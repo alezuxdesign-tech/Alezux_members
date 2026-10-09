@@ -28,9 +28,16 @@ class Admin_Api {
 
 			// Cursos & Currículum
 			register_rest_route( $namespace, '/courses', [
-				'methods'             => 'GET',
-				'callback'            => [ $this, 'get_courses' ],
-				'permission_callback' => [ $this, 'admin_permissions_check' ],
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_courses' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'create_course' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
 			] );
 
 			register_rest_route( $namespace, '/courses/(?P<id>\d+)/curriculum', [
@@ -266,6 +273,9 @@ class Admin_Api {
 	/**
 	 * Obtener cursos con su estructura de secciones y lecciones para el Builder
 	 */
+	/**
+	 * Obtener cursos con su estructura de secciones y lecciones para el Builder
+	 */
 	public function get_courses() {
 		$courses_posts = get_posts( [
 			'post_type'      => 'sfwd-courses',
@@ -276,37 +286,98 @@ class Admin_Api {
 		$courses = [];
 
 		foreach ( $courses_posts as $post ) {
-			// Obtener lecciones asociadas al curso
-			$lessons_posts = get_posts( [
-				'post_type'      => 'sfwd-lessons',
-				'post_status'    => 'publish',
-				'meta_key'       => 'course_id',
-				'meta_value'     => $post->ID,
-				'posts_per_page' => 100,
-				'orderby'        => 'menu_order',
-				'order'          => 'ASC',
-			] );
+			// 1. Verificar si tiene estructura serializada guardada
+			$saved_curriculum = get_post_meta( $post->ID, '_alezux_curriculum_structure', true );
+			$sections = [];
 
-			// Organizar en secciones
-			$lessons_data = [];
-			foreach ( $lessons_posts as $les ) {
-				$lessons_data[] = [
-					'id'       => (string) $les->ID,
-					'title'    => $les->post_title,
-					'duration' => '15m',
-				];
+			if ( ! empty( $saved_curriculum ) && is_array( $saved_curriculum ) ) {
+				$sections = $saved_curriculum;
+			} else {
+				// 2. Si no, construir desde sfwd-lessons y sfwd-topic nativos
+				$lessons_posts = get_posts( [
+					'post_type'      => 'sfwd-lessons',
+					'post_status'    => [ 'publish', 'draft' ],
+					'meta_key'       => 'course_id',
+					'meta_value'     => $post->ID,
+					'posts_per_page' => 100,
+					'orderby'        => 'menu_order',
+					'order'          => 'ASC',
+				] );
+
+				if ( ! empty( $lessons_posts ) ) {
+					foreach ( $lessons_posts as $les ) {
+						// Obtener topics de cada lección
+						$topics_posts = get_posts( [
+							'post_type'      => 'sfwd-topic',
+							'post_status'    => [ 'publish', 'draft' ],
+							'meta_key'       => 'lesson_id',
+							'meta_value'     => $les->ID,
+							'posts_per_page' => 100,
+							'orderby'        => 'menu_order',
+							'order'          => 'ASC',
+						] );
+
+						$topics_data = [];
+						foreach ( $topics_posts as $top ) {
+							$video_url = get_post_meta( $top->ID, '_topic_video_url', true ) ?: '';
+							$cover_url = get_post_meta( $top->ID, '_topic_cover', true ) ?: '';
+							$files     = get_post_meta( $top->ID, '_topic_files', true ) ?: [];
+							$duration  = get_post_meta( $top->ID, '_topic_duration', true ) ?: '15m';
+
+							$topics_data[] = [
+								'id'          => (string) $top->ID,
+								'title'       => $top->post_title,
+								'description' => wp_strip_all_tags( $top->post_content ),
+								'video_url'   => $video_url,
+								'cover'       => $cover_url,
+								'duration'    => $duration,
+								'files'       => is_array( $files ) ? $files : [],
+							];
+						}
+
+						// Si el módulo no tiene topics hijos, convertir la propia lección en el topic principal
+						if ( empty( $topics_data ) ) {
+							$video_url = get_post_meta( $les->ID, '_topic_video_url', true ) ?: '';
+							$cover_url = get_post_meta( $les->ID, '_topic_cover', true ) ?: '';
+							$files     = get_post_meta( $les->ID, '_topic_files', true ) ?: [];
+
+							$topics_data[] = [
+								'id'          => 'top-' . $les->ID,
+								'title'       => $les->post_title,
+								'description' => wp_strip_all_tags( $les->post_content ),
+								'video_url'   => $video_url,
+								'cover'       => $cover_url,
+								'duration'    => '15m',
+								'files'       => is_array( $files ) ? $files : [],
+							];
+						}
+
+						$sections[] = [
+							'id'      => (string) $les->ID,
+							'title'   => $les->post_title,
+							'lessons' => $topics_data,
+						];
+					}
+				} else {
+					$sections = [
+						[
+							'id'      => 'sec-' . $post->ID . '-1',
+							'title'   => 'Módulo 1: Introducción',
+							'lessons' => [
+								[ 
+									'id'          => 'top-demo-1', 
+									'title'       => 'Lección 1: Bienvenida al Curso', 
+									'duration'    => '12m',
+									'cover'       => 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80',
+									'description' => 'Bienvenida a la formación.',
+									'video_url'   => '',
+									'files'       => [],
+								],
+							],
+						],
+					];
+				}
 			}
-
-			$sections = [
-				[
-					'id'      => 'sec-' . $post->ID . '-1',
-					'title'   => 'Módulo 1: Contenido Principal',
-					'lessons' => ! empty( $lessons_data ) ? $lessons_data : [
-						[ 'id' => 'les-demo-1', 'title' => 'Lección 1: Bienvenida al Curso', 'duration' => '12m' ],
-						[ 'id' => 'les-demo-2', 'title' => 'Lección 2: Fundamentos Clave', 'duration' => '24m' ],
-					],
-				],
-			];
 
 			$thumb_id = get_post_thumbnail_id( $post->ID );
 			$thumb_url = $thumb_id ? wp_get_attachment_image_url( $thumb_id, 'medium' ) : 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80';
@@ -334,27 +405,63 @@ class Admin_Api {
 		$params = $request->get_json_params();
 		$sections = isset( $params['sections'] ) ? $params['sections'] : [];
 
-		$order = 1;
-		foreach ( $sections as $section ) {
-			if ( ! empty( $section['lessons'] ) && is_array( $section['lessons'] ) ) {
-				foreach ( $section['lessons'] as $lesson ) {
-					$lesson_id = (int) $lesson['id'];
-					if ( $lesson_id > 0 ) {
-						wp_update_post( [
-							'ID'         => $lesson_id,
-							'menu_order' => $order++,
-						] );
-						update_post_meta( $lesson_id, 'course_id', $course_id );
-					}
-				}
-			}
-		}
-
 		update_post_meta( $course_id, '_alezux_curriculum_structure', $sections );
 
 		return rest_ensure_response( [
 			'success' => true,
 			'message' => 'Estructura de currículum guardada correctamente.',
+		] );
+	}
+
+	/**
+	 * Crear un nuevo curso
+	 */
+	public function create_course( $request ) {
+		$params = $request->get_json_params();
+		$title = ! empty( $params['title'] ) ? sanitize_text_field( $params['title'] ) : 'Nueva Formación';
+		$desc  = ! empty( $params['description'] ) ? wp_kses_post( $params['description'] ) : '';
+		$thumb = ! empty( $params['thumbnail'] ) ? esc_url_raw( $params['thumbnail'] ) : '';
+
+		$course_id = wp_insert_post( [
+			'post_type'    => 'sfwd-courses',
+			'post_title'   => $title,
+			'post_content' => $desc,
+			'post_status'  => 'publish',
+		] );
+
+		if ( is_wp_error( $course_id ) ) {
+			return new \WP_Error( 'cant_create', $course_id->get_error_message(), [ 'status' => 500 ] );
+		}
+
+		$initial_sections = [
+			[
+				'id'      => 'sec-' . $course_id . '-1',
+				'title'   => 'Módulo 1: Introducción',
+				'lessons' => [
+					[
+						'id'          => 'top-' . $course_id . '-1',
+						'title'       => 'Primera Lección de Bienvenida',
+						'duration'    => '10m',
+						'cover'       => $thumb ?: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80',
+						'description' => 'Bienvenida al curso y objetivos principales de aprendizaje.',
+						'video_url'   => '',
+						'files'       => [],
+					],
+				],
+			],
+		];
+
+		update_post_meta( $course_id, '_alezux_curriculum_structure', $initial_sections );
+
+		return rest_ensure_response( [
+			'id'           => $course_id,
+			'title'        => $title,
+			'slug'         => get_post_field( 'post_name', $course_id ),
+			'description'  => $desc,
+			'thumbnail'    => $thumb ?: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80',
+			'status'       => 'publish',
+			'studentCount' => 0,
+			'sections'     => $initial_sections,
 		] );
 	}
 

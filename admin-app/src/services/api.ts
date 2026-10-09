@@ -54,22 +54,33 @@ export interface UpdateStudentPayload {
   enabledCourseIds?: number[];
 }
 
+export interface CourseFileAttachment {
+  id?: string;
+  name: string;
+  url: string;
+  size?: string;
+}
+
 export interface CourseTopic {
   id: string;
   title: string;
+  cover?: string;
+  description?: string;
+  video_url?: string;
+  duration?: string;
+  files?: CourseFileAttachment[];
 }
 
-export interface CourseLesson {
-  id: string;
-  title: string;
-  duration?: string;
+export interface CourseLesson extends CourseTopic {
   topics?: CourseTopic[];
 }
 
 export interface CourseSection {
   id: string;
   title: string;
+  description?: string;
   lessons: CourseLesson[];
+  topics?: CourseTopic[];
 }
 
 export interface Course {
@@ -213,17 +224,63 @@ const MOCK_COURSES: Course[] = [
         id: "sec-1",
         title: "Módulo 1: Fundamentos y Mentalidad del Media Buyer",
         lessons: [
-          { id: "les-1", title: "Bienvenida y Hoja de Ruta", duration: "12m" },
-          { id: "les-2", title: "Configuración de Business Manager y Pixeles", duration: "25m" },
-          { id: "les-3", title: "Estructuras de Campañas CBO vs ABO", duration: "32m" },
+          { 
+            id: "les-1", 
+            title: "Bienvenida y Hoja de Ruta", 
+            duration: "12m",
+            cover: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80",
+            description: "Introducción completa a la formación, mentalidad del comprador de medios y configuración del entorno.",
+            video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            files: [
+              { id: "f-1", name: "Roadmap_Media_Buyer_2026.pdf", url: "https://example.com/files/roadmap.pdf", size: "2.4 MB" }
+            ]
+          },
+          { 
+            id: "les-2", 
+            title: "Configuración de Business Manager y Pixeles", 
+            duration: "25m",
+            cover: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80",
+            description: "Paso a paso para crear cuentas publicitarias, dominios verificados y API de conversiones.",
+            video_url: "https://vimeo.com/76979871",
+            files: [
+              { id: "f-2", name: "Checklist_Seguridad_BM.xlsx", url: "https://example.com/files/checklist.xlsx", size: "850 KB" }
+            ]
+          },
+          { 
+            id: "les-3", 
+            title: "Estructuras de Campañas CBO vs ABO", 
+            duration: "32m",
+            cover: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
+            description: "Cuándo utilizar optimización a nivel de campaña o de conjunto de anuncios para presupuestos escalables.",
+            video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            files: []
+          },
         ],
       },
       {
         id: "sec-2",
         title: "Módulo 2: Creativos de Alta Conversión",
         lessons: [
-          { id: "les-4", title: "Psicología de Hooks y Primeros 3 Segundos", duration: "18m" },
-          { id: "les-5", title: "Estrategias de Escalamiento con Meta Ads 2026", duration: "45m" },
+          { 
+            id: "les-4", 
+            title: "Psicología de Hooks y Primeros 3 Segundos", 
+            duration: "18m",
+            cover: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=600&auto=format&fit=crop&q=80",
+            description: "Fórmulas de ganchos que retienen la atención en TikTok e Instagram Reels.",
+            video_url: "https://vimeo.com/76979871",
+            files: [
+              { id: "f-3", name: "Plantilla_50_Hooks_Virales.pdf", url: "https://example.com/files/hooks.pdf", size: "4.1 MB" }
+            ]
+          },
+          { 
+            id: "les-5", 
+            title: "Estrategias de Escalamiento con Meta Ads 2026", 
+            duration: "45m",
+            cover: "https://images.unsplash.com/photo-1533750516457-a7f992034fec?w=600&auto=format&fit=crop&q=80",
+            description: "Cómo duplicar y escalar presupuestos diarios sin arruinar el ROAS ni disparar el CPA.",
+            video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            files: []
+          },
         ],
       },
     ],
@@ -241,8 +298,26 @@ const MOCK_COURSES: Course[] = [
         id: "sec-3",
         title: "Módulo 1: Arquitectura de Plugins en WordPress",
         lessons: [
-          { id: "les-6", title: "Estructura Modular 'Lego-style'", duration: "28m" },
-          { id: "les-7", title: "Integración con Elementor Widgets", duration: "35m" },
+          { 
+            id: "les-6", 
+            title: "Estructura Modular 'Lego-style'", 
+            duration: "28m",
+            cover: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80",
+            description: "Separación por capas: Core, Modules, Views y Assets para mantenimiento ágil.",
+            video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            files: [
+              { id: "f-4", name: "Boilerplate_Plugin_Starter.zip", url: "https://example.com/files/boilerplate.zip", size: "1.2 MB" }
+            ]
+          },
+          { 
+            id: "les-7", 
+            title: "Integración con Elementor Widgets", 
+            duration: "35m",
+            cover: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&auto=format&fit=crop&q=80",
+            description: "Cómo registrar widgets personalizados con controles de estilo y renderizado dinámico.",
+            video_url: "https://vimeo.com/76979871",
+            files: []
+          },
         ],
       },
     ],
@@ -260,7 +335,17 @@ const MOCK_COURSES: Course[] = [
         id: "sec-4",
         title: "Módulo 1: Prospección y Cualificación",
         lessons: [
-          { id: "les-8", title: "Framework de Descubrimiento de Dolor", duration: "40m" },
+          { 
+            id: "les-8", 
+            title: "Framework de Descubrimiento de Dolor", 
+            duration: "40m",
+            cover: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&auto=format&fit=crop&q=80",
+            description: "Guión de preguntas de alta cualificación para filtrar prospectos no calificados antes de la llamada.",
+            video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            files: [
+              { id: "f-5", name: "Script_Llamada_Cualificacion.pdf", url: "https://example.com/files/script.pdf", size: "1.8 MB" }
+            ]
+          },
         ],
       },
     ],
@@ -694,6 +779,24 @@ class ApiService {
   }
 
   async createCourse(title: string, description: string, thumbnail: string): Promise<Course> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}courses`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ title, description, thumbnail }),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error creating course:", e);
+    }
+
     const newCourse: Course = {
       id: Date.now(),
       title,
@@ -707,7 +810,15 @@ class ApiService {
           id: `sec-${Date.now()}`,
           title: "Módulo 1: Introducción",
           lessons: [
-            { id: `les-${Date.now()}`, title: "Primera Lección de Bienvenida", duration: "10m" },
+            { 
+              id: `les-${Date.now()}`, 
+              title: "Primera Lección de Bienvenida", 
+              duration: "10m",
+              cover: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80",
+              description: "Bienvenida al curso y objetivos principales de aprendizaje.",
+              video_url: "",
+              files: []
+            },
           ],
         },
       ],
