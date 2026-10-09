@@ -48,8 +48,15 @@ class Admin_Dashboard {
 			   MODO APP INDEPENDIENTE (VENTANA COMPLETA LIMPIA)
 			   Elimina todo el entorno/chrome de WordPress
 			   =================================================== */
-			html.wp-toolbar {
-				padding-top: 0 !important;
+			html.wp-toolbar,
+			body.toplevel_page_crezca,
+			body.toplevel_page_alezux-members {
+				padding: 0 !important;
+				margin: 0 !important;
+				overflow: hidden !important;
+				height: 100vh !important;
+				max-height: 100vh !important;
+				background-color: var(--background, #090a0f) !important;
 			}
 			#wpadminbar {
 				display: none !important;
@@ -60,22 +67,41 @@ class Admin_Dashboard {
 			#adminmenu {
 				display: none !important;
 				width: 0 !important;
+				height: 0 !important;
+			}
+			#wpwrap {
+				height: 100vh !important;
+				max-height: 100vh !important;
+				overflow: hidden !important;
+				margin: 0 !important;
+				padding: 0 !important;
 			}
 			#wpcontent {
 				margin-left: 0 !important;
 				padding: 0 !important;
 				background-color: var(--background, #090a0f) !important;
-				min-height: 100vh !important;
+				height: 100vh !important;
+				max-height: 100vh !important;
+				overflow: hidden !important;
+			}
+			#wpbody {
+				padding-top: 0 !important;
+				height: 100vh !important;
+				max-height: 100vh !important;
+				overflow: hidden !important;
 			}
 			#wpbody-content {
 				padding-bottom: 0 !important;
 				float: none !important;
-			}
-			#wpbody {
-				padding-top: 0 !important;
+				height: 100vh !important;
+				max-height: 100vh !important;
+				overflow: hidden !important;
 			}
 			#wpfooter {
 				display: none !important;
+				height: 0 !important;
+				padding: 0 !important;
+				margin: 0 !important;
 			}
 			/* Ocultar avisos, barras y banners de WordPress y plugins */
 			.notice,
@@ -87,28 +113,28 @@ class Admin_Dashboard {
 			#screen-meta {
 				display: none !important;
 			}
-			/* El contenedor de React toma 100% de la pantalla */
-			#crezca-admin-root,
-			#alezux-admin-root {
+			/* El contenedor de React toma exactamente 100vh sin desborde exterior */
+			#crezca-admin-root {
 				width: 100% !important;
-				min-height: 100vh !important;
+				height: 100vh !important;
+				max-height: 100vh !important;
 				margin: 0 !important;
 				padding: 0 !important;
+				overflow: hidden !important;
+			}
+			#alezux-admin-root {
+				display: none !important;
 			}
 			/* Desactivar fondos blancos impuestos por wp-admin/css/forms.css */
 			#crezca-admin-root input,
 			#crezca-admin-root select,
-			#crezca-admin-root textarea,
-			#alezux-admin-root input,
-			#alezux-admin-root select,
-			#alezux-admin-root textarea {
+			#crezca-admin-root textarea {
 				background-color: var(--surface, #1e1e24) !important;
 				color: var(--foreground, #f3f4f6) !important;
 				border: 1px solid var(--border, #2d2d39) !important;
 				box-shadow: none !important;
 			}
-			#crezca-admin-root select option,
-			#alezux-admin-root select option {
+			#crezca-admin-root select option {
 				background-color: #1e1e24 !important;
 				color: #f3f4f6 !important;
 			}
