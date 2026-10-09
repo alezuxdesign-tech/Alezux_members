@@ -294,11 +294,11 @@ const MOCK_AUTOMATIONS: MarketingAutomation[] = [
 
 class ApiService {
   private get wpData() {
-    return (window as any).alezux_admin_data || null;
+    return (window as any).crezca_admin_data || (window as any).alezux_admin_data || null;
   }
 
   private get rootUrl() {
-    return this.wpData?.root_url || "/wp-json/alezux/v1/";
+    return this.wpData?.root_url || "/wp-json/crezca/v1/";
   }
 
   private get nonce() {

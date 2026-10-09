@@ -4,7 +4,7 @@ import "./components/arc/foundation.css";
 import "./index.css";
 import App from "./App";
 
-const container = document.getElementById("alezux-admin-root") || document.getElementById("root");
+const container = document.getElementById("crezca-admin-root") || document.getElementById("alezux-admin-root") || document.getElementById("root");
 
 if (container) {
   ReactDOM.createRoot(container).render(

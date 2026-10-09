@@ -9,6 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $has_arc_bundle = file_exists( ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.js' );
 ?>
 
+<div id="crezca-admin-root"></div>
 <div id="alezux-admin-root"></div>
 
 <?php if ( ! $has_arc_bundle ) : ?>

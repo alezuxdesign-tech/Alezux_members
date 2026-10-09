@@ -55,7 +55,7 @@ export function App() {
           </div>
           <div>
             <div className={styles.brandTitleWrap}>
-              <span className={styles.brandName}>Alezux Members</span>
+              <span className={styles.brandName}>Crezca</span>
               <span className={styles.versionBadge}>v2.0 Arc UI</span>
             </div>
             <span className={styles.brandSubtitle}>Academia & Membresías</span>

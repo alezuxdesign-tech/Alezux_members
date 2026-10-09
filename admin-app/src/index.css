@@ -13,6 +13,7 @@ body {
 }
 
 /* Reset for WordPress Admin integration */
+#crezca-admin-root,
 #alezux-admin-root {
   min-height: 100vh;
   width: 100%;

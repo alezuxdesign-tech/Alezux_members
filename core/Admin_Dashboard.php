@@ -25,7 +25,8 @@ class Admin_Dashboard {
 	public function print_menu_icon_styles() {
 		?>
 		<style>
-			#adminmenu #toplevel_page_alezux-members .wp-menu-image img {
+			#adminmenu #toplevel_page_alezux-members .wp-menu-image img,
+			#adminmenu #toplevel_page_crezca .wp-menu-image img {
 				max-width: 20px;
 				max-height: 20px;
 				width: 20px;
@@ -33,7 +34,8 @@ class Admin_Dashboard {
 				padding-top: 8px;
 				opacity: 0.9;
 			}
-			#adminmenu #toplevel_page_alezux-members:hover .wp-menu-image img {
+			#adminmenu #toplevel_page_alezux-members:hover .wp-menu-image img,
+			#adminmenu #toplevel_page_crezca:hover .wp-menu-image img {
 				opacity: 1;
 			}
 		</style>
@@ -42,35 +44,35 @@ class Admin_Dashboard {
 
 	public function add_admin_menu() {
 		add_menu_page(
-			'Alezux Members',
-			'Alezux Members',
+			'Crezca',
+			'Crezca',
 			'manage_options',
-			'alezux-members',
+			'crezca',
 			[ $this, 'render_dashboard' ],
 			ALEZUX_MEMBERS_URL . 'modules/demo-block/assets/css/img/LOGO.svg',
 			2
 		);
 
-		// Submenú explícito para el Dashboard (para asegurar que sea el primero y cargue la vista correcta)
+		// Submenú explícito para el Dashboard
 		add_submenu_page(
-			'alezux-members',
+			'crezca',
 			'Dashboard',
 			'Dashboard',
 			'manage_options',
-			'alezux-members',
+			'crezca',
 			[ $this, 'render_dashboard' ]
 		);
 	}
 
 	public function enqueue_admin_assets( $hook ) {
 		// Assets específicos SOLO para nuestra página de Dashboard
-		if ( 'toplevel_page_alezux-members' !== $hook ) {
+		if ( 'toplevel_page_crezca' !== $hook && 'toplevel_page_alezux-members' !== $hook ) {
 			return;
 		}
 		
 		// Encolar estilos globales también en el admin para nuestra página
 		wp_enqueue_style( 
-			'alezux-members-global', 
+			'crezca-global', 
 			ALEZUX_MEMBERS_URL . 'assets/css/global.css', 
 			[], 
 			ALEZUX_MEMBERS_VERSION 
@@ -82,7 +84,7 @@ class Admin_Dashboard {
 
 		if ( file_exists( $dist_css ) ) {
 			wp_enqueue_style(
-				'alezux-admin-arc-css',
+				'crezca-admin-arc-css',
 				ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.css',
 				[],
 				ALEZUX_MEMBERS_VERSION
@@ -91,18 +93,22 @@ class Admin_Dashboard {
 
 		if ( file_exists( $dist_js ) ) {
 			wp_enqueue_script(
-				'alezux-admin-arc-js',
+				'crezca-admin-arc-js',
 				ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.js',
 				[ 'wp-element' ],
 				ALEZUX_MEMBERS_VERSION,
 				true
 			);
 
-			wp_localize_script( 'alezux-admin-arc-js', 'alezux_admin_data', [
-				'root_url' => esc_url_raw( rest_url( 'alezux/v1/' ) ),
-				'nonce'    => wp_create_nonce( 'wp_rest' ),
-				'ajax_url' => admin_url( 'admin-ajax.php' ),
-			] );
+			$admin_data = [
+				'root_url'        => esc_url_raw( rest_url( 'crezca/v1/' ) ),
+				'legacy_root_url' => esc_url_raw( rest_url( 'alezux/v1/' ) ),
+				'nonce'           => wp_create_nonce( 'wp_rest' ),
+				'ajax_url'        => admin_url( 'admin-ajax.php' ),
+			];
+
+			wp_localize_script( 'crezca-admin-arc-js', 'crezca_admin_data', $admin_data );
+			wp_localize_script( 'crezca-admin-arc-js', 'alezux_admin_data', $admin_data );
 		}
 	}
 
@@ -200,7 +206,7 @@ class Admin_Dashboard {
             update_option( 'alezux_admin_only_css_classes', $css_classes );
         }
 
-		wp_redirect( admin_url( 'admin.php?page=alezux-members&status=success' ) );
+		wp_redirect( admin_url( 'admin.php?page=crezca&status=success' ) );
 		exit;
 	}
 
@@ -231,7 +237,7 @@ class Admin_Dashboard {
 			$target_user_id 
 		);
 
-		wp_redirect( admin_url( 'admin.php?page=alezux-members&status=notification_sent' ) );
+		wp_redirect( admin_url( 'admin.php?page=crezca&status=notification_sent' ) );
 		exit;
 	}
 
@@ -314,7 +320,7 @@ class Admin_Dashboard {
 
         // Redirigir de vuelta a settings
         $redirect_url = add_query_arg( 
-            [ 'page' => 'alezux-members', 'sim_result' => $result ], 
+            [ 'page' => 'crezca', 'sim_result' => $result ], 
             admin_url( 'admin.php' ) 
         );
         
@@ -493,7 +499,7 @@ class Admin_Dashboard {
 			}
 		}
 
-		wp_redirect( admin_url( 'admin.php?page=alezux-members&status=import_success' ) );
+		wp_redirect( admin_url( 'admin.php?page=crezca&status=import_success' ) );
 		exit;
 	}
 
@@ -566,7 +572,7 @@ class Admin_Dashboard {
 			}
 		}
 
-		wp_redirect( admin_url( 'admin.php?page=alezux-members&status=cleanup_success' ) );
+		wp_redirect( admin_url( 'admin.php?page=crezca&status=cleanup_success' ) );
 		exit;
 	}
 
@@ -748,7 +754,7 @@ class Admin_Dashboard {
 			}
 		}
 
-		wp_redirect( admin_url( 'admin.php?page=alezux-members&status=images_success' ) );
+		wp_redirect( admin_url( 'admin.php?page=crezca&status=images_success' ) );
 		exit;
 	}
 }

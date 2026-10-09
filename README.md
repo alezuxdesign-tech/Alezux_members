@@ -1,10 +1,27 @@
-# Alezux Members (v2.0.0)
+# Crezca (v2.0.0)
 
 Plugin modular integral para gestión de academias, membresías, cursos en línea, estudiantes, finanzas, marketing y control de accesos, con **Panel de Administración Moderno impulsado por la librería Arc UI ([uiarc.dev](https://uiarc.dev/))**.
 
 ---
 
-## 🚀 Novedades de la Versión 2.0.0
+## 🚀 Instalación en WordPress (Sin Comprimir)
+
+Para instalarlo en tu WordPress sin necesidad de archivos ZIP ni conflictos con versiones anteriores:
+
+1. Copia o mueve directamente la carpeta del plugin a tu directorio de plugins de WordPress:
+   ```text
+   wp-content/plugins/crezca/
+   ```
+2. Entra a tu panel de **WordPress > Plugins Instalados**.
+3. Verás listado **Crezca**. Haz clic en **Activar**.
+4. En el menú lateral izquierdo aparecerá la sección **Crezca** con el nuevo Dashboard interactivo de Arc UI.
+
+> [!NOTE]
+> El plugin ha sido renombrado a **Crezca** (`crezca.php`, Text Domain `crezca`, namespace `crezca/v1` y slug de menú `crezca`), por lo que no colisiona ni genera conflictos con instalaciones previas de otros plugins o `Members-Beta`.
+
+---
+
+## 💎 Novedades de la Versión 2.0.0
 
 - **Integración de Arc UI (Free Tier)**:
   - Sistema de diseño de tokens semánticos (`foundation.css`) con soporte para Modo Oscuro (`data-theme="dark"` / `"light"`) y acentos de color (`violet`, `blue`, `green`, `amber`, `coral`, `neutral`).
@@ -15,18 +32,18 @@ Plugin modular integral para gestión de academias, membresías, cursos en líne
   - **Gráfico de Flujo de Estudiantes**: Visualización interactiva de actividad semanal/mensual.
   - **Constructor de Cursos Drag & Drop**: Diseña y organiza módulos, lecciones y temas arrastrando elementos en un árbol visual.
   - **Gestión de Estudiantes & Accesos**: Buscador en tiempo real y panel de activación/desactivación de cursos por estudiante con interruptores instantáneos.
-  - **Módulo de Finanzas & Links de Pago**: Creación de planes de cuotas recurrentes o pago único, con generación de links protegidos por token listos para compartir (`?alezux_action=checkout&token=...`).
+  - **Módulo de Finanzas & Links de Pago**: Creación de planes de cuotas recurrentes o pago único, con generación de links protegidos por token listos para compartir (`?crezca_action=checkout&token=...`).
   - **Módulo de Marketing**: Configuración de correos automáticos por eventos (bienvenida, cuotas pendientes, curso terminado) con editor de plantillas.
 - **Arquitectura Modular "Lego-Style"**:
-  - Se recopilaron y organizaron todos los 14 módulos de la versión anterior: `config`, `estudiantes`, `finanzas`, `formaciones`, `lesson-navigator`, `listing`, `logros`, `marketing`, `menu-admin`, `notifications`, `proyectos-agencia`, `slide-lesson`, `smtp` y `demo-block`.
+  - Se recopilaron y organizaron todos los 14 módulos: `config`, `estudiantes`, `finanzas`, `formaciones`, `lesson-navigator`, `listing`, `logros`, `marketing`, `menu-admin`, `notifications`, `proyectos-agencia`, `slide-lesson`, `smtp` y `demo-block`.
 
 ---
 
 ## 📁 Estructura del Proyecto
 
 ```text
-Alezux_members/
-├── alezux-members.php            # Entrada principal del plugin de WordPress
+crezca/
+├── crezca.php                    # Entrada principal del plugin de WordPress
 ├── admin-app/                    # Aplicación Frontend React + Vite con Arc UI
 │   ├── src/
 │   │   ├── components/arc/       # Componentes y tokens de la librería Arc UI
@@ -46,7 +63,7 @@ Alezux_members/
 │   │   │   └── SettingsView.tsx  # Tokens, temas y claves de Stripe
 │   │   ├── services/api.ts       # Conexión con REST API y datos de respaldo
 │   │   ├── App.tsx               # Shell principal de la aplicación
-│   │   └── main.tsx              # Punto de montaje
+│   │   └── main.tsx              # Punto de montaje (crezca-admin-root)
 │   ├── package.json
 │   └── vite.config.ts
 ├── assets/
@@ -56,8 +73,8 @@ Alezux_members/
 │   │   └── index.html            # Previsualización directa en el navegador
 │   └── css/global.css            # Estilos globales para WordPress
 ├── core/
-│   ├── Admin_Api.php             # Endpoints REST (/wp-json/alezux/v1/...)
-│   ├── Admin_Dashboard.php       # Encolador de assets y menú de administración
+│   ├── Admin_Api.php             # Endpoints REST (/wp-json/crezca/v1/...)
+│   ├── Admin_Dashboard.php       # Encolador de assets y menú de administración (slug: crezca)
 │   ├── Elementor_Widget_Base.php # Base para widgets de Elementor
 │   ├── Module_Base.php           # Base abstracta para módulos Lego
 │   └── Plugin_Loader.php         # Descubrimiento dinámico de módulos
@@ -89,10 +106,10 @@ npm run build
 
 Todos los endpoints están protegidos por permisos de administrador (`manage_options`) y nonces (`wp_rest`):
 
-- `GET /wp-json/alezux/v1/stats`: Métricas de estudiantes, cursos activos, facturación y flujo.
-- `GET /wp-json/alezux/v1/courses`: Listado de formaciones y currículum.
-- `POST /wp-json/alezux/v1/courses/{id}/curriculum`: Guarda la estructura reordenada por Drag & Drop.
-- `GET /wp-json/alezux/v1/students`: Listado de alumnos con sus cursos habilitados.
-- `POST /wp-json/alezux/v1/students/{id}/course-access`: Activa/desactiva acceso a formaciones.
-- `GET /wp-json/alezux/v1/finance/plans`: Lista de planes y cuotas.
-- `POST /wp-json/alezux/v1/finance/create-plan`: Crea un plan y genera su link de pago.
+- `GET /wp-json/crezca/v1/stats`: Métricas de estudiantes, cursos activos, facturación y flujo.
+- `GET /wp-json/crezca/v1/courses`: Listado de formaciones y currículum.
+- `POST /wp-json/crezca/v1/courses/{id}/curriculum`: Guarda la estructura reordenada por Drag & Drop.
+- `GET /wp-json/crezca/v1/students`: Listado de alumnos con sus cursos habilitados.
+- `POST /wp-json/crezca/v1/students/{id}/course-access`: Activa/desactiva acceso a formaciones.
+- `GET /wp-json/crezca/v1/finance/plans`: Lista de planes y cuotas.
+- `POST /wp-json/crezca/v1/finance/create-plan`: Crea un plan y genera su link de pago.

@@ -17,7 +17,7 @@ export function SettingsView({ currentAccent, onAccentChange, currentTheme, onTh
   const [saved, setSaved] = useState(false);
 
   const accents = [
-    { id: "violet", name: "Violeta (Alezux Default)", color: "#7747ff" },
+    { id: "violet", name: "Violeta (Crezca Default)", color: "#7747ff" },
     { id: "blue", name: "Azul Eléctrico", color: "#0562ef" },
     { id: "green", name: "Esmeralda", color: "#0db879" },
     { id: "amber", name: "Ámbar Dorado", color: "#f3ad20" },

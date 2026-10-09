@@ -16,53 +16,55 @@ class Admin_Api {
 	}
 
 	public function register_routes() {
-		$namespace = 'alezux/v1';
+		$namespaces = [ 'crezca/v1', 'alezux/v1' ];
 
-		// Estadísticas y Métricas
-		register_rest_route( $namespace, '/stats', [
-			'methods'             => 'GET',
-			'callback'            => [ $this, 'get_stats' ],
-			'permission_callback' => [ $this, 'admin_permissions_check' ],
-		] );
+		foreach ( $namespaces as $namespace ) {
+			// Estadísticas y Métricas
+			register_rest_route( $namespace, '/stats', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_stats' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
 
-		// Cursos & Currículum
-		register_rest_route( $namespace, '/courses', [
-			'methods'             => 'GET',
-			'callback'            => [ $this, 'get_courses' ],
-			'permission_callback' => [ $this, 'admin_permissions_check' ],
-		] );
+			// Cursos & Currículum
+			register_rest_route( $namespace, '/courses', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_courses' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
 
-		register_rest_route( $namespace, '/courses/(?P<id>\d+)/curriculum', [
-			'methods'             => 'POST',
-			'callback'            => [ $this, 'save_course_curriculum' ],
-			'permission_callback' => [ $this, 'admin_permissions_check' ],
-		] );
+			register_rest_route( $namespace, '/courses/(?P<id>\d+)/curriculum', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'save_course_curriculum' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
 
-		// Estudiantes & Accesos
-		register_rest_route( $namespace, '/students', [
-			'methods'             => 'GET',
-			'callback'            => [ $this, 'get_students' ],
-			'permission_callback' => [ $this, 'admin_permissions_check' ],
-		] );
+			// Estudiantes & Accesos
+			register_rest_route( $namespace, '/students', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_students' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
 
-		register_rest_route( $namespace, '/students/(?P<id>\d+)/course-access', [
-			'methods'             => 'POST',
-			'callback'            => [ $this, 'toggle_student_course_access' ],
-			'permission_callback' => [ $this, 'admin_permissions_check' ],
-		] );
+			register_rest_route( $namespace, '/students/(?P<id>\d+)/course-access', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'toggle_student_course_access' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
 
-		// Finanzas & Planes
-		register_rest_route( $namespace, '/finance/plans', [
-			'methods'             => 'GET',
-			'callback'            => [ $this, 'get_finance_plans' ],
-			'permission_callback' => [ $this, 'admin_permissions_check' ],
-		] );
+			// Finanzas & Planes
+			register_rest_route( $namespace, '/finance/plans', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_finance_plans' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
 
-		register_rest_route( $namespace, '/finance/create-plan', [
-			'methods'             => 'POST',
-			'callback'            => [ $this, 'create_finance_plan' ],
-			'permission_callback' => [ $this, 'admin_permissions_check' ],
-		] );
+			register_rest_route( $namespace, '/finance/create-plan', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'create_finance_plan' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+		}
 	}
 
 	public function admin_permissions_check() {
