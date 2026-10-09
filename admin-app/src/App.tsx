@@ -9,7 +9,9 @@ import {
   Moon, 
   Sun, 
   Layers,
-  Sparkles
+  ArrowLeft,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { SegmentedControl } from "./components/arc/segmented-control/segmented-control";
 import { OverviewView } from "./views/OverviewView";
@@ -26,15 +28,36 @@ export function App() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [accent, setAccent] = useState<string>("violet");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.accent = accent;
+
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
   }, [theme, accent]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  const wpAdminUrl = (window as any).crezca_admin_data?.wp_admin_url 
+    || (window as any).alezux_admin_data?.wp_admin_url 
+    || "/wp-admin/";
 
   const navOptions = [
     { value: "overview" as const, label: "Métricas & Resumen", icon: <BarChart3 size={15} /> },
@@ -74,14 +97,33 @@ export function App() {
 
         {/* Acciones de la barra */}
         <div className={styles.topActions}>
+          <a
+            href={wpAdminUrl}
+            className={styles.backToWpBtn}
+            title="Volver al panel tradicional de WordPress"
+          >
+            <ArrowLeft size={14} />
+            <span>Volver a WordPress</span>
+          </a>
+
           <button
             type="button"
-            className={styles.themeToggleBtn}
+            className={styles.iconBtn}
+            onClick={toggleFullscreen}
+            aria-label="Pantalla completa"
+            title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          >
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+
+          <button
+            type="button"
+            className={styles.iconBtn}
             onClick={toggleTheme}
             aria-label="Cambiar tema"
             title={`Cambiar a tema ${theme === "dark" ? "claro" : "oscuro"}`}
           >
-            {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
       </header>

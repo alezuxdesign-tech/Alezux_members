@@ -18,13 +18,17 @@ class Admin_Dashboard {
 		add_action( 'admin_post_alezux_import_json', [ $this, 'run_json_import' ] );
 		add_action( 'admin_post_alezux_cleanup_ld', [ $this, 'run_cleanup' ] );
 		add_action( 'admin_post_alezux_generate_images', [ $this, 'run_image_generation' ] ); // NUEVO
-		// Fix Icono Globalmente
-		add_action( 'admin_head', [ $this, 'print_menu_icon_styles' ] );
+		// Configuración de modo ventana independiente / app completa y enlace del menú
+		add_action( 'admin_head', [ $this, 'setup_admin_window_mode' ] );
 	}
 
-	public function print_menu_icon_styles() {
+	public function setup_admin_window_mode() {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$is_crezca_page = ( $screen && ( 'toplevel_page_crezca' === $screen->id || 'toplevel_page_alezux-members' === $screen->id ) )
+			|| ( isset( $_GET['page'] ) && ( 'crezca' === $_GET['page'] || 'alezux-members' === $_GET['page'] ) );
 		?>
 		<style>
+			/* Icono de Crezca en el menú lateral */
 			#adminmenu #toplevel_page_alezux-members .wp-menu-image img,
 			#adminmenu #toplevel_page_crezca .wp-menu-image img {
 				max-width: 20px;
@@ -38,7 +42,78 @@ class Admin_Dashboard {
 			#adminmenu #toplevel_page_crezca:hover .wp-menu-image img {
 				opacity: 1;
 			}
+
+			<?php if ( $is_crezca_page ) : ?>
+			/* ===================================================
+			   MODO APP INDEPENDIENTE (VENTANA COMPLETA LIMPIA)
+			   Elimina todo el entorno/chrome de WordPress
+			   =================================================== */
+			html.wp-toolbar {
+				padding-top: 0 !important;
+			}
+			#wpadminbar {
+				display: none !important;
+			}
+			#adminmenumain,
+			#adminmenuback,
+			#adminmenuwrap,
+			#adminmenu {
+				display: none !important;
+				width: 0 !important;
+			}
+			#wpcontent {
+				margin-left: 0 !important;
+				padding: 0 !important;
+				background-color: var(--background, #090a0f) !important;
+				min-height: 100vh !important;
+			}
+			#wpbody-content {
+				padding-bottom: 0 !important;
+				float: none !important;
+			}
+			#wpbody {
+				padding-top: 0 !important;
+			}
+			#wpfooter {
+				display: none !important;
+			}
+			/* Ocultar avisos, barras y banners de WordPress y plugins */
+			.notice,
+			.update-nag,
+			.updated,
+			.error,
+			.is-dismissible,
+			#screen-meta-links,
+			#screen-meta {
+				display: none !important;
+			}
+			/* El contenedor de React toma 100% de la pantalla */
+			#crezca-admin-root,
+			#alezux-admin-root {
+				width: 100% !important;
+				min-height: 100vh !important;
+				margin: 0 !important;
+				padding: 0 !important;
+			}
+			body.toplevel_page_crezca,
+			body.toplevel_page_alezux-members {
+				background-color: #090a0f !important;
+				overflow-x: hidden !important;
+			}
+			<?php endif; ?>
 		</style>
+
+		<script>
+		// Abrir Crezca en una nueva ventana/pestaña al hacer clic desde el menú lateral
+		document.addEventListener('DOMContentLoaded', function() {
+			var crezcaMenuLinks = document.querySelectorAll('#adminmenu a[href*="page=crezca"], #adminmenu a[href*="page=alezux-members"]');
+			crezcaMenuLinks.forEach(function(link) {
+				link.setAttribute('target', '_blank');
+				link.setAttribute('rel', 'noopener noreferrer');
+				link.setAttribute('title', 'Abrir Crezca en una nueva ventana');
+			});
+		});
+		</script>
 		<?php
 	}
 
@@ -103,6 +178,7 @@ class Admin_Dashboard {
 			$admin_data = [
 				'root_url'        => esc_url_raw( rest_url( 'crezca/v1/' ) ),
 				'legacy_root_url' => esc_url_raw( rest_url( 'alezux/v1/' ) ),
+				'wp_admin_url'    => esc_url_raw( admin_url( 'index.php' ) ),
 				'nonce'           => wp_create_nonce( 'wp_rest' ),
 				'ajax_url'        => admin_url( 'admin-ajax.php' ),
 			];
