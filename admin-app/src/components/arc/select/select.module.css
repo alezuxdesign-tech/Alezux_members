@@ -1,0 +1,180 @@
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  font-family: var(--font-body);
+  color: var(--foreground);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--duration-fast), background-color var(--duration-fast), box-shadow var(--duration-fast);
+  text-align: left;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.trigger.md {
+  min-height: var(--control-height-md);
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.trigger.sm {
+  min-height: 32px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: var(--text-xs);
+  border-radius: var(--radius-control);
+}
+
+.trigger:hover:not(.disabled) {
+  border-color: var(--border-strong);
+  background-color: var(--surface-raised);
+}
+
+.trigger:focus-visible,
+.trigger.open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.trigger.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.selectedLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  flex: 1;
+}
+
+.placeholder {
+  color: var(--text-muted);
+}
+
+.chevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.dropdown {
+  position: fixed;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: var(--shadow-floating);
+  z-index: 999999;
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  animation: fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dropdown.above {
+  animation: fadeInAbove 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInAbove {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: var(--text-xs);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
+  user-select: none;
+}
+
+.option:hover:not(.optionDisabled) {
+  background-color: var(--surface-muted);
+}
+
+.optionSelected {
+  background-color: var(--accent-subtle) !important;
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+.optionDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.optionContent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow: hidden;
+}
+
+.optionTexts {
+  display: flex;
+  flex-direction: column;
+}
+
+.optionLabel {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.optionSublabel {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.optionIcon {
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.checkIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+}

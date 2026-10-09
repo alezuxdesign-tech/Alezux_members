@@ -1,14 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Plus,
-  Link2,
   Copy,
   Check,
   CreditCard,
   DollarSign,
   Users,
   TrendingUp,
-  ExternalLink,
   Pencil,
   Trash2,
   Search,
@@ -23,8 +21,6 @@ import {
   Settings,
   Layers,
   Sparkles,
-  ArrowRight,
-  ArrowLeft,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -32,6 +28,7 @@ import { Modal } from "../components/arc/modal/modal";
 import { MetricCard } from "../components/arc/metric-card/metric-card";
 import { Input } from "../components/arc/input/input";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
+import { Select, SelectOption } from "../components/arc/select/select";
 import {
   api,
   FinancePlan,
@@ -125,6 +122,28 @@ export function FinanceView() {
   const [paymentNote, setPaymentNote] = useState<string>("");
   const [isRegisteringPayment, setIsRegisteringPayment] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+
+  const createQuotaOptions: SelectOption<number>[] = useMemo(
+    () => [
+      { value: 1, label: "Cuota 1 (Inmediato al comprar)" },
+      ...Array.from({ length: Math.max(0, createTotalQuotas - 1) }, (_, i) => ({
+        value: i + 2,
+        label: `Cuota ${i + 2}`,
+      })),
+    ],
+    [createTotalQuotas]
+  );
+
+  const editQuotaOptions: SelectOption<number>[] = useMemo(
+    () => [
+      { value: 1, label: "Cuota 1 (Inmediato al comprar)" },
+      ...Array.from({ length: Math.max(0, editTotalQuotas - 1) }, (_, i) => ({
+        value: i + 2,
+        label: `Cuota ${i + 2}`,
+      })),
+    ],
+    [editTotalQuotas]
+  );
 
   useEffect(() => {
     loadAllData();
@@ -541,40 +560,35 @@ export function FinanceView() {
                   </div>
                 </div>
 
-                {/* Caja de Link de Pago Generado */}
+                {/* Caja de Link de Pago con Copy Button integrado */}
                 <div className={styles.linkGeneratorBox}>
-                  <div className={styles.linkDisplay}>
-                    <Link2 size={14} className={styles.linkIcon} />
-                    <span className={styles.linkUrlText}>{plan.checkoutUrl}</span>
-                  </div>
-
-                  <div className={styles.linkActions}>
-                    <Button
-                      variant={isCopied ? "primary" : "secondary"}
-                      size="sm"
-                      className={styles.copyBtn}
+                  <div className={styles.shareLinkBox}>
+                    <span className={styles.shareLinkUrl} title={plan.checkoutUrl}>
+                      {plan.checkoutUrl}
+                    </span>
+                    <button
+                      type="button"
+                      className={[
+                        styles.shareCopyBtn,
+                        isCopied ? styles.shareCopied : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                       onClick={() => handleCopyLink(plan)}
+                      title="Copiar enlace de pago"
                     >
                       {isCopied ? (
                         <>
-                          <Check size={14} /> Copiado
+                          <Check size={13} className={styles.shareCheckIcon} />
+                          <span>Copiado</span>
                         </>
                       ) : (
                         <>
-                          <Copy size={14} /> Copiar Link
+                          <Copy size={13} />
+                          <span>Copy link</span>
                         </>
                       )}
-                    </Button>
-
-                    <a
-                      href={plan.checkoutUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={styles.testLinkBtn}
-                      title="Abrir checkout en nueva pestaña"
-                    >
-                      <ExternalLink size={14} />
-                    </a>
+                    </button>
                   </div>
 
                   <div className={styles.cardFooterActions}>
@@ -947,21 +961,6 @@ export function FinanceView() {
             <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
               Cancelar
             </Button>
-            {createModalTab === "general" ? (
-              <Button
-                variant="secondary"
-                onClick={() => setCreateModalTab("reglas")}
-              >
-                Configurar Reglas <ArrowRight size={14} />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                onClick={() => setCreateModalTab("general")}
-              >
-                <ArrowLeft size={14} /> Volver a Detalles
-              </Button>
-            )}
             <Button variant="primary" loading={isCreating} onClick={handleCreatePlan}>
               Crear Plan y Generar Link
             </Button>
@@ -1114,7 +1113,7 @@ export function FinanceView() {
                     <thead>
                       <tr>
                         <th>Módulo / Lección</th>
-                        <th style={{ width: "210px" }}>Se desbloquea al pagar:</th>
+                        <th style={{ width: "260px" }}>Se desbloquea al pagar:</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1124,28 +1123,17 @@ export function FinanceView() {
                             <span className={styles.ruleModuleTitle}>{mod.title}</span>
                           </td>
                           <td>
-                            <select
-                              className={styles.select}
-                              style={{ minHeight: "34px", fontSize: "12px" }}
+                            <Select<number>
+                              size="sm"
+                              options={createQuotaOptions}
                               value={createAccessRules[mod.id.toString()] || 1}
-                              onChange={(e) => {
-                                const val = Number(e.target.value);
+                              onChange={(val) => {
                                 setCreateAccessRules((prev) => ({
                                   ...prev,
                                   [mod.id.toString()]: val,
                                 }));
                               }}
-                            >
-                              <option value={1}>Cuota 1 (Inmediato al comprar)</option>
-                              {Array.from(
-                                { length: Math.max(0, createTotalQuotas - 1) },
-                                (_, i) => i + 2
-                              ).map((q) => (
-                                <option key={q} value={q}>
-                                  Cuota {q}
-                                </option>
-                              ))}
-                            </select>
+                            />
                           </td>
                         </tr>
                       ))}
@@ -1172,21 +1160,6 @@ export function FinanceView() {
             <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>
               Cancelar
             </Button>
-            {editModalTab === "general" ? (
-              <Button
-                variant="secondary"
-                onClick={() => setEditModalTab("reglas")}
-              >
-                Configurar Reglas <ArrowRight size={14} />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                onClick={() => setEditModalTab("general")}
-              >
-                <ArrowLeft size={14} /> Volver a Detalles
-              </Button>
-            )}
             <Button variant="primary" loading={isSavingEdit} onClick={handleSaveEditPlan}>
               Guardar Cambios
             </Button>
@@ -1337,7 +1310,7 @@ export function FinanceView() {
                     <thead>
                       <tr>
                         <th>Módulo / Lección</th>
-                        <th style={{ width: "210px" }}>Se desbloquea al pagar:</th>
+                        <th style={{ width: "260px" }}>Se desbloquea al pagar:</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1347,28 +1320,17 @@ export function FinanceView() {
                             <span className={styles.ruleModuleTitle}>{mod.title}</span>
                           </td>
                           <td>
-                            <select
-                              className={styles.select}
-                              style={{ minHeight: "34px", fontSize: "12px" }}
+                            <Select<number>
+                              size="sm"
+                              options={editQuotaOptions}
                               value={editAccessRules[mod.id.toString()] || 1}
-                              onChange={(e) => {
-                                const val = Number(e.target.value);
+                              onChange={(val) => {
                                 setEditAccessRules((prev) => ({
                                   ...prev,
                                   [mod.id.toString()]: val,
                                 }));
                               }}
-                            >
-                              <option value={1}>Cuota 1 (Inmediato al comprar)</option>
-                              {Array.from(
-                                { length: Math.max(0, editTotalQuotas - 1) },
-                                (_, i) => i + 2
-                              ).map((q) => (
-                                <option key={q} value={q}>
-                                  Cuota {q}
-                                </option>
-                              ))}
-                            </select>
+                            />
                           </td>
                         </tr>
                       ))}

@@ -198,57 +198,74 @@
   gap: var(--space-3);
 }
 
-.linkDisplay {
+.shareLinkBox {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
   background: var(--surface-muted);
   border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  padding: 6px var(--space-3);
+  border-radius: var(--radius-pill);
+  padding: 4px 5px 4px var(--space-3);
   overflow: hidden;
+  transition: border-color var(--duration-fast);
 }
 
-.linkIcon {
-  color: var(--accent);
-  flex-shrink: 0;
+.shareLinkBox:hover {
+  border-color: var(--border-strong);
 }
 
-.linkUrlText {
+.shareLinkUrl {
+  font-family: monospace;
   font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: monospace;
-}
-
-.linkActions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.copyBtn {
   flex: 1;
+  min-width: 0;
+  user-select: all;
+  padding-left: 4px;
 }
 
-.testLinkBtn {
+.shareCopyBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--control-height-sm);
-  height: var(--control-height-sm);
-  background: var(--surface-muted);
+  gap: 6px;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--foreground);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all var(--duration-fast);
+  outline: none;
 }
 
-.testLinkBtn:hover {
-  color: var(--foreground);
+.shareCopyBtn:hover {
+  background: var(--surface-raised);
   border-color: var(--border-strong);
+  color: var(--foreground);
+}
+
+.shareCopyBtn:active {
+  transform: scale(0.97);
+}
+
+.shareCopied {
+  background: var(--accent-subtle) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.shareCheckIcon {
+  color: var(--accent);
 }
 
 .cardFooterActions {
@@ -513,16 +530,22 @@
 .select {
   width: 100%;
   min-height: var(--control-height-md);
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-8) 0 var(--space-3);
   font-family: var(--font-body);
   font-size: var(--text-sm);
   color: var(--foreground) !important;
   background-color: var(--surface) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius-control);
   outline: none;
   cursor: pointer;
   box-shadow: none !important;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   transition: border-color var(--duration-fast);
 }
 
@@ -532,9 +555,10 @@
 }
 
 .select option {
-  background: var(--surface) !important;
-  background-color: var(--surface) !important;
+  background: var(--surface-raised) !important;
+  background-color: var(--surface-raised) !important;
   color: var(--foreground) !important;
+  padding: 8px 12px;
 }
 
 .noticeSuccess {
