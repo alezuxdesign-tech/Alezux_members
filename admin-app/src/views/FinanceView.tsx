@@ -39,14 +39,13 @@ import {
 } from "../services/api";
 import styles from "./FinanceView.module.css";
 
-type FinanceTab = "planes" | "ventas" | "suscripciones" | "configuracion";
+type FinanceTab = "planes" | "ventas" | "suscripciones";
 type PlanModalTab = "general" | "reglas";
 
 const TABS: SegmentOption<FinanceTab>[] = [
   { value: "planes", label: "Planes de Pago" },
   { value: "ventas", label: "Historial de Ventas" },
   { value: "suscripciones", label: "Suscripciones & Cuotas" },
-  { value: "configuracion", label: "Pasarela & Stripe" },
 ];
 
 const PLAN_MODAL_TABS: SegmentOption<PlanModalTab>[] = [
@@ -88,6 +87,7 @@ export function FinanceView() {
     stripe_secret_key: "",
     webhook_url: "",
   });
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -410,7 +410,10 @@ export function FinanceView() {
     await api.saveFinanceSettings(settings);
     setIsSavingSettings(false);
     setSettingsNotice("Configuración de Stripe guardada con éxito.");
-    setTimeout(() => setSettingsNotice(null), 3500);
+    setTimeout(() => {
+      setSettingsNotice(null);
+      setIsSettingsModalOpen(false);
+    }, 1200);
   };
 
   const handleCopyWebhook = () => {
@@ -464,8 +467,8 @@ export function FinanceView() {
           </p>
         </div>
         <div className={styles.headerActions}>
-          <Button variant="secondary" onClick={() => setActiveTab("configuracion")}>
-            <Settings size={16} /> Pasarela Stripe
+          <Button variant="secondary" onClick={() => setIsSettingsModalOpen(true)}>
+            <Settings size={16} /> Configuración
           </Button>
           <Button variant="primary" onClick={handleOpenCreateModal}>
             <Plus size={16} /> Crear Nuevo Plan
@@ -884,76 +887,81 @@ export function FinanceView() {
       )}
 
       {/* ============================================================== */}
-      {/* PESTAÑA 4: CONFIGURACIÓN PASARELA STRIPE */}
+      {/* MODAL DE CONFIGURACIÓN DE PASARELA STRIPE */}
       {/* ============================================================== */}
-      {activeTab === "configuracion" && (
-        <div className={styles.settingsCard}>
-          <div className={styles.settingsHeader}>
-            <h3 className={styles.settingsTitle}>Credenciales de Pasarela Stripe</h3>
-            <p className={styles.settingsDesc}>
-              Conecta tu cuenta de Stripe para procesar cobros automáticos con tarjeta, suscripciones en cuotas y pagos únicos.
-            </p>
-          </div>
-
-          {settingsNotice && (
-            <div className={styles.noticeSuccess}>
-              <Check size={16} />
-              <span>{settingsNotice}</span>
-            </div>
-          )}
-
-          <div className={styles.formGroup}>
-            <Input
-              label="Stripe Publishable Key (Clave Pública)"
-              placeholder="pk_test_... o pk_live_..."
-              value={settings.stripe_public_key}
-              onChange={(e) => setSettings({ ...settings, stripe_public_key: e.target.value })}
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <div className={styles.passwordField}>
-              <Input
-                label="Stripe Secret Key (Clave Secreta)"
-                type={showSecretKey ? "text" : "password"}
-                placeholder="sk_test_... o sk_live_..."
-                value={settings.stripe_secret_key}
-                onChange={(e) => setSettings({ ...settings, stripe_secret_key: e.target.value })}
-              />
-              <button
-                type="button"
-                className={styles.eyeToggleBtn}
-                onClick={() => setShowSecretKey(!showSecretKey)}
-                aria-label="Mostrar u ocultar clave secreta"
-              >
-                {showSecretKey ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>URL del Webhook de Stripe (Para tu Dashboard de Stripe)</label>
-            <div className={styles.webhookBox}>
-              <span className={styles.webhookText}>
-                {settings.webhook_url || `${window.location.origin}/?alezux_webhook=stripe`}
-              </span>
-              <Button variant="secondary" size="sm" onClick={handleCopyWebhook}>
-                {copiedWebhook ? <Check size={14} /> : <Copy size={14} />}
-                {copiedWebhook ? "Copiado" : "Copiar"}
-              </Button>
-            </div>
-            <p className={styles.settingsDesc}>
-              Añade esta URL en tu Stripe Dashboard en <em>Desarrolladores → Webhooks</em> para que las suscripciones y accesos se activen de forma instantánea al pagar.
-            </p>
-          </div>
-
-          <div>
-            <Button variant="primary" loading={isSavingSettings} onClick={handleSaveSettings}>
-              Guardar Configuración de Stripe
+      <Modal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        title="Configuración de Pasarela Stripe"
+        description="Conecta tu cuenta de Stripe para procesar cobros automáticos con tarjeta, suscripciones en cuotas y pagos únicos."
+        maxWidth="620px"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsSettingsModalOpen(false)}>
+              Cancelar
             </Button>
+            <Button
+              variant="primary"
+              loading={isSavingSettings}
+              onClick={handleSaveSettings}
+            >
+              Guardar Configuración
+            </Button>
+          </>
+        }
+      >
+        {settingsNotice && (
+          <div className={styles.noticeSuccess} style={{ marginBottom: "var(--space-4)" }}>
+            <Check size={16} />
+            <span>{settingsNotice}</span>
+          </div>
+        )}
+
+        <div className={styles.formGroup}>
+          <Input
+            label="Stripe Publishable Key (Clave Pública)"
+            placeholder="pk_test_... o pk_live_..."
+            value={settings.stripe_public_key}
+            onChange={(e) => setSettings({ ...settings, stripe_public_key: e.target.value })}
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <div className={styles.passwordField}>
+            <Input
+              label="Stripe Secret Key (Clave Secreta)"
+              type={showSecretKey ? "text" : "password"}
+              placeholder="sk_test_... o sk_live_..."
+              value={settings.stripe_secret_key}
+              onChange={(e) => setSettings({ ...settings, stripe_secret_key: e.target.value })}
+            />
+            <button
+              type="button"
+              className={styles.eyeToggleBtn}
+              onClick={() => setShowSecretKey(!showSecretKey)}
+              aria-label="Mostrar u ocultar clave secreta"
+            >
+              {showSecretKey ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
           </div>
         </div>
-      )}
+
+        <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+          <label className={styles.label}>URL del Webhook de Stripe (Para tu Dashboard de Stripe)</label>
+          <div className={styles.webhookBox}>
+            <span className={styles.webhookText}>
+              {settings.webhook_url || `${window.location.origin}/?alezux_webhook=stripe`}
+            </span>
+            <Button variant="secondary" size="sm" onClick={handleCopyWebhook}>
+              {copiedWebhook ? <Check size={14} /> : <Copy size={14} />}
+              {copiedWebhook ? "Copiado" : "Copiar"}
+            </Button>
+          </div>
+          <p className={styles.settingsDesc} style={{ marginTop: "6px" }}>
+            Añade esta URL en tu Stripe Dashboard en <em>Desarrolladores → Webhooks</em> para que las suscripciones y accesos se activen de forma instantánea al pagar.
+          </p>
+        </div>
+      </Modal>
 
       {/* ============================================================== */}
       {/* MODAL PARA CREAR NUEVO PLAN CON REGLAS DE LIBERACIÓN */}
