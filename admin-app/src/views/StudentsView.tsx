@@ -13,6 +13,9 @@ import {
   Sparkles,
   AlertCircle,
   Mail,
+  CheckCircle2,
+  Clock,
+  Ban,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -23,16 +26,20 @@ import { SegmentedControl, SegmentOption } from "../components/arc/segmented-con
 import { api, Student, Course } from "../services/api";
 import styles from "./StudentsView.module.css";
 
-const MANAGE_STATUS_OPTIONS: SegmentOption<"active" | "inactive" | "blocked">[] = [
-  { value: "active", label: "Activo" },
-  { value: "inactive", label: "Inactivo" },
-  { value: "blocked", label: "Bloqueado" },
+const STATUS_ITEMS = [
+  { value: "active" as const, label: "Activo", icon: <CheckCircle2 size={15} /> },
+  { value: "inactive" as const, label: "Inactivo", icon: <Clock size={15} /> },
+  { value: "blocked" as const, label: "Bloqueado", icon: <Ban size={15} /> },
 ];
 
-const PWD_MODE_OPTIONS: SegmentOption<"keep" | "manual" | "auto">[] = [
-  { value: "keep", label: "Mantener actual" },
-  { value: "manual", label: "Cambiar manualmente" },
-  { value: "auto", label: "Generar y enviar por correo" },
+const CREATE_STATUS_ITEMS = [
+  { value: "active" as const, label: "Activo", icon: <CheckCircle2 size={15} /> },
+  { value: "inactive" as const, label: "Inactivo", icon: <Clock size={15} /> },
+];
+
+const PWD_MODE_OPTIONS: SegmentOption<"manual" | "auto">[] = [
+  { value: "manual", label: "Cambiar Manualmente", icon: <Key size={14} /> },
+  { value: "auto", label: "Cambiar Automáticamente", icon: <Sparkles size={14} /> },
 ];
 
 const CREATE_PWD_MODE_OPTIONS: SegmentOption<"auto" | "manual">[] = [
@@ -52,12 +59,14 @@ export function StudentsView() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editStatus, setEditStatus] = useState<"active" | "inactive" | "blocked">("active");
-  const [editPasswordMode, setEditPasswordMode] = useState<"keep" | "manual" | "auto">("keep");
+  const [editPasswordMode, setEditPasswordMode] = useState<"manual" | "auto">("manual");
   const [editManualPassword, setEditManualPassword] = useState("");
   const [editSendEmail, setEditSendEmail] = useState(true);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [editCourses, setEditCourses] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isResettingAuto, setIsResettingAuto] = useState(false);
+  const [autoResetSuccess, setAutoResetSuccess] = useState(false);
   const [manageFeedback, setManageFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Modal de Crear Nuevo Alumno
@@ -86,10 +95,12 @@ export function StudentsView() {
     setEditName(student.name);
     setEditEmail(student.email);
     setEditStatus(student.status);
-    setEditPasswordMode("keep");
+    setEditPasswordMode("manual");
     setEditManualPassword("");
     setEditSendEmail(true);
     setShowEditPassword(false);
+    setIsResettingAuto(false);
+    setAutoResetSuccess(false);
     setEditCourses([...student.enabledCourseIds]);
     setManageFeedback(null);
   };
@@ -102,6 +113,43 @@ export function StudentsView() {
     }
   };
 
+  // Botón interior para generar y enviar contraseña automáticamente
+  const handleTriggerAutoPasswordReset = async () => {
+    if (!selectedStudent) return;
+    setIsResettingAuto(true);
+    setAutoResetSuccess(false);
+    setManageFeedback(null);
+
+    const res = await api.updateStudent(selectedStudent.id, {
+      name: editName.trim(),
+      email: editEmail.trim(),
+      status: editStatus,
+      passwordMode: "auto",
+      enabledCourseIds: editCourses,
+    });
+
+    setIsResettingAuto(false);
+
+    if (res.success) {
+      setAutoResetSuccess(true);
+      if (res.student) {
+        setStudents((prev) => prev.map((s) => (s.id === selectedStudent.id ? res.student! : s)));
+        setSelectedStudent(res.student);
+      }
+      setManageFeedback({
+        type: "success",
+        text: `Contraseña generada y enviada a ${editEmail || selectedStudent.email} con éxito.`,
+      });
+      setTimeout(() => setAutoResetSuccess(false), 5000);
+    } else {
+      setManageFeedback({
+        type: "error",
+        text: res.message || "Error al generar y enviar contraseña.",
+      });
+    }
+  };
+
+  // Guardar cambios generales del estudiante
   const handleSaveStudent = async () => {
     if (!selectedStudent) return;
     if (!editName.trim() || !editEmail.trim()) {
@@ -109,12 +157,15 @@ export function StudentsView() {
       return;
     }
 
-    if (editPasswordMode === "manual" && !editManualPassword.trim()) {
-      setManageFeedback({
-        type: "error",
-        text: "Por favor ingresa una nueva contraseña o selecciona 'Mantener actual'.",
-      });
-      return;
+    let pwdMode: "keep" | "manual" | "auto" = "keep";
+    if (editPasswordMode === "manual") {
+      if (editManualPassword.trim().length > 0) {
+        pwdMode = "manual";
+      } else {
+        pwdMode = "keep";
+      }
+    } else if (editPasswordMode === "auto") {
+      pwdMode = autoResetSuccess ? "keep" : "auto";
     }
 
     setIsSaving(true);
@@ -124,7 +175,7 @@ export function StudentsView() {
       name: editName.trim(),
       email: editEmail.trim(),
       status: editStatus,
-      passwordMode: editPasswordMode,
+      passwordMode: pwdMode,
       password: editManualPassword,
       sendEmail: editSendEmail,
       enabledCourseIds: editCourses,
@@ -424,15 +475,57 @@ export function StudentsView() {
                   />
                 </div>
 
+                {/* EXPANDING BUTTON GROUP PARA ESTADO DE LA CUENTA */}
                 <div className={styles.formGridFull}>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Estado de la Cuenta</label>
-                    <SegmentedControl<"active" | "inactive" | "blocked">
-                      options={MANAGE_STATUS_OPTIONS}
-                      value={editStatus}
-                      onChange={setEditStatus}
-                      size="sm"
-                    />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
+                      <label className={styles.label}>Estado de la Cuenta</label>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        Actualmente:{" "}
+                        <strong
+                          style={{
+                            color:
+                              editStatus === "active"
+                                ? "#4ade80"
+                                : editStatus === "inactive"
+                                ? "#fbbf24"
+                                : "#f87171",
+                          }}
+                        >
+                          {editStatus === "active"
+                            ? "Activo"
+                            : editStatus === "inactive"
+                            ? "Inactivo"
+                            : "Bloqueado"}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className={styles.expandingButtonGroup} role="radiogroup" aria-label="Estado de la cuenta">
+                      {STATUS_ITEMS.map((item) => {
+                        const isSelected = editStatus === item.value;
+                        return (
+                          <button
+                            key={item.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            className={[
+                              styles.expandingBtn,
+                              isSelected ? styles.expandingBtnActive : "",
+                              isSelected ? styles[`expandingBtnActive_${item.value}`] : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            onClick={() => setEditStatus(item.value)}
+                          >
+                            {item.icon}
+                            <span>{item.label}</span>
+                            {isSelected && <span className={styles.activeDot} />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -442,22 +535,16 @@ export function StudentsView() {
                 <div className={styles.sectionHeader}>
                   <h4 className={styles.sectionTitle}>Seguridad & Contraseña</h4>
                   <p className={styles.sectionSubtitle}>
-                    Cambia la contraseña de forma manual o genérala automáticamente y envíala por correo.
+                    Modifica la contraseña manualmente o genérala automáticamente y envíala al correo del alumno.
                   </p>
                 </div>
 
-                <SegmentedControl<"keep" | "manual" | "auto">
+                <SegmentedControl<"manual" | "auto">
                   options={PWD_MODE_OPTIONS}
                   value={editPasswordMode}
                   onChange={setEditPasswordMode}
                   size="sm"
                 />
-
-                {editPasswordMode === "keep" && (
-                  <p className={styles.switchDesc}>
-                    La contraseña actual del alumno no sufrirá ninguna modificación al guardar.
-                  </p>
-                )}
 
                 {editPasswordMode === "manual" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
@@ -468,7 +555,7 @@ export function StudentsView() {
                           type={showEditPassword ? "text" : "password"}
                           value={editManualPassword}
                           onChange={(e) => setEditManualPassword(e.target.value)}
-                          placeholder="Escribe la nueva contraseña segura..."
+                          placeholder="Escribe la nueva contraseña (deja vacío para no cambiarla)..."
                         />
                         <button
                           type="button"
@@ -479,27 +566,53 @@ export function StudentsView() {
                           {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
+                      <span className={styles.switchDesc}>
+                        Deja este campo en blanco si no deseas modificar la contraseña actual del estudiante.
+                      </span>
                     </div>
 
-                    <div className={styles.switchRow}>
-                      <div className={styles.switchLabel}>
-                        <span className={styles.switchTitle}>Enviar nueva clave al correo del alumno</span>
-                        <span className={styles.switchDesc}>
-                          Utiliza la plantilla de correo de Marketing (admin_reset_password) para notificar al estudiante.
-                        </span>
+                    {editManualPassword.trim().length > 0 && (
+                      <div className={styles.switchRow}>
+                        <div className={styles.switchLabel}>
+                          <span className={styles.switchTitle}>Enviar nueva clave al correo del alumno</span>
+                          <span className={styles.switchDesc}>
+                            Utiliza la plantilla de correo de Marketing (admin_reset_password) para notificar al estudiante.
+                          </span>
+                        </div>
+                        <Switch checked={editSendEmail} onCheckedChange={setEditSendEmail} />
                       </div>
-                      <Switch checked={editSendEmail} onCheckedChange={setEditSendEmail} />
-                    </div>
+                    )}
                   </div>
                 )}
 
                 {editPasswordMode === "auto" && (
-                  <div className={styles.noticeBanner}>
-                    <Sparkles size={18} className={styles.noticeBannerIcon} />
-                    <div>
-                      <strong>Generación & Envío Automático:</strong>
-                      <br />
-                      Al presionar <em>Guardar Cambios</em>, el sistema generará una contraseña segura aleatoria de 12 caracteres y se la enviará automáticamente al correo <strong>{editEmail || "del alumno"}</strong> utilizando la plantilla de correo <em>Reset por Admin (admin_reset_password)</em> del módulo de Marketing.
+                  <div className={styles.autoPasswordContainer}>
+                    <div className={styles.noticeBanner}>
+                      <Sparkles size={18} className={styles.noticeBannerIcon} />
+                      <div>
+                        <strong>Generación & Envío Automático:</strong>
+                        <br />
+                        El sistema generará una contraseña segura aleatoria de 12 caracteres y se la enviará de inmediato al correo <strong>{editEmail || selectedStudent.email}</strong> utilizando la plantilla de correo <em>Reset por Admin (admin_reset_password)</em> del módulo de Marketing.
+                      </div>
+                    </div>
+
+                    <div className={styles.autoActionRow}>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        loading={isResettingAuto}
+                        onClick={handleTriggerAutoPasswordReset}
+                      >
+                        <Mail size={15} />
+                        Generar y Enviar Nueva Contraseña
+                      </Button>
+
+                      {autoResetSuccess && (
+                        <span className={styles.successMessage}>
+                          <Check size={14} /> Contraseña enviada con éxito a {editEmail || selectedStudent.email}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -613,13 +726,45 @@ export function StudentsView() {
 
                 <div className={styles.formGridFull}>
                   <div className={styles.formGroup}>
-                    <label className={styles.label}>Estado Inicial</label>
-                    <SegmentedControl<"active" | "inactive" | "blocked">
-                      options={MANAGE_STATUS_OPTIONS}
-                      value={newStatus}
-                      onChange={setNewStatus}
-                      size="sm"
-                    />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
+                      <label className={styles.label}>Estado Inicial</label>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        Actualmente:{" "}
+                        <strong
+                          style={{
+                            color: newStatus === "active" ? "#4ade80" : "#fbbf24",
+                          }}
+                        >
+                          {newStatus === "active" ? "Activo" : "Inactivo"}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className={styles.expandingButtonGroup} role="radiogroup" aria-label="Estado inicial">
+                      {CREATE_STATUS_ITEMS.map((item) => {
+                        const isSelected = newStatus === item.value;
+                        return (
+                          <button
+                            key={item.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            className={[
+                              styles.expandingBtn,
+                              isSelected ? styles.expandingBtnActive : "",
+                              isSelected ? styles[`expandingBtnActive_${item.value}`] : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            onClick={() => setNewStatus(item.value)}
+                          >
+                            {item.icon}
+                            <span>{item.label}</span>
+                            {isSelected && <span className={styles.activeDot} />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
