@@ -6,7 +6,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$has_arc_bundle = file_exists( ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.js' );
+$dist_css = ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.css';
+$dist_js  = ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.js';
+$has_arc_bundle = file_exists( $dist_js );
+$js_ver  = $has_arc_bundle ? filemtime( $dist_js ) : ALEZUX_MEMBERS_VERSION;
+$css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : ALEZUX_MEMBERS_VERSION;
 ?>
 
 <div id="crezca-admin-root">
@@ -17,6 +21,21 @@ $has_arc_bundle = file_exists( ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboa
     <style>@keyframes crezca-spin { to { transform: rotate(360deg); } }</style>
   </div>
 </div>
+
+<?php if ( $has_arc_bundle ) : ?>
+<link rel="stylesheet" id="crezca-direct-arc-css" href="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.css?v=' . $css_ver ); ?>">
+<script id="crezca-direct-admin-data">
+  window.crezca_admin_data = <?php echo json_encode([
+    'root_url'        => esc_url_raw( rest_url( 'crezca/v1/' ) ),
+    'legacy_root_url' => esc_url_raw( rest_url( 'alezux/v1/' ) ),
+    'wp_admin_url'    => esc_url_raw( admin_url( 'index.php' ) ),
+    'nonce'           => wp_create_nonce( 'wp_rest' ),
+    'ajax_url'        => admin_url( 'admin-ajax.php' ),
+  ]); ?>;
+  window.alezux_admin_data = window.crezca_admin_data;
+</script>
+<script id="crezca-direct-arc-js" src="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.js?v=' . $js_ver ); ?>"></script>
+<?php endif; ?>
 
 <?php if ( ! $has_arc_bundle ) : ?>
 <style>

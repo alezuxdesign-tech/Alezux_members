@@ -95,6 +95,8 @@ function mountApp() {
 
   if (!(container as any).__crezcaRootMounted) {
     (container as any).__crezcaRootMounted = true;
+    console.log("🚀 [Crezca] Crezca root container detected. Initializing React 18...");
+    container.innerHTML = "";
     const root = ReactDOM.createRoot(container);
     root.render(
       <React.StrictMode>
@@ -103,6 +105,7 @@ function mountApp() {
         </ErrorBoundary>
       </React.StrictMode>
     );
+    console.log("✅ [Crezca] React dashboard mounted successfully.");
   }
 }
 
@@ -112,6 +115,5 @@ if (document.readyState === "loading") {
   mountApp();
 }
 
-// Reintentos automáticos por si el script se ejecutó asíncronamente antes de la inyección del DOM
-setTimeout(mountApp, 60);
-setTimeout(mountApp, 300);
+setTimeout(mountApp, 50);
+setTimeout(mountApp, 250);
