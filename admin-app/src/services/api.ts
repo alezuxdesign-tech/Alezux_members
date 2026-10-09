@@ -33,6 +33,27 @@ export interface Student {
   enabledCourseIds: number[];
 }
 
+export interface CreateStudentPayload {
+  name: string;
+  email: string;
+  status?: "active" | "inactive" | "blocked";
+  passwordMode: "auto" | "manual";
+  password?: string;
+  planName?: string;
+  enabledCourseIds?: number[];
+  sendWelcomeEmail?: boolean;
+}
+
+export interface UpdateStudentPayload {
+  name?: string;
+  email?: string;
+  status?: "active" | "inactive" | "blocked";
+  passwordMode?: "keep" | "manual" | "auto";
+  password?: string;
+  sendEmail?: boolean;
+  enabledCourseIds?: number[];
+}
+
 export interface CourseTopic {
   id: string;
   title: string;
@@ -769,6 +790,90 @@ class ApiService {
       console.warn("API Error toggling access:", e);
     }
     return true;
+  }
+
+  async createStudent(payload: CreateStudentPayload): Promise<{ success: boolean; student?: Student; message?: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}students`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          return data;
+        } else {
+          return { success: false, message: data.message || "Error al crear estudiante" };
+        }
+      }
+    } catch (e: any) {
+      console.warn("API Error creating student:", e);
+      return { success: false, message: e?.message || "Error de conexión" };
+    }
+
+    // Mock fallback
+    const newStudent: Student = {
+      id: Date.now(),
+      name: payload.name || "Nuevo Alumno",
+      email: payload.email,
+      avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
+      joinedDate: new Date().toLocaleDateString("es-ES"),
+      status: payload.status || "active",
+      planName: payload.planName || "Acceso Manual",
+      enabledCourseIds: payload.enabledCourseIds || [],
+    };
+    MOCK_STUDENTS.unshift(newStudent);
+    return {
+      success: true,
+      student: newStudent,
+      message: "Alumno creado exitosamente (Modo Demo)." + (payload.passwordMode === "auto" ? " Se simula el envío del correo de bienvenida con credenciales." : ""),
+    };
+  }
+
+  async updateStudent(id: number, payload: UpdateStudentPayload): Promise<{ success: boolean; student?: Student; message?: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}students/${id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          return data;
+        } else {
+          return { success: false, message: data.message || "Error al actualizar estudiante" };
+        }
+      }
+    } catch (e: any) {
+      console.warn("API Error updating student:", e);
+      return { success: false, message: e?.message || "Error de conexión" };
+    }
+
+    // Mock fallback
+    const idx = MOCK_STUDENTS.findIndex((s) => s.id === id);
+    if (idx !== -1) {
+      MOCK_STUDENTS[idx] = {
+        ...MOCK_STUDENTS[idx],
+        name: payload.name !== undefined ? payload.name : MOCK_STUDENTS[idx].name,
+        email: payload.email !== undefined ? payload.email : MOCK_STUDENTS[idx].email,
+        status: payload.status !== undefined ? payload.status : MOCK_STUDENTS[idx].status,
+        enabledCourseIds: payload.enabledCourseIds !== undefined ? payload.enabledCourseIds : MOCK_STUDENTS[idx].enabledCourseIds,
+      };
+      return {
+        success: true,
+        student: MOCK_STUDENTS[idx],
+        message: "Estudiante actualizado correctamente." + (payload.passwordMode === "auto" ? " Se simuló el envío de la nueva contraseña por correo." : ""),
+      };
+    }
+    return { success: true, message: "Estudiante actualizado" };
   }
 
   // --- FINANCE ---

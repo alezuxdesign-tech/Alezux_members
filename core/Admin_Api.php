@@ -47,8 +47,21 @@ class Admin_Api {
 
 			// Estudiantes & Accesos
 			register_rest_route( $namespace, '/students', [
-				'methods'             => 'GET',
-				'callback'            => [ $this, 'get_students' ],
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_students' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'create_student' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/students/(?P<id>\d+)', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'update_student' ],
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
@@ -470,6 +483,277 @@ class Admin_Api {
 		return rest_ensure_response( [
 			'success' => true,
 			'message' => 'Acceso a curso actualizado.',
+		] );
+	}
+
+	/**
+	 * Enviar correo a estudiante usando el motor de Marketing de Alezux
+	 */
+	public function send_student_email( $type, $user_id, $extra_data = [] ) {
+		$user = get_user_by( 'ID', $user_id );
+		if ( ! $user || ! is_email( $user->user_email ) ) {
+			return false;
+		}
+
+		if ( class_exists( '\Alezux_Members\Modules\Marketing\Marketing' ) ) {
+			try {
+				$engine = \Alezux_Members\Modules\Marketing\Marketing::get_instance()->get_engine();
+				if ( $engine && method_exists( $engine, 'send_email' ) ) {
+					$data = array_merge( [ 'user' => $user ], $extra_data );
+					return $engine->send_email( $type, $user->user_email, $data, false );
+				}
+			} catch ( \Exception $e ) {
+				error_log( 'Alezux Marketing Send Error: ' . $e->getMessage() );
+			}
+		}
+
+		// Fallback por si el motor de marketing no estuviera disponible
+		$site_name = get_bloginfo( 'name' );
+		$subject = ( $type === 'admin_reset_password' ) ? "Tu contraseña ha sido restablecida - {$site_name}" : "Bienvenido a {$site_name} - Tus Credenciales";
+		$pwd = $extra_data['password'] ?? ( $extra_data['new_password'] ?? '' );
+		$message = "Hola {$user->display_name},\n\n";
+		if ( $type === 'admin_reset_password' ) {
+			$message .= "Un administrador ha actualizado tus credenciales de acceso.\n\nNueva contraseña: {$pwd}\n\nIngresa aquí: " . wp_login_url();
+		} else {
+			$message .= "Tu cuenta ha sido creada exitosamente.\n\nUsuario: {$user->user_login}\nContraseña: {$pwd}\n\nIngresa aquí: " . wp_login_url();
+		}
+		return wp_mail( $user->user_email, $subject, $message );
+	}
+
+	/**
+	 * Crear nuevo estudiante
+	 */
+	public function create_student( $request ) {
+		$params = $request->get_json_params();
+
+		$name  = sanitize_text_field( $params['name'] ?? '' );
+		$email = sanitize_email( $params['email'] ?? '' );
+
+		if ( empty( $email ) || ! is_email( $email ) ) {
+			return new \WP_Error( 'invalid_email', 'El correo electrónico proporcionado no es válido.', [ 'status' => 400 ] );
+		}
+
+		if ( email_exists( $email ) ) {
+			return new \WP_Error( 'email_exists', 'Ya existe un usuario registrado con este correo electrónico.', [ 'status' => 400 ] );
+		}
+
+		// Generar username a partir del email
+		$base_username = sanitize_user( current( explode( '@', $email ) ), true );
+		$username = ! empty( $base_username ) ? $base_username : 'alumno';
+		$i = 1;
+		while ( username_exists( $username ) ) {
+			$username = $base_username . $i;
+			$i++;
+		}
+
+		$password_mode = $params['passwordMode'] ?? 'auto';
+		$password = '';
+		if ( $password_mode === 'manual' && ! empty( $params['password'] ) ) {
+			$password = trim( $params['password'] );
+		} else {
+			$password = wp_generate_password( 12, true, false );
+		}
+
+		$user_id = wp_create_user( $username, $password, $email );
+		if ( is_wp_error( $user_id ) ) {
+			return new \WP_Error( 'create_failed', $user_id->get_error_message(), [ 'status' => 500 ] );
+		}
+
+		// Actualizar nombres y rol
+		$name_parts = explode( ' ', $name, 2 );
+		$first_name = $name_parts[0] ?? $name;
+		$last_name  = $name_parts[1] ?? '';
+
+		wp_update_user( [
+			'ID'           => $user_id,
+			'display_name' => ! empty( $name ) ? $name : $username,
+			'first_name'   => $first_name,
+			'last_name'    => $last_name,
+			'role'         => 'subscriber',
+		] );
+
+		// Estado
+		$status = $params['status'] ?? 'active';
+		update_user_meta( $user_id, 'alezux_is_blocked', ( $status === 'blocked' ) ? 1 : 0 );
+		update_user_meta( $user_id, '_alezux_plan_name', sanitize_text_field( $params['planName'] ?? 'Acceso Manual' ) );
+
+		// Cursos
+		$course_ids = isset( $params['enabledCourseIds'] ) && is_array( $params['enabledCourseIds'] )
+			? array_values( array_map( 'intval', $params['enabledCourseIds'] ) )
+			: [];
+		update_user_meta( $user_id, '_alezux_enabled_courses', $course_ids );
+
+		if ( function_exists( 'ld_update_course_access' ) ) {
+			foreach ( $course_ids as $c_id ) {
+				ld_update_course_access( $user_id, $c_id, false );
+			}
+		}
+
+		// Enviar correo de bienvenida si se solicita o si la contraseña fue auto-generada
+		$send_email = ! empty( $params['sendWelcomeEmail'] ) || $password_mode === 'auto';
+		if ( $send_email ) {
+			$course_names = [];
+			foreach ( $course_ids as $c_id ) {
+				$c_post = get_post( $c_id );
+				if ( $c_post ) {
+					$course_names[] = $c_post->post_title;
+				}
+			}
+			$course_title = ! empty( $course_names ) ? implode( ', ', $course_names ) : 'Formaciones Alezux';
+
+			$this->send_student_email( 'student_welcome', $user_id, [
+				'password'     => $password,
+				'course_title' => $course_title,
+				'login_url'    => wp_login_url(),
+			] );
+		}
+
+		return rest_ensure_response( [
+			'success' => true,
+			'message' => 'Alumno creado exitosamente.' . ( $send_email ? ' Se ha enviado el correo con sus credenciales.' : '' ),
+			'student' => [
+				'id'               => $user_id,
+				'name'             => ! empty( $name ) ? $name : $username,
+				'email'            => $email,
+				'avatar'           => get_avatar_url( $user_id, [ 'size' => 80 ] ),
+				'joinedDate'       => date( 'd/m/Y' ),
+				'status'           => $status,
+				'planName'         => sanitize_text_field( $params['planName'] ?? 'Acceso Manual' ),
+				'enabledCourseIds' => $course_ids,
+			],
+		] );
+	}
+
+	/**
+	 * Actualizar estudiante (Información personal, contraseña y cursos)
+	 */
+	public function update_student( $request ) {
+		$student_id = (int) $request['id'];
+		$user = get_user_by( 'ID', $student_id );
+
+		if ( ! $user ) {
+			return new \WP_Error( 'student_not_found', 'Estudiante no encontrado.', [ 'status' => 404 ] );
+		}
+
+		$params = $request->get_json_params();
+
+		// 1. Información personal
+		$userdata = [ 'ID' => $student_id ];
+
+		if ( isset( $params['name'] ) && ! empty( trim( $params['name'] ) ) ) {
+			$name = sanitize_text_field( $params['name'] );
+			$name_parts = explode( ' ', $name, 2 );
+			$userdata['display_name'] = $name;
+			$userdata['first_name']   = $name_parts[0] ?? $name;
+			$userdata['last_name']    = $name_parts[1] ?? '';
+		}
+
+		if ( isset( $params['email'] ) && ! empty( trim( $params['email'] ) ) ) {
+			$new_email = sanitize_email( $params['email'] );
+			if ( ! is_email( $new_email ) ) {
+				return new \WP_Error( 'invalid_email', 'El correo electrónico no es válido.', [ 'status' => 400 ] );
+			}
+			$existing_user = get_user_by( 'email', $new_email );
+			if ( $existing_user && (int) $existing_user->ID !== $student_id ) {
+				return new \WP_Error( 'email_taken', 'El correo electrónico ya está registrado por otro usuario.', [ 'status' => 400 ] );
+			}
+			$userdata['user_email'] = $new_email;
+		}
+
+		if ( count( $userdata ) > 1 ) {
+			$updated = wp_update_user( $userdata );
+			if ( is_wp_error( $updated ) ) {
+				return new \WP_Error( 'update_failed', $updated->get_error_message(), [ 'status' => 500 ] );
+			}
+		}
+
+		// 2. Estado (active, inactive, blocked)
+		if ( isset( $params['status'] ) ) {
+			$status = sanitize_text_field( $params['status'] );
+			update_user_meta( $student_id, 'alezux_is_blocked', ( $status === 'blocked' ) ? 1 : 0 );
+		}
+
+		// 3. Contraseña (manual o automática)
+		$password_mode = $params['passwordMode'] ?? 'keep';
+		$password_changed = false;
+		$new_password = '';
+
+		if ( $password_mode === 'manual' && ! empty( $params['password'] ) ) {
+			$new_password = trim( $params['password'] );
+			wp_set_password( $new_password, $student_id );
+			$password_changed = true;
+
+			// Si el admin marcó enviar por correo
+			if ( ! empty( $params['sendEmail'] ) ) {
+				$this->send_student_email( 'admin_reset_password', $student_id, [
+					'new_password' => $new_password,
+					'password'     => $new_password,
+					'login_url'    => wp_login_url(),
+				] );
+			}
+		} elseif ( $password_mode === 'auto' ) {
+			$new_password = wp_generate_password( 12, true, false );
+			wp_set_password( $new_password, $student_id );
+			$password_changed = true;
+
+			// Enviar automáticamente por correo con plantilla admin_reset_password
+			$this->send_student_email( 'admin_reset_password', $student_id, [
+				'new_password' => $new_password,
+				'password'     => $new_password,
+				'login_url'    => wp_login_url(),
+			] );
+		}
+
+		// 4. Cursos Habilitados (si se envían)
+		if ( isset( $params['enabledCourseIds'] ) && is_array( $params['enabledCourseIds'] ) ) {
+			$new_course_ids = array_values( array_map( 'intval', $params['enabledCourseIds'] ) );
+			$old_course_ids = get_user_meta( $student_id, '_alezux_enabled_courses', true );
+			$old_course_ids = is_array( $old_course_ids ) ? $old_course_ids : [];
+
+			if ( function_exists( 'ld_update_course_access' ) ) {
+				// Remover cursos retirados
+				$to_remove = array_diff( $old_course_ids, $new_course_ids );
+				foreach ( $to_remove as $cid ) {
+					ld_update_course_access( $student_id, $cid, true );
+				}
+				// Agregar cursos nuevos
+				$to_add = array_diff( $new_course_ids, $old_course_ids );
+				foreach ( $to_add as $cid ) {
+					ld_update_course_access( $student_id, $cid, false );
+				}
+			}
+
+			update_user_meta( $student_id, '_alezux_enabled_courses', $new_course_ids );
+		}
+
+		// Obtener estado actualizado
+		$fresh_user = get_user_by( 'ID', $student_id );
+		$is_blocked = (bool) get_user_meta( $student_id, 'alezux_is_blocked', true );
+		$meta_courses = get_user_meta( $student_id, '_alezux_enabled_courses', true );
+		$course_ids = is_array( $meta_courses ) ? $meta_courses : [];
+
+		$msg = 'Información del estudiante actualizada correctamente.';
+		if ( $password_changed ) {
+			if ( $password_mode === 'auto' || ! empty( $params['sendEmail'] ) ) {
+				$msg .= ' Se ha enviado la nueva contraseña a su correo.';
+			} else {
+				$msg .= ' La contraseña ha sido cambiada.';
+			}
+		}
+
+		return rest_ensure_response( [
+			'success' => true,
+			'message' => $msg,
+			'student' => [
+				'id'               => $fresh_user->ID,
+				'name'             => $fresh_user->display_name ?: $fresh_user->user_login,
+				'email'            => $fresh_user->user_email,
+				'avatar'           => get_avatar_url( $fresh_user->ID, [ 'size' => 80 ] ),
+				'joinedDate'       => date( 'd/m/Y', strtotime( $fresh_user->user_registered ) ),
+				'status'           => $is_blocked ? 'blocked' : 'active',
+				'planName'         => get_user_meta( $fresh_user->ID, '_alezux_plan_name', true ) ?: 'Acceso Completo',
+				'enabledCourseIds' => array_values( array_map( 'intval', (array) $course_ids ) ),
+			],
 		] );
 	}
 
