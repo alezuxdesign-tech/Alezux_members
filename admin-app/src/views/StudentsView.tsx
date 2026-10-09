@@ -24,6 +24,7 @@ import { Switch } from "../components/arc/switch/switch";
 import { Input } from "../components/arc/input/input";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
 import { api, Student, Course } from "../services/api";
+import { ModuleSkeleton } from "../components/arc/skeleton";
 import styles from "./StudentsView.module.css";
 
 const STATUS_ITEMS = [
@@ -82,10 +83,17 @@ export function StudentsView() {
   const [newCourses, setNewCourses] = useState<number[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    api.getStudents().then(setStudents);
-    api.getCourses().then(setCourses);
+    Promise.all([api.getStudents(), api.getCourses()])
+      .then(([studentsData, coursesData]) => {
+        setStudents(studentsData);
+        setCourses(coursesData);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   // Abrir Modal de Gestión
@@ -277,6 +285,10 @@ export function StudentsView() {
     const matchesStatus = filterStatus === "all" || student.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  if (isLoading) {
+    return <ModuleSkeleton type="students" />;
+  }
 
   return (
     <div className={styles.container}>

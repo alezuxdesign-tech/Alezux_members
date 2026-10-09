@@ -37,6 +37,7 @@ import {
   SubscriptionItem,
   FinanceSettings,
 } from "../services/api";
+import { ModuleSkeleton } from "../components/arc/skeleton";
 import styles from "./FinanceView.module.css";
 
 type FinanceTab = "planes" | "ventas" | "suscripciones";
@@ -80,6 +81,7 @@ export function FinanceView() {
   const [subsTotal, setSubsTotal] = useState(0);
   const [subsSearch, setSubsSearch] = useState("");
   const [loadingSubs, setLoadingSubs] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Configuración Pasarela
   const [settings, setSettings] = useState<FinanceSettings>({
@@ -157,18 +159,29 @@ export function FinanceView() {
   }, []);
 
   const loadAllData = () => {
-    api.getPlans().then(setPlans);
-    api.getCourses().then((cList) => {
-      setCourses(cList);
-      if (cList.length > 0 && createCourseId === 0) {
-        // Inicializar con el primer curso para facilitar la configuración de reglas
-        setCreateCourseId(cList[0].id);
-        fetchModulesForCreate(cList[0].id);
-      }
-    });
-    loadSales();
-    loadSubscriptions();
-    api.getFinanceSettings().then(setSettings);
+    Promise.all([
+      api.getPlans(),
+      api.getCourses(),
+      api.getSales({ search: salesSearch, status: salesStatus }),
+      api.getSubscriptions({ search: subsSearch }),
+      api.getFinanceSettings(),
+    ])
+      .then(([plansData, cList, salesData, subsData, settingsData]) => {
+        setPlans(plansData);
+        setCourses(cList);
+        if (cList.length > 0 && createCourseId === 0) {
+          setCreateCourseId(cList[0].id);
+          fetchModulesForCreate(cList[0].id);
+        }
+        setSales(salesData.rows);
+        setSalesTotal(salesData.total);
+        setSubscriptions(subsData.rows);
+        setSubsTotal(subsData.total);
+        setSettings(settingsData);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
   const loadSales = () => {
@@ -455,6 +468,10 @@ export function FinanceView() {
       );
     });
   }, [subscriptions, subsSearch]);
+
+  if (isLoading) {
+    return <ModuleSkeleton type="finance" />;
+  }
 
   return (
     <div className={styles.container}>

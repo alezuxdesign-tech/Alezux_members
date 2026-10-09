@@ -1,0 +1,75 @@
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--surface-muted, rgba(255, 255, 255, 0.06));
+  display: inline-block;
+  user-select: none;
+}
+
+/* Shimmer animation bar */
+.skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 20%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.04) 80%,
+    transparent 100%
+  );
+  animation: arcShimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+:global([data-theme="light"]) .skeleton {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+:global([data-theme="light"]) .skeleton::after {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.03) 20%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.03) 80%,
+    transparent 100%
+  );
+}
+
+@keyframes arcShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Variants */
+.text {
+  height: 14px;
+  border-radius: 4px;
+}
+
+.circular {
+  border-radius: 50% !important;
+}
+
+.rectangular {
+  border-radius: 0;
+}
+
+.rounded {
+  border-radius: var(--radius-control, 8px);
+}
+
+.surface {
+  border-radius: var(--radius-surface, 12px);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}

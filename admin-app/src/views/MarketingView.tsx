@@ -25,6 +25,7 @@ import { MetricCard } from "../components/arc/metric-card/metric-card";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
 import { FileDropzone } from "../components/arc/file-dropzone/file-dropzone";
 import { api, MarketingAutomation, MarketingSettings, EmailLogItem } from "../services/api";
+import { ModuleSkeleton } from "../components/arc/skeleton";
 import styles from "./MarketingView.module.css";
 
 type CategoryFilter = "all" | "registro" | "finanzas" | "cursos" | "logros";
@@ -167,6 +168,7 @@ export function MarketingView() {
   const [activeFilter, setActiveFilter] = useState<CategoryFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAuto, setSelectedAuto] = useState<MarketingAutomation | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Switch de modo de vista: Vista Previa vs Editor HTML
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -257,12 +259,14 @@ export function MarketingView() {
   };
 
   useEffect(() => {
-    api.getAutomations().then((data) => {
-      setAutomations(data);
-    });
-    api.getMarketingSettings().then((data) => {
-      setSettings(data);
-    });
+    Promise.all([api.getAutomations(), api.getMarketingSettings()])
+      .then(([data, settingsData]) => {
+        setAutomations(data);
+        setSettings(settingsData);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   const handleToggle = async (id: string, currentEnabled: boolean) => {
@@ -379,6 +383,10 @@ export function MarketingView() {
     { value: "cursos", label: `Cursos (${automations.filter((a) => a.category === "cursos").length})` },
     { value: "logros", label: `Logros (${automations.filter((a) => a.category === "logros").length})` },
   ];
+
+  if (isLoading) {
+    return <ModuleSkeleton type="marketing" />;
+  }
 
   return (
     <div className={styles.container}>

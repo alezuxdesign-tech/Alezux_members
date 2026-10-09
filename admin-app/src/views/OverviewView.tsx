@@ -5,6 +5,7 @@ import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { SegmentedControl } from "../components/arc/segmented-control/segmented-control";
 import { api, DashboardStats } from "../services/api";
+import { ModuleSkeleton } from "../components/arc/skeleton";
 import styles from "./OverviewView.module.css";
 
 interface OverviewViewProps {
@@ -19,7 +20,9 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
     api.getDashboardStats().then(setStats);
   }, []);
 
-  if (!stats) return null;
+  if (!stats) {
+    return <ModuleSkeleton type="overview" />;
+  }
 
   return (
     <div className={styles.container}>

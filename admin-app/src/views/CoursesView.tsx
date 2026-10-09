@@ -15,11 +15,13 @@ import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
 import { Input } from "../components/arc/input/input";
 import { api, Course, CourseSection, CourseLesson } from "../services/api";
+import { ModuleSkeleton } from "../components/arc/skeleton";
 import styles from "./CoursesView.module.css";
 
 export function CoursesView() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Modal para Nuevo Curso
   const [isNewCourseModalOpen, setIsNewCourseModalOpen] = useState(false);
@@ -37,13 +39,17 @@ export function CoursesView() {
   const [draggedLesson, setDraggedLesson] = useState<{ sectionId: string; lessonIndex: number } | null>(null);
 
   useEffect(() => {
-    api.getCourses().then((data) => {
-      setCourses(data);
-      if (data.length > 0 && !selectedCourse) {
-        setSelectedCourse(data[0]);
-        setSections(data[0].sections);
-      }
-    });
+    api.getCourses()
+      .then((data) => {
+        setCourses(data);
+        if (data.length > 0 && !selectedCourse) {
+          setSelectedCourse(data[0]);
+          setSections(data[0].sections);
+        }
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   const handleSelectCourse = (course: Course) => {
@@ -156,6 +162,10 @@ export function CoursesView() {
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
   };
+
+  if (isLoading) {
+    return <ModuleSkeleton type="courses" />;
+  }
 
   return (
     <div className={styles.container}>
