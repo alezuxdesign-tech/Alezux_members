@@ -487,6 +487,16 @@
   }
 }
 
+.logoDropzoneContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.logoUrlInputRow {
+  margin-top: var(--space-1);
+}
+
 .logoPreviewCard {
   display: flex;
   align-items: center;

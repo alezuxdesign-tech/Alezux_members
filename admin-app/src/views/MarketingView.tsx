@@ -20,6 +20,7 @@ import { Switch } from "../components/arc/switch/switch";
 import { Input } from "../components/arc/input/input";
 import { MetricCard } from "../components/arc/metric-card/metric-card";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
+import { FileDropzone } from "../components/arc/file-dropzone/file-dropzone";
 import { api, MarketingAutomation, MarketingSettings } from "../services/api";
 import styles from "./MarketingView.module.css";
 
@@ -708,17 +709,60 @@ export function MarketingView() {
               />
             </div>
 
-            <div className={styles.formGroup}>
-              <Input
-                label="URL del Logotipo Oficial"
-                value={settings.logo_url}
-                onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })}
-                placeholder="https://tudominio.com/wp-content/uploads/logo.png"
-                hint="Se inserta en la cabecera del correo mediante la variable {{logo_url}}."
+            <div className={styles.logoDropzoneContainer}>
+              <label className={styles.label}>Logotipo de la Academia (Cabecera de Correos)</label>
+              <FileDropzone
+                accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
+                multiple={false}
+                maxFiles={1}
+                label="Arrastra el logotipo de tu academia aquí"
+                description="PNG, JPG, SVG o WebP (máx. 10 MB)"
+                dropLabel="Suelta la imagen para subirla"
+                note="Se insertará automáticamente en la cabecera de todas las plantillas."
+                compactAt={1}
+                listPlacement="inside"
+                defaultItems={
+                  settings.logo_url
+                    ? [
+                        {
+                          id: "current-logo",
+                          name: settings.logo_url.split("/").pop() || "logotipo.png",
+                          size: 45 * 1024,
+                          status: "uploaded",
+                          preview: settings.logo_url,
+                        },
+                      ]
+                    : []
+                }
+                onUpload={async (item, { onProgress }) => {
+                  onProgress(20);
+                  if (item.file) {
+                    onProgress(50);
+                    const uploadedUrl = await api.uploadLogo(item.file);
+                    onProgress(100);
+                    if (uploadedUrl) {
+                      setSettings((prev) => ({ ...prev, logo_url: uploadedUrl }));
+                    } else {
+                      throw new Error("No se pudo subir la imagen.");
+                    }
+                  }
+                }}
               />
+
+              <div className={styles.logoUrlInputRow}>
+                <Input
+                  label="O ingresa la URL directa del logotipo:"
+                  value={settings.logo_url}
+                  onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })}
+                  placeholder="https://tudominio.com/wp-content/uploads/logo.png"
+                  sizeVariant="sm"
+                  hint="Variable global para tus plantillas: {{logo_url}}"
+                />
+              </div>
+
               {settings.logo_url && (
                 <div className={styles.logoPreviewCard}>
-                  <span className={styles.logoPreviewLabel}>Vista previa del logo:</span>
+                  <span className={styles.logoPreviewLabel}>Vista previa del logo actual:</span>
                   <img src={settings.logo_url} alt="Logotipo configurado" className={styles.logoImg} />
                 </div>
               )}

@@ -714,6 +714,31 @@ class ApiService {
     }
     return true;
   }
+
+  async uploadLogo(file: File): Promise<string | null> {
+    try {
+      if (this.wpData) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch(`${this.rootUrl}marketing/upload-logo`, {
+          method: "POST",
+          headers: {
+            "X-WP-Nonce": this.nonce,
+          },
+          body: formData,
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json.url) return json.url;
+        }
+      }
+    } catch (e) {
+      console.warn("API Error uploading logo:", e);
+    }
+    return URL.createObjectURL(file);
+  }
 }
 
 export const api = new ApiService();

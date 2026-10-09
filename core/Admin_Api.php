@@ -95,6 +95,12 @@ class Admin_Api {
 				'callback'            => [ $this, 'save_marketing_settings' ],
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
+
+			register_rest_route( $namespace, '/marketing/upload-logo', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'upload_marketing_logo' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
 		}
 	}
 
@@ -675,6 +681,35 @@ class Admin_Api {
 		return rest_ensure_response( [
 			'success' => true,
 			'message' => 'Configuración de marketing guardada correctamente.',
+		] );
+	}
+
+	/**
+	 * Subida de Logotipo de Marketing vía Dropzone o selector
+	 */
+	public function upload_marketing_logo( $request ) {
+		$files = $request->get_file_params();
+		if ( empty( $files['file'] ) && empty( $_FILES['file'] ) ) {
+			return new \WP_Error( 'no_file', 'No se ha proporcionado ningún archivo para subir', [ 'status' => 400 ] );
+		}
+
+		if ( ! function_exists( 'media_handle_upload' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+		}
+
+		$attachment_id = media_handle_upload( 'file', 0 );
+		if ( is_wp_error( $attachment_id ) ) {
+			return new \WP_Error( 'upload_failed', $attachment_id->get_error_message(), [ 'status' => 500 ] );
+		}
+
+		$url = wp_get_attachment_url( $attachment_id );
+		update_option( 'alezux_marketing_logo_url', $url );
+
+		return rest_ensure_response( [
+			'success' => true,
+			'url'     => $url,
 		] );
 	}
 }
