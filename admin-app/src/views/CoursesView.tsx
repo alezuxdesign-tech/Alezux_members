@@ -19,26 +19,19 @@ import {
   Image as ImageIcon,
   ExternalLink,
   Save,
-  BookOpen,
-  DollarSign,
-  CreditCard,
-  Sliders,
-  Settings,
-  Tag
+  BookOpen
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
 import { Input } from "../components/arc/input/input";
-import { Switch } from "../components/arc/switch/switch";
 import { 
   api, 
   Course, 
   CourseSection, 
   CourseLesson, 
   CourseTopic, 
-  CourseFileAttachment,
-  FinancePlan
+  CourseFileAttachment 
 } from "../services/api";
 import { ModuleSkeleton } from "../components/arc/skeleton";
 import { FileDropzone, formatFileSize } from "../components/arc/file-dropzone/file-dropzone";
@@ -51,23 +44,13 @@ interface EditingTopicState {
   topic: CourseTopic;
 }
 
-interface EditingModuleCoverState {
-  sectionId: string;
-  sectionTitle: string;
-  cover: string;
-}
-
 export function CoursesView() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [availablePlans, setAvailablePlans] = useState<FinancePlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Modo de Vista: "grid" (catálogo de tarjetas) | "builder" (página de edición del curso)
   const [viewMode, setViewMode] = useState<"grid" | "builder">("grid");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-
-  // Sub-tab dentro del editor: "curriculum" (módulos y lecciones) | "settings" (configuración general y portadas)
-  const [builderTab, setBuilderTab] = useState<"curriculum" | "settings">("curriculum");
 
   // Filtros de Catálogo
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,15 +62,6 @@ export function CoursesView() {
   const [newDescription, setNewDescription] = useState("");
   const [newThumbnail, setNewThumbnail] = useState("");
   const [isCreatingCourse, setIsCreatingCourse] = useState(false);
-
-  // Estados de Configuración General del Curso en edición
-  const [courseTitle, setCourseTitle] = useState("");
-  const [courseDescription, setCourseDescription] = useState("");
-  const [courseThumbnail, setCourseThumbnail] = useState("");
-  const [courseBanner, setCourseBanner] = useState("");
-  const [coursePrice, setCoursePrice] = useState<number | string>(0);
-  const [courseStatus, setCourseStatus] = useState<"publish" | "draft">("publish");
-  const [courseLinkedPlanId, setCourseLinkedPlanId] = useState<number | null>(null);
 
   // Estado del Constructor del Curso Activo (Builder)
   const [sections, setSections] = useState<CourseSection[]>([]);
@@ -103,14 +77,10 @@ export function CoursesView() {
   const [newFileName, setNewFileName] = useState("");
   const [newFileUrl, setNewFileUrl] = useState("");
 
-  // Modal para Editar Portada de Módulo
-  const [editingModuleCover, setEditingModuleCover] = useState<EditingModuleCoverState | null>(null);
-
   useEffect(() => {
-    Promise.all([api.getCourses(), api.getPlans()])
-      .then(([coursesData, plansData]) => {
-        setCourses(coursesData);
-        setAvailablePlans(plansData);
+    api.getCourses()
+      .then((data) => {
+        setCourses(data);
       })
       .finally(() => {
         setIsLoading(false);
@@ -120,15 +90,7 @@ export function CoursesView() {
   // --- NAVEGACIÓN ENTRE VISTAS ---
   const handleOpenCourseBuilder = (course: Course) => {
     setSelectedCourse(course);
-    setCourseTitle(course.title || "");
-    setCourseDescription(course.description || "");
-    setCourseThumbnail(course.thumbnail || "");
-    setCourseBanner(course.banner || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80");
-    setCoursePrice(course.price ?? 0);
-    setCourseStatus(course.status || "publish");
-    setCourseLinkedPlanId(course.linkedPlanId ?? null);
     setSections(course.sections || []);
-    setBuilderTab("curriculum");
     setSavedSuccess(false);
     setViewMode("builder");
   };
@@ -137,65 +99,10 @@ export function CoursesView() {
     // Si tenemos cambios locales, refrescamos el curso en la lista principal
     if (selectedCourse) {
       setCourses((prev) =>
-        prev.map((c) =>
-          c.id === selectedCourse.id
-            ? {
-                ...c,
-                title: courseTitle,
-                description: courseDescription,
-                thumbnail: courseThumbnail,
-                banner: courseBanner,
-                price: Number(coursePrice) || 0,
-                status: courseStatus,
-                linkedPlanId: courseLinkedPlanId,
-                sections,
-              }
-            : c
-        )
+        prev.map((c) => (c.id === selectedCourse.id ? { ...c, sections } : c))
       );
     }
     setViewMode("grid");
-  };
-
-  // Guardar todos los datos del curso (metadatos + currículum)
-  const handleSaveAllCourse = async () => {
-    if (!selectedCourse) return;
-    setIsSavingCurriculum(true);
-
-    const updatedData: Partial<Course> = {
-      title: courseTitle,
-      description: courseDescription,
-      thumbnail: courseThumbnail,
-      banner: courseBanner,
-      price: Number(coursePrice) || 0,
-      status: courseStatus,
-      linkedPlanId: courseLinkedPlanId,
-      sections,
-    };
-
-    await api.saveCourse(selectedCourse.id, updatedData, sections);
-
-    setSelectedCourse((prev) => (prev ? { ...prev, ...updatedData } : null));
-    setCourses((prev) =>
-      prev.map((c) => (c.id === selectedCourse.id ? { ...c, ...updatedData } : c))
-    );
-
-    setIsSavingCurriculum(false);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3500);
-  };
-
-  // Actualizar portada de módulo
-  const handleUpdateSectionCover = (sectionId: string, cover: string) => {
-    setSections((prev) =>
-      prev.map((s) => (s.id === sectionId ? { ...s, cover } : s))
-    );
-  };
-
-  const handleSaveModuleCoverModal = () => {
-    if (!editingModuleCover) return;
-    handleUpdateSectionCover(editingModuleCover.sectionId, editingModuleCover.cover);
-    setEditingModuleCover(null);
   };
 
   // --- CREACIÓN DE NUEVO CURSO ---
@@ -220,8 +127,6 @@ export function CoursesView() {
     const newSection: CourseSection = {
       id: `sec-${Date.now()}`,
       title: `Nuevo Módulo ${sections.length + 1}`,
-      cover: courseThumbnail || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
-      description: "",
       lessons: [
         {
           id: `top-${Date.now()}`,
@@ -426,29 +331,15 @@ export function CoursesView() {
             </button>
 
             <div className={styles.builderBreadcrumb}>
-              <h2 className={styles.builderCourseName}>{courseTitle || selectedCourse.title}</h2>
+              <h2 className={styles.builderCourseName}>{selectedCourse.title}</h2>
               <div className={styles.builderMetaBadges}>
-                <Badge variant={courseStatus === "publish" ? "success" : "neutral"} size="sm">
-                  {courseStatus === "publish" ? "Habilitado / Publicado" : "Deshabilitado / Borrador"}
+                <Badge variant={selectedCourse.status === "publish" ? "success" : "neutral"} size="sm">
+                  {selectedCourse.status === "publish" ? "Publicado" : "Borrador"}
                 </Badge>
                 <span>&bull;</span>
                 <span>{sections.length} Módulos</span>
                 <span>&bull;</span>
                 <span>{totalTopics} Topics / Lecciones</span>
-                {coursePrice !== undefined && coursePrice !== "" && Number(coursePrice) > 0 && (
-                  <>
-                    <span>&bull;</span>
-                    <span style={{ color: "#38bdf8", fontWeight: 700 }}>${coursePrice} USD</span>
-                  </>
-                )}
-                {courseLinkedPlanId && (
-                  <>
-                    <span>&bull;</span>
-                    <span style={{ color: "#c084fc", fontWeight: 600 }}>
-                      Plan: {availablePlans.find((p) => p.id === courseLinkedPlanId)?.name || `#${courseLinkedPlanId}`}
-                    </span>
-                  </>
-                )}
               </div>
             </div>
           </div>
@@ -456,317 +347,93 @@ export function CoursesView() {
           <div className={styles.builderNavRight}>
             {savedSuccess && (
               <span className={styles.saveAlert}>
-                <Check size={16} /> Cambios guardados correctamente
+                <Check size={16} /> Estructura guardada correctamente
               </span>
             )}
-            {builderTab === "curriculum" && (
-              <Button variant="secondary" onClick={handleAddSection}>
-                <FolderPlus size={16} /> + Módulo
-              </Button>
-            )}
-            <Button variant="primary" loading={isSavingCurriculum} onClick={handleSaveAllCourse}>
-              <Save size={16} /> Guardar Curso
+            <Button variant="secondary" onClick={handleAddSection}>
+              <FolderPlus size={16} /> + Módulo
+            </Button>
+            <Button variant="primary" loading={isSavingCurriculum} onClick={handleSaveCurriculum}>
+              <Save size={16} /> Guardar Estructura
             </Button>
           </div>
         </div>
 
-        {/* Hero Showcase con Banner Panorámico y Portada 16:9 */}
-        <div
-          className={styles.builderHeroBanner}
-          style={{
-            backgroundImage: `url(${courseBanner || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80"})`,
-          }}
-        >
-          <div className={styles.builderHeroOverlay}>
-            <div className={styles.builderHeroLeft}>
-              {/* Portada del curso con hover y preview */}
-              <div
-                className={styles.builderHeroThumbWrapper}
-                onClick={() => setBuilderTab("settings")}
-                title="Clic para cambiar portada y banner en Configuración"
-              >
-                <img
-                  src={courseThumbnail || selectedCourse.thumbnail}
-                  alt={courseTitle}
-                  className={styles.builderHeroThumbImg}
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
-                />
-                <div className={styles.builderHeroThumbOverlay}>
-                  <Edit3 size={13} />
-                  <span>Cambiar</span>
-                </div>
-              </div>
-
-              {/* Información y Badges del Curso */}
-              <div className={styles.builderHeroInfo}>
-                <h3 className={styles.builderHeroTitle}>{courseTitle || selectedCourse.title}</h3>
-                <p className={styles.builderHeroDesc}>
-                  {courseDescription || selectedCourse.description || "Sin descripción asignada para este curso."}
-                </p>
-                <div className={styles.builderHeroBadges}>
-                  <Badge variant={courseStatus === "publish" ? "success" : "neutral"} size="sm">
-                    {courseStatus === "publish" ? "Habilitado" : "Borrador"}
-                  </Badge>
-                  <span className={styles.heroPriceTag}>
-                    <DollarSign size={13} /> {coursePrice && Number(coursePrice) > 0 ? `${coursePrice} USD` : "Gratis / Incluido"}
-                  </span>
-                  {courseLinkedPlanId ? (
-                    <span className={styles.heroPlanTag}>
-                      <CreditCard size={13} /> Plan: {availablePlans.find((p) => p.id === courseLinkedPlanId)?.name || `#${courseLinkedPlanId}`}
-                    </span>
-                  ) : (
-                    <span className={styles.heroPlanTag} style={{ opacity: 0.8 }}>
-                      <Tag size={12} /> Sin Plan Vinculado
-                    </span>
-                  )}
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
-                    {sections.length} Módulos &bull; {totalTopics} Lecciones
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.builderHeroActions}>
-              <Button
-                variant={builderTab === "settings" ? "secondary" : "primary"}
-                onClick={() => setBuilderTab(builderTab === "settings" ? "curriculum" : "settings")}
-              >
-                <Settings size={15} />
-                {builderTab === "settings" ? "Ver Módulos" : "Configurar Portada, Banner y Precio"}
-              </Button>
-            </div>
+        {/* Banner con Miniatura y Resumen del Curso */}
+        <div className={styles.courseSummaryBanner}>
+          <img
+            src={selectedCourse.thumbnail}
+            alt={selectedCourse.title}
+            className={styles.bannerThumb}
+          />
+          <div className={styles.bannerDetails}>
+            <h3 className={styles.bannerTitle}>{selectedCourse.title}</h3>
+            <p className={styles.bannerDesc}>
+              {selectedCourse.description || "Sin descripción asignada para este curso."}
+            </p>
           </div>
         </div>
 
-        {/* Sub-Tabs de Navegación entre Módulos y Ajustes Generales */}
-        <div className={styles.builderSubTabsBar}>
-          <div className={styles.builderTabs}>
-            <button
-              type="button"
-              className={[
-                styles.builderTabBtn,
-                builderTab === "curriculum" ? styles.builderTabBtnActive : "",
-              ].join(" ")}
-              onClick={() => setBuilderTab("curriculum")}
-            >
-              <Layers size={16} /> Estructura de Módulos ({sections.length})
-            </button>
-            <button
-              type="button"
-              className={[
-                styles.builderTabBtn,
-                builderTab === "settings" ? styles.builderTabBtnActive : "",
-              ].join(" ")}
-              onClick={() => setBuilderTab("settings")}
-            >
-              <Settings size={16} /> Configuración General y Portadas
-            </button>
-          </div>
+        {/* Lista de Módulos (Secciones) */}
+        <div className={styles.modulesContainer}>
+          {sections.map((section, sIdx) => {
+            const isCollapsed = !!collapsedSections[section.id];
+            const topicsCount = section.lessons ? section.lessons.length : 0;
 
-          <div style={{ display: "flex", gap: "8px" }}>
-            {builderTab === "curriculum" && (
-              <Button variant="secondary" size="sm" onClick={handleAddSection}>
-                <Plus size={14} /> Nuevo Módulo
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* =========================================================================
-            PESTAÑA 1: CONFIGURACIÓN GENERAL Y PORTADAS DEL CURSO
-           ========================================================================= */}
-        {builderTab === "settings" && (
-          <div className={styles.courseSettingsCard}>
-            <div className={styles.settingsSectionHeader}>
-              <div>
-                <h3 className={styles.settingsTitle}>Configuración General y Portadas del Curso</h3>
-                <p className={styles.settingsDesc}>
-                  Cambia la imagen de portada, la imagen de banner, el nombre, la descripción, el precio, el estado de habilitación y la vinculación a planes.
-                </p>
-              </div>
-              <Button variant="primary" loading={isSavingCurriculum} onClick={handleSaveAllCourse}>
-                <Save size={16} /> Guardar Cambios
-              </Button>
-            </div>
-
-            {/* 1. SECCIÓN DE IMÁGENES: PORTADA Y BANNER */}
-            <div className={styles.settingsGroup}>
-              <h4 className={styles.settingsGroupTitle}>
-                <ImageIcon size={18} /> Imágenes Principales del Curso
-              </h4>
-
-              <div className={styles.imagesGrid}>
-                {/* Portada 16:9 */}
-                <div className={styles.imageCard}>
-                  <div className={styles.imageCardHeader}>
-                    <label className={styles.label}>Imagen de Portada (Miniatura / Card)</label>
-                    <span className={styles.miniLabel}>Recomendado: 16:9 (600x338 px)</span>
-                  </div>
-                  <div className={styles.coverPreviewContainer}>
-                    {courseThumbnail ? (
-                      <img
-                        src={courseThumbnail}
-                        alt="Portada del Curso"
-                        className={styles.coverPreviewImgLarge}
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div className={styles.placeholderLarge}>
-                        <ImageIcon size={32} />
-                        <span>Sin imagen de portada</span>
-                      </div>
-                    )}
-                  </div>
-                  <Input
-                    placeholder="https://... (URL de la imagen de portada)"
-                    value={courseThumbnail}
-                    onChange={(e) => setCourseThumbnail(e.target.value)}
-                  />
-                </div>
-
-                {/* Banner Panorámico 3:1 */}
-                <div className={styles.imageCard}>
-                  <div className={styles.imageCardHeader}>
-                    <label className={styles.label}>Imagen de Banner (Cabecera Panorámica)</label>
-                    <span className={styles.miniLabel}>Recomendado: 3:1 (1200x400 px)</span>
-                  </div>
-                  <div className={styles.bannerPreviewContainer}>
-                    {courseBanner ? (
-                      <img
-                        src={courseBanner}
-                        alt="Banner del Curso"
-                        className={styles.bannerPreviewImgLarge}
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div className={styles.placeholderLarge}>
-                        <ImageIcon size={32} />
-                        <span>Sin imagen de banner</span>
-                      </div>
-                    )}
-                  </div>
-                  <Input
-                    placeholder="https://... (URL del banner panorámico)"
-                    value={courseBanner}
-                    onChange={(e) => setCourseBanner(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 2. SECCIÓN DE INFORMACIÓN BÁSICA: NOMBRE Y DESCRIPCIÓN */}
-            <div className={styles.settingsGroup}>
-              <h4 className={styles.settingsGroupTitle}>
-                <FileText size={18} /> Información del Curso
-              </h4>
-
-              <div className={styles.formGroup}>
-                <Input
-                  label="Nombre del Curso *"
-                  placeholder="Ej: Master en Marketing Digital & Performance"
-                  value={courseTitle}
-                  onChange={(e) => setCourseTitle(e.target.value)}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Descripción Completa del Curso</label>
-                <textarea
-                  placeholder="Describe detalladamente los temas, conocimientos adquiridos y beneficios de este curso..."
-                  value={courseDescription}
-                  onChange={(e) => setCourseDescription(e.target.value)}
-                  className={styles.textarea}
-                  rows={4}
-                />
-              </div>
-            </div>
-
-            {/* 3. COMERCIALIZACIÓN, PRECIO, PLAN Y ESTADO */}
-            <div className={styles.settingsGroup}>
-              <h4 className={styles.settingsGroupTitle}>
-                <DollarSign size={18} /> Comercialización, Precio y Publicación
-              </h4>
-
-              <div className={styles.pricingAndStatusGrid}>
-                {/* Precio */}
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Precio del Curso ($ USD)</label>
-                  <div className={styles.inputWithIcon}>
-                    <span className={styles.currencyPrefix}>$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="0.00"
-                      value={coursePrice}
-                      onChange={(e) => setCoursePrice(e.target.value === "" ? "" : Number(e.target.value))}
-                      className={styles.currencyInput}
-                    />
-                  </div>
-                  <span className={styles.inputHelper}>Precio de referencia para venta directa o catálogo.</span>
-                </div>
-
-                {/* Switch de Estado */}
-                <div className={styles.statusToggleBox}>
-                  <label className={styles.label}>Estado en la Plataforma</label>
-                  <div className={styles.switchRow}>
-                    <Switch
-                      checked={courseStatus === "publish"}
-                      onCheckedChange={(checked) => setCourseStatus(checked ? "publish" : "draft")}
-                      id="course-status-switch"
-                    />
-                    <label htmlFor="course-status-switch" className={styles.switchLabel}>
-                      <span className={courseStatus === "publish" ? styles.statusTextActive : styles.statusTextDraft}>
-                        {courseStatus === "publish" ? "Habilitado (Público)" : "Deshabilitado (Borrador)"}
-                      </span>
-                      <span className={styles.switchSubtext}>
-                        {courseStatus === "publish"
-                          ? "El curso está activo y disponible para alumnos inscritos."
-                          : "El curso está en modo borrador y oculto en la plataforma."}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Vinculación a Plan de Finanzas */}
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Vincular a Plan de Finanzas</label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      value={courseLinkedPlanId ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCourseLinkedPlanId(val === "" ? null : Number(val));
-                      }}
-                      className={styles.styledSelect}
+            return (
+              <div key={section.id} className={styles.moduleCard}>
+                {/* Encabezado del Módulo */}
+                <div
+                  className={[
+                    styles.moduleHeader,
+                    !isCollapsed ? styles.moduleHeaderOpen : "",
+                  ].join(" ")}
+                >
+                  <div className={styles.moduleHeaderLeft}>
+                    <button
+                      type="button"
+                      className={styles.collapseBtn}
+                      onClick={() => toggleSectionCollapse(section.id)}
+                      title={isCollapsed ? "Expandir módulo" : "Colapsar módulo"}
                     >
-                      <option value="">Sin vincular a ningún plan (Venta directa o gratuita)</option>
-                      {availablePlans.map((plan) => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name} — {plan.totalQuotas} {plan.totalQuotas === 1 ? "pago de" : "cuotas de"} ${plan.quotaAmount} (Total: ${plan.totalAmount})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <span className={styles.inputHelper}>
-                    {courseLinkedPlanId ? (
-                      <span className={styles.linkedPlanNotice}>
-                        <Check size={13} /> Vinculado al Plan #{courseLinkedPlanId}.
-                      </span>
-                    ) : (
-                      "Permite sincronizar este curso con planes de cuotas creados en Finanzas."
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
+                      {isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                    </button>
 
+                    <span className={styles.moduleIndexPill}>Módulo {sIdx + 1}</span>
+
+                    <input
+                      type="text"
+                      value={section.title}
+                      onChange={(e) => handleUpdateSectionTitle(section.id, e.target.value)}
+                      className={styles.moduleTitleInput}
+                      placeholder="Nombre del Módulo..."
+                    />
+                  </div>
+
+                  <div className={styles.moduleHeaderRight}>
+                    <span className={styles.moduleCountBadge}>
+                      {topicsCount} {topicsCount === 1 ? "Topic" : "Topics"}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenAddTopic(section.id)}
+                      title="Añadir Topic a este módulo"
+                    >
+                      <Plus size={15} /> Topic
+                    </Button>
+                    <button
+                      type="button"
+                      className={styles.deleteBtn}
+                      onClick={() => handleDeleteSection(section.id)}
+                      title="Eliminar módulo"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+<<<<<<< HEAD
             {/* Footer con botón de guardado */}
             <div className={styles.settingsFooter}>
               <Button variant="secondary" onClick={() => setBuilderTab("curriculum")}>
@@ -876,6 +543,11 @@ export function CoursesView() {
                   {/* Contenido Expandido del Módulo */}
                   {!isCollapsed && (
                     <>
+=======
+                {/* Lista de Topics dentro del Módulo */}
+                {!isCollapsed && (
+                  <>
+>>>>>>> parent of fbd60a0 (feat(courses): add course cover, banner, price, status switch, finance plan link, and module cover images)
                     <div className={styles.topicsContainer}>
                       {section.lessons && section.lessons.length > 0 ? (
                         section.lessons.map((lesson, lIdx) => (
@@ -1007,6 +679,7 @@ export function CoursesView() {
             </div>
           )}
         </div>
+<<<<<<< HEAD
         )}
 
         {/* MODAL PARA CAMBIAR PORTADA DEL MÓDULO */}
@@ -1077,6 +750,8 @@ export function CoursesView() {
             </div>
           </Modal>
         )}
+=======
+>>>>>>> parent of fbd60a0 (feat(courses): add course cover, banner, price, status switch, finance plan link, and module cover images)
 
         {/* MODAL DETALLADO PARA EDITAR TOPIC / LECCIÓN */}
         {editingTopicState && (
@@ -1368,12 +1043,9 @@ export function CoursesView() {
 
           return (
             <div key={course.id} className={styles.courseCard}>
-              {/* Portada 16:9 con Badge de Estado y Precio */}
+              {/* Portada 16:9 con Badge de Estado */}
               <div className={styles.courseCoverWrapper}>
                 <img src={course.thumbnail} alt={course.title} className={styles.courseCoverImg} />
-                <span className={styles.cardPriceTag}>
-                  {course.price && Number(course.price) > 0 ? `$${course.price} USD` : "Gratis"}
-                </span>
                 <div className={styles.courseCoverOverlay}>
                   <Badge variant={course.status === "publish" ? "success" : "neutral"} size="sm">
                     {course.status === "publish" ? "Publicado" : "Borrador"}
@@ -1385,16 +1057,6 @@ export function CoursesView() {
               <div className={styles.courseCardBody}>
                 <h3 className={styles.courseCardTitle}>{course.title}</h3>
                 <p className={styles.courseCardDescription}>{course.description}</p>
-
-                {/* Plan Vinculado si aplica */}
-                {course.linkedPlanId ? (
-                  <div className={styles.cardPlanTag}>
-                    <CreditCard size={12} />
-                    <span>
-                      {availablePlans.find((p) => p.id === course.linkedPlanId)?.name || `Plan #${course.linkedPlanId}`}
-                    </span>
-                  </div>
-                ) : null}
 
                 {/* Métricas del Curso */}
                 <div className={styles.courseCardStats}>

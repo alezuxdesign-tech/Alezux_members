@@ -78,7 +78,6 @@ export interface CourseLesson extends CourseTopic {
 export interface CourseSection {
   id: string;
   title: string;
-  cover?: string;
   description?: string;
   lessons: CourseLesson[];
   topics?: CourseTopic[];
@@ -90,9 +89,6 @@ export interface Course {
   slug: string;
   description: string;
   thumbnail: string;
-  banner?: string;
-  price?: number;
-  linkedPlanId?: number | null;
   status: "publish" | "draft";
   studentCount: number;
   sections: CourseSection[];
@@ -221,16 +217,12 @@ const MOCK_COURSES: Course[] = [
     slug: "marketing-digital-performance",
     description: "Domina la adquisición de tráfico, funnels y optimización de conversión.",
     thumbnail: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
-    banner: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80",
-    price: 197,
-    linkedPlanId: 1,
     status: "publish",
     studentCount: 520,
     sections: [
       {
         id: "sec-1",
         title: "Módulo 1: Fundamentos y Mentalidad del Media Buyer",
-        cover: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
         lessons: [
           { 
             id: "les-1", 
@@ -268,7 +260,6 @@ const MOCK_COURSES: Course[] = [
       {
         id: "sec-2",
         title: "Módulo 2: Creativos de Alta Conversión",
-        cover: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80",
         lessons: [
           { 
             id: "les-4", 
@@ -300,16 +291,12 @@ const MOCK_COURSES: Course[] = [
     slug: "desarrollo-web-fullstack",
     description: "Crea plataformas escalables, plugins personalizados y arquitecturas modernas.",
     thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80",
-    banner: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&auto=format&fit=crop&q=80",
-    price: 297,
-    linkedPlanId: 2,
     status: "publish",
     studentCount: 390,
     sections: [
       {
         id: "sec-3",
         title: "Módulo 1: Arquitectura de Plugins en WordPress",
-        cover: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80",
         lessons: [
           { 
             id: "les-6", 
@@ -341,16 +328,12 @@ const MOCK_COURSES: Course[] = [
     slug: "ventas-high-ticket",
     description: "Aprende el método consultivo para cerrar contratos de alto valor.",
     thumbnail: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&auto=format&fit=crop&q=80",
-    banner: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&auto=format&fit=crop&q=80",
-    price: 147,
-    linkedPlanId: 3,
     status: "publish",
     studentCount: 510,
     sections: [
       {
         id: "sec-4",
         title: "Módulo 1: Prospección y Cualificación",
-        cover: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&auto=format&fit=crop&q=80",
         lessons: [
           { 
             id: "les-8", 
@@ -776,7 +759,7 @@ class ApiService {
     return MOCK_COURSES;
   }
 
-  async saveCourse(courseId: number, courseData: Partial<Course>, sections?: CourseSection[]): Promise<boolean> {
+  async saveCourseCurriculum(courseId: number, sections: CourseSection[]): Promise<boolean> {
     try {
       if (this.wpData) {
         const res = await fetch(`${this.rootUrl}courses/${courseId}/curriculum`, {
@@ -785,28 +768,14 @@ class ApiService {
             "Content-Type": "application/json",
             "X-WP-Nonce": this.nonce,
           },
-          body: JSON.stringify({
-            sections: sections || courseData.sections,
-            ...courseData,
-          }),
+          body: JSON.stringify({ sections }),
         });
         return res.ok;
       }
     } catch (e) {
-      console.warn("API Error saving course:", e);
+      console.warn("API Error saving curriculum:", e);
     }
-
-    // Local mock update
-    const found = MOCK_COURSES.find((c) => c.id === courseId);
-    if (found) {
-      if (sections) found.sections = sections;
-      Object.assign(found, courseData);
-    }
-    return true;
-  }
-
-  async saveCourseCurriculum(courseId: number, sections: CourseSection[], courseData?: Partial<Course>): Promise<boolean> {
-    return this.saveCourse(courseId, { ...(courseData || {}), sections }, sections);
+    return true; // Local success
   }
 
   async createCourse(title: string, description: string, thumbnail: string): Promise<Course> {
@@ -834,16 +803,12 @@ class ApiService {
       slug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       description,
       thumbnail: thumbnail || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
-      banner: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80",
-      price: 97,
-      linkedPlanId: null,
       status: "publish",
       studentCount: 0,
       sections: [
         {
           id: `sec-${Date.now()}`,
           title: "Módulo 1: Introducción",
-          cover: thumbnail || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
           lessons: [
             { 
               id: `les-${Date.now()}`, 
