@@ -88,6 +88,20 @@ export interface MarketingAutomation {
   description?: string;
 }
 
+export interface MarketingSettings {
+  from_name: string;
+  from_email: string;
+  logo_url: string;
+  smtp_enabled: boolean;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_secure: "tls" | "ssl" | "none";
+  smtp_auth: boolean;
+  smtp_username: string;
+  smtp_password: string;
+  smtp_skip_ssl: boolean;
+}
+
 // Datos Mock de respaldo (usados en Vite local dev o si la API de WP aún no tiene datos)
 const MOCK_STATS: DashboardStats = {
   totalStudents: 1420,
@@ -649,6 +663,56 @@ class ApiService {
       console.warn("API Error sending test email:", e);
     }
     return { success: true };
+  }
+
+  // --- MARKETING GENERAL SETTINGS ---
+  async getMarketingSettings(): Promise<MarketingSettings> {
+    const defaultSettings: MarketingSettings = {
+      from_name: "Academia Crezca",
+      from_email: "notificaciones@crezca.com",
+      logo_url: "",
+      smtp_enabled: false,
+      smtp_host: "",
+      smtp_port: 587,
+      smtp_secure: "tls",
+      smtp_auth: true,
+      smtp_username: "",
+      smtp_password: "",
+      smtp_skip_ssl: false,
+    };
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}marketing/settings`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return { ...defaultSettings, ...data };
+        }
+      }
+    } catch (e) {
+      console.warn("API Error getting marketing settings:", e);
+    }
+    return defaultSettings;
+  }
+
+  async saveMarketingSettings(settings: MarketingSettings): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}marketing/settings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(settings),
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error saving marketing settings:", e);
+    }
+    return true;
   }
 }
 

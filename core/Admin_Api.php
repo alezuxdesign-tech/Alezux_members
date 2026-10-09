@@ -83,6 +83,18 @@ class Admin_Api {
 				'callback'            => [ $this, 'send_marketing_test_email' ],
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
+
+			register_rest_route( $namespace, '/marketing/settings', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_marketing_settings' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/marketing/settings', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'save_marketing_settings' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
 		}
 	}
 
@@ -598,6 +610,71 @@ class Admin_Api {
 		return rest_ensure_response( [
 			'success' => (bool) $sent,
 			'email'   => $email,
+		] );
+	}
+
+	/**
+	 * Obtener configuración general de marketing (Remitente, Logotipo y SMTP)
+	 */
+	public function get_marketing_settings() {
+		return rest_ensure_response( [
+			'from_name'     => get_option( 'alezux_marketing_from_name', get_bloginfo( 'name' ) ),
+			'from_email'    => get_option( 'alezux_marketing_from_email', get_bloginfo( 'admin_email' ) ),
+			'logo_url'      => get_option( 'alezux_marketing_logo_url', '' ),
+			'smtp_enabled'  => get_option( 'alezux_marketing_smtp_enabled', '0' ) === '1',
+			'smtp_host'     => get_option( 'alezux_marketing_smtp_host', '' ),
+			'smtp_port'     => (int) get_option( 'alezux_marketing_smtp_port', 587 ),
+			'smtp_secure'   => get_option( 'alezux_marketing_smtp_secure', 'tls' ),
+			'smtp_auth'     => get_option( 'alezux_marketing_smtp_auth', '1' ) === '1',
+			'smtp_username' => get_option( 'alezux_marketing_smtp_username', '' ),
+			'smtp_password' => get_option( 'alezux_marketing_smtp_password', '' ),
+			'smtp_skip_ssl' => get_option( 'alezux_marketing_smtp_skip_ssl', '0' ) === '1',
+		] );
+	}
+
+	/**
+	 * Guardar configuración general de marketing
+	 */
+	public function save_marketing_settings( $request ) {
+		$params = $request->get_json_params();
+
+		if ( isset( $params['from_name'] ) ) {
+			update_option( 'alezux_marketing_from_name', sanitize_text_field( $params['from_name'] ) );
+		}
+		if ( isset( $params['from_email'] ) ) {
+			update_option( 'alezux_marketing_from_email', sanitize_email( $params['from_email'] ) );
+		}
+		if ( isset( $params['logo_url'] ) ) {
+			update_option( 'alezux_marketing_logo_url', sanitize_url( $params['logo_url'] ) );
+		}
+		if ( isset( $params['smtp_enabled'] ) ) {
+			update_option( 'alezux_marketing_smtp_enabled', ! empty( $params['smtp_enabled'] ) ? '1' : '0' );
+		}
+		if ( isset( $params['smtp_host'] ) ) {
+			update_option( 'alezux_marketing_smtp_host', sanitize_text_field( $params['smtp_host'] ) );
+		}
+		if ( isset( $params['smtp_port'] ) ) {
+			update_option( 'alezux_marketing_smtp_port', (int) $params['smtp_port'] );
+		}
+		if ( isset( $params['smtp_secure'] ) ) {
+			update_option( 'alezux_marketing_smtp_secure', sanitize_text_field( $params['smtp_secure'] ) );
+		}
+		if ( isset( $params['smtp_auth'] ) ) {
+			update_option( 'alezux_marketing_smtp_auth', ! empty( $params['smtp_auth'] ) ? '1' : '0' );
+		}
+		if ( isset( $params['smtp_username'] ) ) {
+			update_option( 'alezux_marketing_smtp_username', sanitize_text_field( $params['smtp_username'] ) );
+		}
+		if ( isset( $params['smtp_password'] ) ) {
+			update_option( 'alezux_marketing_smtp_password', sanitize_text_field( wp_unslash( $params['smtp_password'] ) ) );
+		}
+		if ( isset( $params['smtp_skip_ssl'] ) ) {
+			update_option( 'alezux_marketing_smtp_skip_ssl', ! empty( $params['smtp_skip_ssl'] ) ? '1' : '0' );
+		}
+
+		return rest_ensure_response( [
+			'success' => true,
+			'message' => 'Configuración de marketing guardada correctamente.',
 		] );
 	}
 }

@@ -443,3 +443,105 @@
   font-weight: 600;
   margin-right: auto;
 }
+
+/* Modal Configuración General */
+.settingsBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.settingsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.settingsSection:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.settingsSectionTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 600px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.logoPreviewCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  margin-top: var(--space-2);
+}
+
+.logoPreviewLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.logoImg {
+  max-height: 40px;
+  max-width: 160px;
+  object-fit: contain;
+}
+
+.smtpFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--accent);
+  margin-top: var(--space-2);
+}
+
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.passwordToggleBtn {
+  position: absolute;
+  right: 12px;
+  top: 32px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color var(--duration-fast);
+}
+
+.passwordToggleBtn:hover {
+  color: var(--foreground);
+}
+

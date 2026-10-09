@@ -1,5 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
-import { Zap, Send, Check, Eye, Mail, Search, Copy, CheckCheck, FileCode } from "lucide-react";
+import {
+  Zap,
+  Send,
+  Check,
+  Eye,
+  EyeOff,
+  Mail,
+  Search,
+  Copy,
+  CheckCheck,
+  FileCode,
+  Settings,
+  Server,
+} from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
@@ -7,7 +20,7 @@ import { Switch } from "../components/arc/switch/switch";
 import { Input } from "../components/arc/input/input";
 import { MetricCard } from "../components/arc/metric-card/metric-card";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
-import { api, MarketingAutomation } from "../services/api";
+import { api, MarketingAutomation, MarketingSettings } from "../services/api";
 import styles from "./MarketingView.module.css";
 
 type CategoryFilter = "all" | "registro" | "finanzas" | "cursos" | "logros";
@@ -108,7 +121,6 @@ function renderSampleEmail(content: string): string {
     rendered = rendered.split(key).join(value);
   }
 
-  // Si no incluye etiquetas <html> o <body> completas, envolver en un contenedor estilizado
   if (!rendered.includes("<html") && !rendered.includes("<body")) {
     rendered = `
       <!DOCTYPE html>
@@ -155,7 +167,7 @@ export function MarketingView() {
   // Switch de modo de vista: Vista Previa vs Editor HTML
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
-  // Form states for modal
+  // Form states for template modal
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editEnabled, setEditEnabled] = useState(true);
@@ -168,9 +180,31 @@ export function MarketingView() {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
 
+  // MODAL DE CONFIGURACIÓN GENERAL
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<MarketingSettings>({
+    from_name: "Academia Crezca",
+    from_email: "notificaciones@crezca.com",
+    logo_url: "",
+    smtp_enabled: false,
+    smtp_host: "",
+    smtp_port: 587,
+    smtp_secure: "tls",
+    smtp_auth: true,
+    smtp_username: "",
+    smtp_password: "",
+    smtp_skip_ssl: false,
+  });
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsSaveSuccess, setSettingsSaveSuccess] = useState(false);
+
   useEffect(() => {
     api.getAutomations().then((data) => {
       setAutomations(data);
+    });
+    api.getMarketingSettings().then((data) => {
+      setSettings(data);
     });
   }, []);
 
@@ -236,6 +270,27 @@ export function MarketingView() {
     setTimeout(() => setCopiedVar(null), 1800);
   };
 
+  // Guardar Configuración General
+  const handleOpenSettings = async () => {
+    setIsSettingsOpen(true);
+    setSettingsSaveSuccess(false);
+    const current = await api.getMarketingSettings();
+    setSettings(current);
+  };
+
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    const ok = await api.saveMarketingSettings(settings);
+    setIsSavingSettings(false);
+    if (ok) {
+      setSettingsSaveSuccess(true);
+      setTimeout(() => {
+        setSettingsSaveSuccess(false);
+        setIsSettingsOpen(false);
+      }, 1200);
+    }
+  };
+
   // KPIs
   const totalAutomations = automations.length;
   const activeCount = automations.filter((a) => a.enabled).length;
@@ -275,9 +330,12 @@ export function MarketingView() {
         <div>
           <h1 className={styles.title}>Marketing & Automatizaciones de Email</h1>
           <p className={styles.subtitle}>
-            Suite completa de correos transaccionales y de retención para tu academia digital.
+            Suite completa de correos transaccionales, entrega SMTP y retención para tu academia.
           </p>
         </div>
+        <Button variant="secondary" onClick={handleOpenSettings}>
+          <Settings size={16} /> Configuración General
+        </Button>
       </div>
 
       {/* Métricas Generales */}
@@ -473,7 +531,7 @@ export function MarketingView() {
             <div className={styles.previewToggleRow}>
               <div>
                 <span className={styles.previewToggleTitle}>
-                  {isPreviewMode ? "Previsualización del Correo (Visual)" : "Editor de Plantilla (Código HTML)"}
+                  {isPreviewMode ? "Previsualización del Correo (Vista Final)" : "Editor de Plantilla (Código HTML)"}
                 </span>
                 <p className={styles.previewToggleDesc}>
                   {isPreviewMode
@@ -500,7 +558,9 @@ export function MarketingView() {
                 <div className={styles.emailClientBar}>
                   <div className={styles.emailClientField}>
                     <span className={styles.emailClientLabel}>De:</span>
-                    <span className={styles.emailClientValue}>Academia Crezca &lt;notificaciones@crezca.com&gt;</span>
+                    <span className={styles.emailClientValue}>
+                      {settings.from_name} &lt;{settings.from_email}&gt;
+                    </span>
                   </div>
                   <div className={styles.emailClientField}>
                     <span className={styles.emailClientLabel}>Para:</span>
@@ -591,6 +651,191 @@ export function MarketingView() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal de Configuración General de Marketing */}
+      <Modal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        title="Configuración General de Marketing"
+        description="Personaliza los datos del remitente, el logotipo para tus plantillas y la entrega SMTP."
+        maxWidth="680px"
+        footer={
+          <>
+            {settingsSaveSuccess && (
+              <span className={styles.saveSuccessNotice}>
+                <CheckCheck size={16} /> ¡Configuración guardada!
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              onClick={() => setIsSettingsOpen(false)}
+              disabled={isSavingSettings}
+            >
+              Cerrar
+            </Button>
+            <Button
+              variant="primary"
+              loading={isSavingSettings}
+              onClick={handleSaveSettings}
+            >
+              Guardar Configuración
+            </Button>
+          </>
+        }
+      >
+        <div className={styles.settingsBody}>
+          {/* 1. SECCIÓN REMITENTE & MARCA */}
+          <div className={styles.settingsSection}>
+            <h4 className={styles.settingsSectionTitle}>
+              <Mail size={16} /> Remitente & Logotipo de la Academia
+            </h4>
+            <div className={styles.formGrid}>
+              <Input
+                label="Nombre del Remitente"
+                value={settings.from_name}
+                onChange={(e) => setSettings({ ...settings, from_name: e.target.value })}
+                placeholder="Academia Crezca"
+                hint="Nombre visible que verán los alumnos al recibir el correo."
+              />
+              <Input
+                label="Email del Remitente (From)"
+                value={settings.from_email}
+                onChange={(e) => setSettings({ ...settings, from_email: e.target.value })}
+                placeholder="notificaciones@tuacademia.com"
+                type="email"
+                hint="Dirección de correo de origen."
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <Input
+                label="URL del Logotipo Oficial"
+                value={settings.logo_url}
+                onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })}
+                placeholder="https://tudominio.com/wp-content/uploads/logo.png"
+                hint="Se inserta en la cabecera del correo mediante la variable {{logo_url}}."
+              />
+              {settings.logo_url && (
+                <div className={styles.logoPreviewCard}>
+                  <span className={styles.logoPreviewLabel}>Vista previa del logo:</span>
+                  <img src={settings.logo_url} alt="Logotipo configurado" className={styles.logoImg} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. SECCIÓN SMTP */}
+          <div className={styles.settingsSection}>
+            <h4 className={styles.settingsSectionTitle}>
+              <Server size={16} /> Envío por Servidor SMTP (Opcional)
+            </h4>
+
+            <div className={styles.statusToggleRow}>
+              <div>
+                <span className={styles.statusLabel}>Habilitar Servidor SMTP Propio</span>
+                <p className={styles.statusHint}>
+                  Envía los correos mediante un proveedor externo (Gmail, SendGrid, Amazon SES, Brevo) en lugar de la función mail() de PHP.
+                </p>
+              </div>
+              <Switch
+                checked={settings.smtp_enabled}
+                onCheckedChange={(val) => setSettings({ ...settings, smtp_enabled: val })}
+                aria-label="Habilitar SMTP"
+              />
+            </div>
+
+            {settings.smtp_enabled && (
+              <div className={styles.smtpFields}>
+                <Input
+                  label="Servidor SMTP (Host)"
+                  value={settings.smtp_host}
+                  onChange={(e) => setSettings({ ...settings, smtp_host: e.target.value })}
+                  placeholder="smtp.gmail.com o smtp.sendgrid.net"
+                />
+
+                <div className={styles.formGrid}>
+                  <Input
+                    label="Puerto SMTP"
+                    value={settings.smtp_port.toString()}
+                    onChange={(e) => setSettings({ ...settings, smtp_port: parseInt(e.target.value) || 587 })}
+                    type="number"
+                    placeholder="587"
+                  />
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Seguridad de Conexión</label>
+                    <SegmentedControl<"tls" | "ssl" | "none">
+                      options={[
+                        { value: "tls", label: "TLS (587)" },
+                        { value: "ssl", label: "SSL (465)" },
+                        { value: "none", label: "Ninguna" },
+                      ]}
+                      value={settings.smtp_secure}
+                      onChange={(val) => setSettings({ ...settings, smtp_secure: val })}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.statusToggleRow}>
+                  <div>
+                    <span className={styles.statusLabel}>¿Requiere Autenticación?</span>
+                    <p className={styles.statusHint}>
+                      Casi todos los proveedores SMTP exigen credenciales de usuario y contraseña.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.smtp_auth}
+                    onCheckedChange={(val) => setSettings({ ...settings, smtp_auth: val })}
+                    aria-label="Requiere autenticación"
+                  />
+                </div>
+
+                {settings.smtp_auth && (
+                  <div className={styles.formGrid}>
+                    <Input
+                      label="Usuario SMTP (Username)"
+                      value={settings.smtp_username}
+                      onChange={(e) => setSettings({ ...settings, smtp_username: e.target.value })}
+                      placeholder="usuario@dominio.com o apikey"
+                    />
+                    <div className={styles.passwordWrapper}>
+                      <Input
+                        label="Contraseña SMTP (Password)"
+                        type={showSmtpPassword ? "text" : "password"}
+                        value={settings.smtp_password}
+                        onChange={(e) => setSettings({ ...settings, smtp_password: e.target.value })}
+                        placeholder="••••••••••••"
+                      />
+                      <button
+                        type="button"
+                        className={styles.passwordToggleBtn}
+                        onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                        aria-label="Mostrar u ocultar contraseña"
+                      >
+                        {showSmtpPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className={styles.statusToggleRow}>
+                  <div>
+                    <span className={styles.statusLabel}>Omitir Verificación SSL (Modo Local/Dev)</span>
+                    <p className={styles.statusHint}>
+                      Actívalo únicamente si estás en entorno local (LocalWP, Laragon) con certificados autofirmados.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.smtp_skip_ssl}
+                    onCheckedChange={(val) => setSettings({ ...settings, smtp_skip_ssl: val })}
+                    aria-label="Omitir verificación SSL"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </Modal>
     </div>
   );
