@@ -178,8 +178,12 @@ class Admin_Dashboard {
 	}
 
 	public function enqueue_admin_assets( $hook ) {
-		// Assets específicos SOLO para nuestra página de Dashboard
-		if ( 'toplevel_page_crezca' !== $hook && 'toplevel_page_alezux-members' !== $hook ) {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$is_crezca_page = ( 'toplevel_page_crezca' === $hook || 'toplevel_page_alezux-members' === $hook )
+			|| ( $screen && ( 'toplevel_page_crezca' === $screen->id || 'toplevel_page_alezux-members' === $screen->id || 'crezca' === $screen->id ) )
+			|| ( isset( $_GET['page'] ) && in_array( $_GET['page'], [ 'crezca', 'alezux-members', 'crezca-dashboard' ], true ) );
+
+		if ( ! $is_crezca_page ) {
 			return;
 		}
 		
@@ -210,7 +214,7 @@ class Admin_Dashboard {
 			wp_enqueue_script(
 				'crezca-admin-arc-js',
 				ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.js',
-				[ 'wp-element' ],
+				[],
 				$js_ver,
 				true
 			);
@@ -232,6 +236,9 @@ class Admin_Dashboard {
 
 
 	public function render_dashboard() {
+		// Salvaguarda: garantizar que los assets de Crezca estén encolados
+		$this->enqueue_admin_assets( 'toplevel_page_crezca' );
+
 		// Obtener opciones guardadas
 		$settings = [
 			'primary_color' => get_option( 'alezux_primary_color', '#6c5ce7' ),

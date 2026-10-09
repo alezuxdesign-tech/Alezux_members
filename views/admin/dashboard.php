@@ -9,7 +9,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 $has_arc_bundle = file_exists( ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.js' );
 ?>
 
-<div id="crezca-admin-root"></div>
+<div id="crezca-admin-root">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#090a0f;color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;user-select:none;">
+    <div style="width:42px;height:42px;border:3px solid rgba(119,71,255,0.2);border-top-color:#7747ff;border-radius:50%;animation:crezca-spin 0.8s linear infinite;margin-bottom:16px;"></div>
+    <div style="font-size:16px;font-weight:700;color:#f8fafc;letter-spacing:-0.01em;">Crezca</div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px;">Cargando panel de administración...</div>
+    <style>@keyframes crezca-spin { to { transform: rotate(360deg); } }</style>
+  </div>
+</div>
 
 <?php if ( ! $has_arc_bundle ) : ?>
 <style>
