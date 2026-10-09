@@ -102,6 +102,16 @@ export interface MarketingSettings {
   smtp_skip_ssl: boolean;
 }
 
+export interface EmailLogItem {
+  id: number;
+  type?: string;
+  recipient: string;
+  date: string;
+  status: string;
+  rawStatus: string;
+  openedAt?: string | null;
+}
+
 // Datos Mock de respaldo (usados en Vite local dev o si la API de WP aún no tiene datos)
 const MOCK_STATS: DashboardStats = {
   totalStudents: 1420,
@@ -738,6 +748,74 @@ class ApiService {
       console.warn("API Error uploading logo:", e);
     }
     return URL.createObjectURL(file);
+  }
+
+  async getAutomationLogs(typeId: string): Promise<EmailLogItem[]> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}marketing/automations/${typeId}/logs`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error fetching logs:", e);
+    }
+    // Mock logs de prueba si no hay conexión WP o en desarrollo
+    return [
+      {
+        id: 1001,
+        recipient: "carlos.mendoza@empresa.com",
+        date: "Hoy, 14:32",
+        status: "Leído",
+        rawStatus: "opened",
+        openedAt: "Hoy, 14:35",
+      },
+      {
+        id: 1002,
+        recipient: "valeria.g@marketingagency.io",
+        date: "Ayer, 09:15",
+        status: "Enviado",
+        rawStatus: "sent",
+      },
+      {
+        id: 1003,
+        recipient: "srivas@digitalgrowth.com",
+        date: "07/10/2026, 18:20",
+        status: "Leído",
+        rawStatus: "opened",
+        openedAt: "07/10/2026, 19:02",
+      },
+      {
+        id: 1004,
+        recipient: "mariana.silva@outlook.com",
+        date: "05/10/2026, 11:00",
+        status: "Fallido",
+        rawStatus: "failed",
+      },
+    ];
+  }
+
+  async resendMarketingLog(logId: number): Promise<{ success: boolean; message?: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}marketing/logs/${logId}/resend`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error resending log:", e);
+    }
+    return { success: true, message: "Correo reenviado correctamente." };
   }
 }
 

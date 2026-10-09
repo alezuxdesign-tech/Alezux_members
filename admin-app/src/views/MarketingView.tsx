@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  Zap,
   Send,
   Check,
   Eye,
@@ -12,6 +11,10 @@ import {
   FileCode,
   Settings,
   Server,
+  History,
+  Clock,
+  RotateCcw,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -21,7 +24,7 @@ import { Input } from "../components/arc/input/input";
 import { MetricCard } from "../components/arc/metric-card/metric-card";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
 import { FileDropzone } from "../components/arc/file-dropzone/file-dropzone";
-import { api, MarketingAutomation, MarketingSettings } from "../services/api";
+import { api, MarketingAutomation, MarketingSettings, EmailLogItem } from "../services/api";
 import styles from "./MarketingView.module.css";
 
 type CategoryFilter = "all" | "registro" | "finanzas" | "cursos" | "logros";
@@ -200,6 +203,59 @@ export function MarketingView() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSaveSuccess, setSettingsSaveSuccess] = useState(false);
 
+  // MODAL DE HISTORIAL DE ENVÍOS
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyAuto, setHistoryAuto] = useState<MarketingAutomation | null>(null);
+  const [historyLogs, setHistoryLogs] = useState<EmailLogItem[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [resendingLogId, setResendingLogId] = useState<number | null>(null);
+  const [historyNotice, setHistoryNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const handleOpenHistory = async (auto: MarketingAutomation) => {
+    setHistoryAuto(auto);
+    setIsHistoryOpen(true);
+    setHistoryNotice(null);
+    setLoadingLogs(true);
+    try {
+      const logs = await api.getAutomationLogs(auto.id);
+      setHistoryLogs(logs);
+    } catch (e) {
+      console.error("Error cargando historial de correos:", e);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  const handleResendLog = async (logId: number) => {
+    setResendingLogId(logId);
+    setHistoryNotice(null);
+    try {
+      const res = await api.resendMarketingLog(logId);
+      if (res.success) {
+        setHistoryNotice({
+          type: "success",
+          text: res.message || "Correo reenviado exitosamente.",
+        });
+        if (historyAuto) {
+          const updated = await api.getAutomationLogs(historyAuto.id);
+          setHistoryLogs(updated);
+        }
+      } else {
+        setHistoryNotice({
+          type: "error",
+          text: res.message || "No se pudo reenviar el correo.",
+        });
+      }
+    } catch (e: any) {
+      setHistoryNotice({
+        type: "error",
+        text: e?.message || "Error al comunicarse con el servidor.",
+      });
+    } finally {
+      setResendingLogId(null);
+    }
+  };
+
   useEffect(() => {
     api.getAutomations().then((data) => {
       setAutomations(data);
@@ -350,7 +406,7 @@ export function MarketingView() {
         <MetricCard
           label="Automatizaciones Activas"
           value={activeCount}
-          icon={<Zap size={16} />}
+          icon={<CheckCheck size={16} />}
           context={`${totalAutomations > 0 ? Math.round((activeCount / totalAutomations) * 100) : 100}% activas en producción`}
         />
         <MetricCard
@@ -395,10 +451,6 @@ export function MarketingView() {
                   <Badge variant={catInfo.variant} size="sm">
                     {catInfo.label}
                   </Badge>
-                  <div className={styles.triggerBadge}>
-                    <Zap size={12} className={styles.zapIcon} />
-                    <span>{auto.triggerEvent}</span>
-                  </div>
                 </div>
 
                 <Switch
@@ -421,7 +473,12 @@ export function MarketingView() {
               </div>
 
               <div className={styles.cardFooter}>
-                <div className={styles.statsRow}>
+                <div
+                  className={styles.statsRow}
+                  onClick={() => handleOpenHistory(auto)}
+                  title="Ver historial de envíos"
+                  style={{ cursor: "pointer" }}
+                >
                   <span className={styles.statLabel}>Enviados:</span>
                   <Badge variant="neutral" size="sm">
                     <span className={styles.tabularNums}>
@@ -434,10 +491,10 @@ export function MarketingView() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => handleOpenModal(auto, true)}
-                    title="Previsualizar cómo verá el correo el alumno"
+                    onClick={() => handleOpenHistory(auto)}
+                    title="Ver historial de correos enviados"
                   >
-                    <Eye size={14} /> Vista Previa
+                    <History size={14} /> Historial
                   </Button>
                   <Button
                     variant="ghost"
@@ -879,6 +936,140 @@ export function MarketingView() {
               </div>
             )}
           </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Historial de Envíos */}
+      <Modal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        title={
+          <div className={styles.modalTitleFlex}>
+            <History size={18} className={styles.modalHeaderIcon} />
+            <span>Historial de Envíos</span>
+          </div>
+        }
+        description={
+          historyAuto ? (
+            <span>
+              <strong>{historyAuto.name}</strong> · Evento: {historyAuto.triggerEvent}
+            </span>
+          ) : undefined
+        }
+        maxWidth="760px"
+        footer={
+          <div className={styles.historyModalFooter}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => historyAuto && handleOpenHistory(historyAuto)}
+              disabled={loadingLogs}
+              title="Recargar historial"
+            >
+              <RotateCcw size={14} className={loadingLogs ? styles.spin : ""} />
+              {loadingLogs ? "Actualizando..." : "Actualizar"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setIsHistoryOpen(false)}>
+              Cerrar
+            </Button>
+          </div>
+        }
+      >
+        <div className={styles.modalBody}>
+          {historyNotice && (
+            <div
+              className={
+                historyNotice.type === "success"
+                  ? styles.noticeSuccess
+                  : styles.noticeError
+              }
+            >
+              {historyNotice.type === "success" ? (
+                <Check size={16} />
+              ) : (
+                <AlertCircle size={16} />
+              )}
+              <span>{historyNotice.text}</span>
+            </div>
+          )}
+
+          {loadingLogs ? (
+            <div className={styles.historyLoadingState}>
+              <RotateCcw size={28} className={styles.spin} />
+              <p>Cargando registros de envíos...</p>
+            </div>
+          ) : historyLogs.length === 0 ? (
+            <div className={styles.historyEmptyState}>
+              <Clock size={36} className={styles.historyEmptyIcon} />
+              <h4 className={styles.historyEmptyTitle}>No hay envíos registrados</h4>
+              <p className={styles.historyEmptyDesc}>
+                Cuando esta automatización se dispare, aquí verás el listado de alumnos receptores, la fecha de envío, el estado de entrega y si el correo fue abierto.
+              </p>
+            </div>
+          ) : (
+            <div className={styles.historyTableWrapper}>
+              <table className={styles.historyTable}>
+                <thead>
+                  <tr>
+                    <th>Destinatario</th>
+                    <th>Fecha de Envío</th>
+                    <th>Estado</th>
+                    <th style={{ textAlign: "right" }}>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyLogs.map((log) => {
+                    let badgeVariant: "neutral" | "accent" | "success" | "warning" | "danger" = "neutral";
+                    if (log.status === "Leído") {
+                      badgeVariant = "accent";
+                    } else if (log.status === "Enviado") {
+                      badgeVariant = "neutral";
+                    } else if (log.status === "Fallido" || log.rawStatus?.includes("fail")) {
+                      badgeVariant = "danger";
+                    }
+
+                    return (
+                      <tr key={log.id}>
+                        <td>
+                          <div className={styles.recipientCell}>
+                            <Mail size={14} className={styles.recipientIcon} />
+                            <span className={styles.recipientEmail}>{log.recipient}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className={styles.dateCell}>
+                            <span className={styles.dateText}>{log.date}</span>
+                            {log.openedAt && (
+                              <span className={styles.openedBadge}>
+                                Abierto: {log.openedAt}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <Badge variant={badgeVariant} size="sm">
+                            {log.status}
+                          </Badge>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleResendLog(log.id)}
+                            disabled={resendingLogId === log.id}
+                            title="Reenviar este correo al destinatario"
+                          >
+                            <Send size={12} />
+                            {resendingLogId === log.id ? "Reenviando..." : "Reenviar"}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

@@ -78,6 +78,18 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
+			register_rest_route( $namespace, '/marketing/automations/(?P<id>[a-zA-Z0-9_-]+)/logs', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_automation_logs' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/marketing/logs/(?P<id>\d+)/resend', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'resend_marketing_log' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
 			register_rest_route( $namespace, '/marketing/send-test', [
 				'methods'             => 'POST',
 				'callback'            => [ $this, 'send_marketing_test_email' ],
@@ -617,6 +629,104 @@ class Admin_Api {
 			'success' => (bool) $sent,
 			'email'   => $email,
 		] );
+	}
+
+	/**
+	 * Obtener historial de correos enviados para una automatización
+	 */
+	public function get_automation_logs( $request ) {
+		global $wpdb;
+		$type = sanitize_text_field( $request->get_param( 'id' ) );
+		$table_logs = $wpdb->prefix . 'alezux_marketing_logs';
+
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_logs'" ) !== $table_logs ) {
+			return rest_ensure_response( [] );
+		}
+
+		$logs = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM $table_logs WHERE type = %s ORDER BY sent_at DESC LIMIT 200",
+			$type
+		) );
+
+		if ( empty( $logs ) ) {
+			return rest_ensure_response( [] );
+		}
+
+		$formatted = [];
+		foreach ( $logs as $log ) {
+			$status_display = 'Enviado';
+			if ( ! empty( $log->opened_at ) ) {
+				$status_display = 'Leído';
+			} elseif ( strpos( strtolower( $log->status ), 'fail' ) !== false || strpos( strtolower( $log->status ), 'err' ) !== false ) {
+				$status_display = 'Fallido';
+			}
+
+			$formatted[] = [
+				'id'        => (int) $log->id,
+				'type'      => $log->type,
+				'recipient' => $log->recipient_email,
+				'date'      => date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $log->sent_at ) ),
+				'status'    => $status_display,
+				'rawStatus' => strtolower( $log->status ),
+				'openedAt'  => ! empty( $log->opened_at ) ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $log->opened_at ) ) : null,
+			];
+		}
+
+		return rest_ensure_response( $formatted );
+	}
+
+	/**
+	 * Reenviar correo desde el historial
+	 */
+	public function resend_marketing_log( $request ) {
+		global $wpdb;
+		$log_id = (int) $request->get_param( 'id' );
+		$table_logs = $wpdb->prefix . 'alezux_marketing_logs';
+
+		$log = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_logs WHERE id = %d", $log_id ) );
+		if ( ! $log ) {
+			return new \WP_Error( 'not_found', 'Registro de correo no encontrado.', [ 'status' => 404 ] );
+		}
+
+		if ( ! class_exists( '\Alezux_Members\Modules\Marketing\Marketing' ) && file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/Marketing.php' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/Marketing.php';
+		}
+		if ( ! class_exists( '\Alezux_Members\Modules\Marketing\Includes\Email_Engine' ) && file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Email_Engine.php' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Email_Engine.php';
+		}
+
+		$marketing = \Alezux_Members\Modules\Marketing\Marketing::get_instance();
+		$engine = $marketing->get_engine();
+
+		$user = get_user_by( 'email', $log->recipient_email );
+		$data = [];
+		if ( $user ) {
+			$data['user'] = $user;
+			if ( $log->type === 'student_welcome' ) {
+				$password = wp_generate_password( 12, true );
+				wp_set_password( $password, $user->ID );
+				$data['new_password'] = $password;
+			}
+		} else {
+			$data['user'] = (object) [
+				'display_name' => $log->recipient_email,
+				'user_email'   => $log->recipient_email,
+			];
+		}
+
+		$sent = $engine->send_email( $log->type, $log->recipient_email, $data, false );
+
+		if ( $sent ) {
+			$wpdb->update( $table_logs, [ 'status' => 'sent', 'sent_at' => current_time( 'mysql' ) ], [ 'id' => $log_id ] );
+			return rest_ensure_response( [
+				'success' => true,
+				'message' => 'Correo reenviado exitosamente a ' . $log->recipient_email,
+			] );
+		} else {
+			$err = $engine->get_last_error_message();
+			$wpdb->update( $table_logs, [ 'status' => 'fail: ' . mb_substr( $err, 0, 150 ) ], [ 'id' => $log_id ] );
+			return new \WP_Error( 'send_failed', 'Error al reenviar correo: ' . $err, [ 'status' => 500 ] );
+		}
 	}
 
 	/**
