@@ -39,6 +39,12 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
+			register_rest_route( $namespace, '/courses/(?P<id>\d+)/modules', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_course_modules' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
 			// Estudiantes & Accesos
 			register_rest_route( $namespace, '/students', [
 				'methods'             => 'GET',
@@ -337,6 +343,64 @@ class Admin_Api {
 			'success' => true,
 			'message' => 'Estructura de currículum guardada correctamente.',
 		] );
+	}
+
+	/**
+	 * Obtener lecciones y módulos de un curso para configurar reglas de liberación por cuotas
+	 */
+	public function get_course_modules( $request ) {
+		$course_id = (int) $request->get_param( 'id' );
+		$modules = [];
+
+		if ( function_exists( 'learndash_get_course_steps' ) ) {
+			$steps = learndash_get_course_steps( $course_id );
+			if ( ! empty( $steps ) ) {
+				foreach ( $steps as $step_id ) {
+					$post = get_post( $step_id );
+					if ( $post && $post->post_type === 'sfwd-lessons' ) {
+						if ( strpos( $post->post_title, '[Separador' ) !== false ) {
+							continue;
+						}
+						$modules[] = [
+							'id'    => (int) $post->ID,
+							'title' => $post->post_title,
+						];
+					}
+				}
+			}
+		}
+
+		if ( empty( $modules ) ) {
+			$lessons_posts = get_posts( [
+				'post_type'      => 'sfwd-lessons',
+				'post_status'    => 'publish',
+				'meta_key'       => 'course_id',
+				'meta_value'     => $course_id,
+				'posts_per_page' => 100,
+				'orderby'        => 'menu_order',
+				'order'          => 'ASC',
+			] );
+
+			foreach ( $lessons_posts as $les ) {
+				$modules[] = [
+					'id'    => (int) $les->ID,
+					'title' => $les->post_title,
+				];
+			}
+		}
+
+		// Fallback si no tiene lecciones creadas todavía en WP
+		if ( empty( $modules ) && $course_id > 0 ) {
+			$course_title = get_the_title( $course_id ) ?: "Curso #{$course_id}";
+			$modules = [
+				[ 'id' => 101, 'title' => 'Módulo 1: Fundamentos y Bienvenida (' . $course_title . ')' ],
+				[ 'id' => 102, 'title' => 'Módulo 2: Estrategias y Herramientas' ],
+				[ 'id' => 103, 'title' => 'Módulo 3: Casos Prácticos e Implementación' ],
+				[ 'id' => 104, 'title' => 'Módulo 4: Proyecto Final y Certificación' ],
+			];
+		}
+
+		return rest_ensure_response( $modules );
 	}
 
 	/**

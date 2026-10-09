@@ -21,7 +21,8 @@ import {
   MessageSquare,
   AlertCircle,
   Settings,
-  ArrowUpRight,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -88,6 +89,9 @@ export function FinanceView() {
   const [createQuotaAmount, setCreateQuotaAmount] = useState<number>(97);
   const [createFrequency, setCreateFrequency] = useState<string>("month");
   const [createWhatsapp, setCreateWhatsapp] = useState<string>("");
+  const [createAccessRules, setCreateAccessRules] = useState<Record<string, number>>({});
+  const [createModules, setCreateModules] = useState<{ id: number; title: string }[]>([]);
+  const [loadingCreateModules, setLoadingCreateModules] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   // Modal Configurar / Editar Plan
@@ -99,6 +103,9 @@ export function FinanceView() {
   const [editQuotaAmount, setEditQuotaAmount] = useState<number>(97);
   const [editFrequency, setEditFrequency] = useState<string>("month");
   const [editWhatsapp, setEditWhatsapp] = useState<string>("");
+  const [editAccessRules, setEditAccessRules] = useState<Record<string, number>>({});
+  const [editModules, setEditModules] = useState<{ id: number; title: string }[]>([]);
+  const [loadingEditModules, setLoadingEditModules] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Modal Pago Manual
@@ -115,7 +122,14 @@ export function FinanceView() {
 
   const loadAllData = () => {
     api.getPlans().then(setPlans);
-    api.getCourses().then(setCourses);
+    api.getCourses().then((cList) => {
+      setCourses(cList);
+      if (cList.length > 0 && createCourseId === 0) {
+        // Inicializar con el primer curso para facilitar la configuración de reglas
+        setCreateCourseId(cList[0].id);
+        fetchModulesForCreate(cList[0].id);
+      }
+    });
     loadSales();
     loadSubscriptions();
     api.getFinanceSettings().then(setSettings);
@@ -139,11 +153,75 @@ export function FinanceView() {
     });
   };
 
+  // Cargar módulos para Crear Plan
+  const fetchModulesForCreate = async (courseId: number) => {
+    if (courseId <= 0) {
+      setCreateModules([]);
+      setCreateAccessRules({});
+      return;
+    }
+    setLoadingCreateModules(true);
+    const mods = await api.getCourseModules(courseId);
+    setCreateModules(mods);
+
+    // Inicializar reglas por defecto (todas en cuota 1 si no existen)
+    const initialRules: Record<string, number> = {};
+    mods.forEach((m, idx) => {
+      initialRules[m.id.toString()] = 1;
+    });
+    setCreateAccessRules(initialRules);
+    setLoadingCreateModules(false);
+  };
+
+  // Cargar módulos para Editar Plan
+  const fetchModulesForEdit = async (courseId: number, existingRules?: any) => {
+    if (courseId <= 0) {
+      setEditModules([]);
+      setEditAccessRules({});
+      return;
+    }
+    setLoadingEditModules(true);
+    const mods = await api.getCourseModules(courseId);
+    setEditModules(mods);
+
+    // Parsear reglas existentes
+    let parsedRules: Record<string, number> = {};
+    if (existingRules) {
+      if (typeof existingRules === "object") {
+        parsedRules = { ...existingRules };
+      } else if (typeof existingRules === "string") {
+        try {
+          parsedRules = JSON.parse(existingRules);
+        } catch {
+          parsedRules = {};
+        }
+      }
+    }
+
+    // Completar módulos sin regla asignada
+    mods.forEach((m) => {
+      const key = m.id.toString();
+      if (!parsedRules[key]) {
+        parsedRules[key] = 1;
+      }
+    });
+
+    setEditAccessRules(parsedRules);
+    setLoadingEditModules(false);
+  };
+
   // Handlers para Planes
   const handleCopyLink = (plan: FinancePlan) => {
     navigator.clipboard.writeText(plan.checkoutUrl);
     setCopiedToken(plan.token);
     setTimeout(() => setCopiedToken(null), 2000);
+  };
+
+  const handleOpenCreateModal = () => {
+    setIsCreateModalOpen(true);
+    const firstCourse = courses.length > 0 ? courses[0].id : 0;
+    setCreateCourseId(firstCourse);
+    fetchModulesForCreate(firstCourse);
   };
 
   const handleCreatePlan = async () => {
@@ -159,6 +237,7 @@ export function FinanceView() {
       quotaAmount: createQuotaAmount,
       frequency: createFrequency,
       whatsapp_number: createWhatsapp,
+      access_rules: createAccessRules,
     });
 
     setPlans([created, ...plans]);
@@ -170,6 +249,7 @@ export function FinanceView() {
     setCreateTotalQuotas(4);
     setCreateQuotaAmount(97);
     setCreateWhatsapp("");
+    setCreateAccessRules({});
   };
 
   const handleOpenEditPlan = (plan: FinancePlan) => {
@@ -181,6 +261,7 @@ export function FinanceView() {
     setEditFrequency(plan.frequency || "month");
     setEditWhatsapp(plan.whatsapp_number || "");
     setIsEditModalOpen(true);
+    fetchModulesForEdit(plan.courseId, plan.access_rules);
   };
 
   const handleSaveEditPlan = async () => {
@@ -195,6 +276,7 @@ export function FinanceView() {
       quotaAmount: editQuotaAmount,
       frequency: editFrequency,
       whatsapp_number: editWhatsapp,
+      access_rules: editAccessRules,
     });
 
     setPlans((prev) =>
@@ -210,6 +292,7 @@ export function FinanceView() {
               totalAmount: editTotalQuotas * editQuotaAmount,
               frequency: editFrequency,
               whatsapp_number: editWhatsapp,
+              access_rules: editAccessRules,
             }
           : p
       )
@@ -223,6 +306,33 @@ export function FinanceView() {
     if (!window.confirm("¿Seguro que deseas eliminar este plan de pago?")) return;
     await api.deletePlan(id);
     setPlans((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  // Funciones de conveniencia para reglas de acceso
+  const distributeRulesEqually = (
+    modules: { id: number; title: string }[],
+    totalQ: number,
+    setRulesFn: (fn: (prev: Record<string, number>) => Record<string, number>) => void
+  ) => {
+    if (modules.length === 0) return;
+    const newRules: Record<string, number> = {};
+    modules.forEach((mod, idx) => {
+      // Distribuir proporcionalmente entre las cuotas
+      const assignedQuota = Math.min(totalQ, Math.floor((idx / modules.length) * totalQ) + 1);
+      newRules[mod.id.toString()] = assignedQuota;
+    });
+    setRulesFn(() => newRules);
+  };
+
+  const unlockAllInQuotaOne = (
+    modules: { id: number; title: string }[],
+    setRulesFn: (fn: (prev: Record<string, number>) => Record<string, number>) => void
+  ) => {
+    const newRules: Record<string, number> = {};
+    modules.forEach((mod) => {
+      newRules[mod.id.toString()] = 1;
+    });
+    setRulesFn(() => newRules);
   };
 
   // Handlers para Suscripciones & Pagos Manuales
@@ -311,14 +421,14 @@ export function FinanceView() {
         <div>
           <h1 className={styles.title}>Módulo de Finanzas & Planes de Pago</h1>
           <p className={styles.subtitle}>
-            Gestión centralizada de ventas, suscripciones recurrentes, control de cuotas y enlaces directos con Stripe.
+            Gestión centralizada de ventas, suscripciones recurrentes, control de cuotas y reglas de liberación de contenido.
           </p>
         </div>
         <div className={styles.headerActions}>
           <Button variant="secondary" onClick={() => setActiveTab("configuracion")}>
             <Settings size={16} /> Pasarela Stripe
           </Button>
-          <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+          <Button variant="primary" onClick={handleOpenCreateModal}>
             <Plus size={16} /> Crear Nuevo Plan
           </Button>
         </div>
@@ -459,7 +569,7 @@ export function FinanceView() {
                       variant="secondary"
                       size="sm"
                       onClick={() => handleOpenEditPlan(plan)}
-                      title="Editar y configurar plan"
+                      title="Editar plan y configurar reglas de liberación"
                     >
                       <Pencil size={13} /> Configurar
                     </Button>
@@ -487,7 +597,7 @@ export function FinanceView() {
               <Button
                 variant="primary"
                 style={{ marginTop: "1rem" }}
-                onClick={() => setIsCreateModalOpen(true)}
+                onClick={handleOpenCreateModal}
               >
                 <Plus size={16} /> Crear Primer Plan
               </Button>
@@ -811,13 +921,14 @@ export function FinanceView() {
       )}
 
       {/* ============================================================== */}
-      {/* MODAL PARA CREAR NUEVO PLAN */}
+      {/* MODAL PARA CREAR NUEVO PLAN CON REGLAS DE LIBERACIÓN */}
       {/* ============================================================== */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title="Crear Nuevo Plan de Pago"
-        description="Configura el número de cuotas, el monto y el curso vinculado para generar el enlace de pago con Stripe."
+        description="Configura el número de cuotas, el precio y las reglas de liberación de contenido para el alumno."
+        maxWidth="680px"
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
@@ -843,7 +954,11 @@ export function FinanceView() {
           <div className={styles.selectWrap}>
             <select
               value={createCourseId}
-              onChange={(e) => setCreateCourseId(Number(e.target.value))}
+              onChange={(e) => {
+                const cId = Number(e.target.value);
+                setCreateCourseId(cId);
+                fetchModulesForCreate(cId);
+              }}
               className={styles.select}
             >
               <option value={0}>Todos los Cursos (Membresía Completa)</option>
@@ -900,6 +1015,105 @@ export function FinanceView() {
             onChange={(e) => setCreateWhatsapp(e.target.value)}
           />
         </div>
+
+        {/* Sección: Reglas de Liberación de Contenido */}
+        <div className={styles.rulesSection}>
+          <div className={styles.rulesSectionHeader}>
+            <div>
+              <h4 className={styles.rulesTitle}>Reglas de Liberación de Contenido</h4>
+              <p className={styles.rulesDesc}>
+                Define en qué cuota pagada se desbloquea cada módulo para el estudiante:
+              </p>
+            </div>
+
+            {createCourseId > 0 && createModules.length > 0 && createTotalQuotas > 1 && (
+              <div className={styles.rulesQuickActions}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() => unlockAllInQuotaOne(createModules, setCreateAccessRules)}
+                  title="Liberar todas las lecciones en la primera cuota"
+                >
+                  Todo en Cuota 1
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() =>
+                    distributeRulesEqually(createModules, createTotalQuotas, setCreateAccessRules)
+                  }
+                  title="Distribuir secuencialmente entre las cuotas"
+                >
+                  <Sparkles size={12} /> Distribuir por Cuotas
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {createCourseId === 0 ? (
+            <div className={styles.allAccessNotice}>
+              <Check size={16} className={styles.allAccessIcon} />
+              <div>
+                <strong>Membresía All-Access:</strong> Este plan da acceso a todos los cursos. Para configurar reglas de liberación gradual de lecciones por cuota, selecciona un curso específico en el selector de arriba.
+              </div>
+            </div>
+          ) : loadingCreateModules ? (
+            <div className={styles.rulesLoading}>
+              <RotateCcw size={15} className={styles.spin} />
+              <span>Cargando módulos y lecciones del curso...</span>
+            </div>
+          ) : createModules.length === 0 ? (
+            <div className={styles.rulesEmpty}>
+              Este curso aún no tiene lecciones creadas en WordPress.
+            </div>
+          ) : (
+            <div className={styles.rulesTableContainer}>
+              <table className={styles.rulesTable}>
+                <thead>
+                  <tr>
+                    <th>Módulo / Lección</th>
+                    <th style={{ width: "210px" }}>Se desbloquea al pagar:</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {createModules.map((mod) => (
+                    <tr key={mod.id}>
+                      <td>
+                        <span className={styles.ruleModuleTitle}>{mod.title}</span>
+                      </td>
+                      <td>
+                        <select
+                          className={styles.select}
+                          style={{ minHeight: "34px", fontSize: "12px" }}
+                          value={createAccessRules[mod.id.toString()] || 1}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setCreateAccessRules((prev) => ({
+                              ...prev,
+                              [mod.id.toString()]: val,
+                            }));
+                          }}
+                        >
+                          <option value={1}>Cuota 1 (Inmediato al comprar)</option>
+                          {Array.from(
+                            { length: Math.max(0, createTotalQuotas - 1) },
+                            (_, i) => i + 2
+                          ).map((q) => (
+                            <option key={q} value={q}>
+                              Cuota {q}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* ============================================================== */}
@@ -909,7 +1123,8 @@ export function FinanceView() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         title="Configurar y Editar Plan"
-        description="Actualiza el nombre, curso vinculado, cuotas y detalles del enlace de pago."
+        description="Actualiza el nombre, curso vinculado, cuotas y reglas de liberación de contenido."
+        maxWidth="680px"
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>
@@ -934,7 +1149,11 @@ export function FinanceView() {
           <div className={styles.selectWrap}>
             <select
               value={editCourseId}
-              onChange={(e) => setEditCourseId(Number(e.target.value))}
+              onChange={(e) => {
+                const cId = Number(e.target.value);
+                setEditCourseId(cId);
+                fetchModulesForEdit(cId, editAccessRules);
+              }}
               className={styles.select}
             >
               <option value={0}>Todos los Cursos (Membresía Completa)</option>
@@ -989,6 +1208,105 @@ export function FinanceView() {
             value={editWhatsapp}
             onChange={(e) => setEditWhatsapp(e.target.value)}
           />
+        </div>
+
+        {/* Sección: Reglas de Liberación de Contenido en Edición */}
+        <div className={styles.rulesSection}>
+          <div className={styles.rulesSectionHeader}>
+            <div>
+              <h4 className={styles.rulesTitle}>Reglas de Liberación de Contenido</h4>
+              <p className={styles.rulesDesc}>
+                Define en qué cuota pagada se desbloquea cada módulo para el estudiante:
+              </p>
+            </div>
+
+            {editCourseId > 0 && editModules.length > 0 && editTotalQuotas > 1 && (
+              <div className={styles.rulesQuickActions}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() => unlockAllInQuotaOne(editModules, setEditAccessRules)}
+                  title="Liberar todas las lecciones en la primera cuota"
+                >
+                  Todo en Cuota 1
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() =>
+                    distributeRulesEqually(editModules, editTotalQuotas, setEditAccessRules)
+                  }
+                  title="Distribuir secuencialmente entre las cuotas"
+                >
+                  <Sparkles size={12} /> Distribuir por Cuotas
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {editCourseId === 0 ? (
+            <div className={styles.allAccessNotice}>
+              <Check size={16} className={styles.allAccessIcon} />
+              <div>
+                <strong>Membresía All-Access:</strong> Este plan da acceso a todos los cursos. Para configurar reglas de liberación gradual de lecciones por cuota, selecciona un curso específico en el selector de arriba.
+              </div>
+            </div>
+          ) : loadingEditModules ? (
+            <div className={styles.rulesLoading}>
+              <RotateCcw size={15} className={styles.spin} />
+              <span>Cargando módulos y lecciones del curso...</span>
+            </div>
+          ) : editModules.length === 0 ? (
+            <div className={styles.rulesEmpty}>
+              Este curso aún no tiene lecciones creadas en WordPress.
+            </div>
+          ) : (
+            <div className={styles.rulesTableContainer}>
+              <table className={styles.rulesTable}>
+                <thead>
+                  <tr>
+                    <th>Módulo / Lección</th>
+                    <th style={{ width: "210px" }}>Se desbloquea al pagar:</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {editModules.map((mod) => (
+                    <tr key={mod.id}>
+                      <td>
+                        <span className={styles.ruleModuleTitle}>{mod.title}</span>
+                      </td>
+                      <td>
+                        <select
+                          className={styles.select}
+                          style={{ minHeight: "34px", fontSize: "12px" }}
+                          value={editAccessRules[mod.id.toString()] || 1}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setEditAccessRules((prev) => ({
+                              ...prev,
+                              [mod.id.toString()]: val,
+                            }));
+                          }}
+                        >
+                          <option value={1}>Cuota 1 (Inmediato al comprar)</option>
+                          {Array.from(
+                            { length: Math.max(0, editTotalQuotas - 1) },
+                            (_, i) => i + 2
+                          ).map((q) => (
+                            <option key={q} value={q}>
+                              Cuota {q}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </Modal>
 

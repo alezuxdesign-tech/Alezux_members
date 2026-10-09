@@ -549,3 +549,132 @@
   font-size: var(--text-xs);
   font-weight: 500;
 }
+
+/* Reglas de Liberación de Contenido */
+.rulesSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.rulesSectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.rulesTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.rulesDesc {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  line-height: 1.45;
+}
+
+.rulesQuickActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.allAccessNotice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.allAccessIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.rulesLoading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.rulesEmpty {
+  padding: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-control);
+}
+
+.rulesTableContainer {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  max-height: 250px;
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.rulesTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.rulesTable th {
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.rulesTable td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.rulesTable tr:last-child td {
+  border-bottom: none;
+}
+
+.ruleModuleTitle {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}

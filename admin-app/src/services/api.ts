@@ -694,6 +694,47 @@ class ApiService {
     return newCourse;
   }
 
+  async getCourseModules(courseId: number): Promise<{ id: number; title: string }[]> {
+    try {
+      if (this.wpData && courseId > 0) {
+        const res = await fetch(`${this.rootUrl}courses/${courseId}/modules`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            return data;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("API Error fetching course modules:", e);
+    }
+
+    // Fallback: extraer de los cursos o devolver lecciones estándar
+    const found = MOCK_COURSES.find((c) => c.id === courseId);
+    if (found && found.sections && found.sections.length > 0) {
+      const list: { id: number; title: string }[] = [];
+      let counter = 100;
+      found.sections.forEach((sec) => {
+        sec.lessons.forEach((l) => {
+          list.push({
+            id: Number(l.id.replace(/\D/g, "")) || ++counter,
+            title: `${sec.title} - ${l.title}`,
+          });
+        });
+      });
+      if (list.length > 0) return list;
+    }
+
+    return [
+      { id: 101, title: "Módulo 1: Fundamentos y Bienvenida" },
+      { id: 102, title: "Módulo 2: Estrategias y Técnicas Principales" },
+      { id: 103, title: "Módulo 3: Casos Prácticos y Configuración" },
+      { id: 104, title: "Módulo 4: Proyecto Final y Certificación" },
+    ];
+  }
+
   // --- STUDENTS ---
   async getStudents(): Promise<Student[]> {
     try {
