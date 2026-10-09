@@ -228,15 +228,23 @@
   padding: 0 var(--space-3);
   font-family: var(--font-body);
   font-size: var(--text-sm);
-  color: var(--foreground);
-  background-color: var(--surface);
-  border: 1px solid var(--border);
+  color: var(--foreground) !important;
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border) !important;
   border-radius: var(--radius-control);
   outline: none;
   cursor: pointer;
+  box-shadow: none !important;
   transition: border-color var(--duration-fast);
 }
 
 .select:focus {
-  border-color: var(--accent);
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent) !important;
+}
+
+.select option {
+  background: var(--surface) !important;
+  background-color: var(--surface) !important;
+  color: var(--foreground) !important;
 }

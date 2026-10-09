@@ -222,20 +222,24 @@
 
 .sectionTitleInput {
   flex: 1;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--foreground);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: var(--radius-control);
-  outline: none;
-  transition: all var(--duration-fast);
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--foreground) !important;
+  font-size: var(--text-sm) !important;
+  font-weight: 600 !important;
+  padding: 6px 10px !important;
+  border-radius: var(--radius-control) !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: all var(--duration-fast) !important;
 }
 
 .sectionTitleInput:focus {
-  background: var(--surface);
-  border-color: var(--accent);
+  background: var(--surface) !important;
+  background-color: var(--surface) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent) !important;
 }
 
 .sectionControls {
@@ -303,12 +307,23 @@
 
 .lessonTitleInput {
   flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--foreground);
-  font-size: var(--text-sm);
-  outline: none;
-  padding: 2px 4px;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--foreground) !important;
+  font-size: var(--text-sm) !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 4px 8px !important;
+  border-radius: var(--radius-control) !important;
+  transition: all var(--duration-fast) !important;
+}
+
+.lessonTitleInput:focus {
+  background: var(--surface-muted) !important;
+  background-color: var(--surface-muted) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent) !important;
 }
 
 .durationTag {
@@ -362,17 +377,20 @@
 }
 
 .input, .textarea {
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  background: var(--surface) !important;
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-control) !important;
   padding: var(--space-3);
-  color: var(--foreground);
+  color: var(--foreground) !important;
   font-size: var(--text-sm);
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
   font-family: inherit;
   transition: border-color var(--duration-fast);
 }
 
 .input:focus, .textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent) !important;
 }

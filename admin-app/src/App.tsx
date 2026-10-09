@@ -99,30 +99,44 @@ export function App() {
       <aside className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ""}`}>
         {/* Cabecera del Sidebar */}
         <div className={styles.sidebarHeader}>
-          <div className={styles.brandGroup} title="Crezca - Academia & Membresías">
-            <div className={styles.logoMark}>
-              <Layers size={19} className={styles.logoIcon} />
-            </div>
-            {!isCollapsed && (
-              <div className={styles.brandText}>
-                <div className={styles.brandTitleWrap}>
-                  <span className={styles.brandName}>Crezca</span>
-                  <span className={styles.versionBadge}>v2.0 Arc UI</span>
+          {!isCollapsed ? (
+            <>
+              <div className={styles.brandGroup} title="Crezca - Academia & Membresías">
+                <div className={styles.logoMark}>
+                  <Layers size={19} className={styles.logoIcon} />
                 </div>
-                <span className={styles.brandSubtitle}>Academia & Membresías</span>
+                <div className={styles.brandText}>
+                  <div className={styles.brandTitleWrap}>
+                    <span className={styles.brandName}>Crezca</span>
+                    <span className={styles.versionBadge}>v2.0 Arc UI</span>
+                  </div>
+                  <span className={styles.brandSubtitle}>Academia & Membresías</span>
+                </div>
               </div>
-            )}
-          </div>
 
-          <button
-            type="button"
-            className={styles.collapseBtn}
-            onClick={toggleSidebar}
-            title={isCollapsed ? "Expandir barra lateral" : "Contraer barra lateral"}
-            aria-label={isCollapsed ? "Expandir barra lateral" : "Contraer barra lateral"}
-          >
-            {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-          </button>
+              <button
+                type="button"
+                className={styles.collapseBtn}
+                onClick={toggleSidebar}
+                title="Contraer barra lateral"
+                aria-label="Contraer barra lateral"
+              >
+                <PanelLeftClose size={16} />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className={styles.collapsedHeaderBtn}
+              onClick={toggleSidebar}
+              title="Expandir barra lateral"
+              aria-label="Expandir barra lateral"
+            >
+              <div className={styles.logoMark}>
+                <Layers size={19} className={styles.logoIcon} />
+              </div>
+            </button>
+          )}
         </div>
 
         {/* Lista de Navegación Vertical */}

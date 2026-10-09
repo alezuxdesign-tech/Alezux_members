@@ -95,10 +95,22 @@ class Admin_Dashboard {
 				margin: 0 !important;
 				padding: 0 !important;
 			}
-			body.toplevel_page_crezca,
-			body.toplevel_page_alezux-members {
-				background-color: #090a0f !important;
-				overflow-x: hidden !important;
+			/* Desactivar fondos blancos impuestos por wp-admin/css/forms.css */
+			#crezca-admin-root input,
+			#crezca-admin-root select,
+			#crezca-admin-root textarea,
+			#alezux-admin-root input,
+			#alezux-admin-root select,
+			#alezux-admin-root textarea {
+				background-color: var(--surface, #1e1e24) !important;
+				color: var(--foreground, #f3f4f6) !important;
+				border: 1px solid var(--border, #2d2d39) !important;
+				box-shadow: none !important;
+			}
+			#crezca-admin-root select option,
+			#alezux-admin-root select option {
+				background-color: #1e1e24 !important;
+				color: #f3f4f6 !important;
 			}
 			<?php endif; ?>
 		</style>

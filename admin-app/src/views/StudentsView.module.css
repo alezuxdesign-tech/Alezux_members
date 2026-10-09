@@ -50,13 +50,21 @@
 }
 
 .select {
-  background: transparent;
-  border: none;
-  color: var(--foreground);
-  font-size: var(--text-xs);
-  padding: 4px 0;
-  outline: none;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  color: var(--foreground) !important;
+  font-size: var(--text-xs) !important;
+  padding: 4px 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
   cursor: pointer;
+}
+
+.select option {
+  background: var(--surface) !important;
+  background-color: var(--surface) !important;
+  color: var(--foreground) !important;
 }
 
 .tableWrapper {

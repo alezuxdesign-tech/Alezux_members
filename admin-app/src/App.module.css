@@ -35,6 +35,88 @@
   min-width: 76px;
 }
 
+.collapsedHeaderBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: transform var(--duration-fast);
+}
+
+.collapsedHeaderBtn:hover {
+  transform: scale(1.06);
+}
+
+.sidebar.collapsed .sidebarHeader {
+  padding: var(--space-4) 0;
+  justify-content: center;
+  min-height: 72px;
+}
+
+.sidebar.collapsed .navSection {
+  padding: var(--space-4) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidebar.collapsed .navItem {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin: 0 auto 6px;
+  justify-content: center;
+  border-radius: var(--radius-control);
+}
+
+.sidebar.collapsed .navIconWrap {
+  min-width: 0;
+  margin: 0;
+}
+
+.sidebar.collapsed .activeIndicator {
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+}
+
+.sidebar.collapsed .sidebarFooter {
+  padding: var(--space-4) 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sidebar.collapsed .footerActionsGrid {
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-2);
+}
+
+.sidebar.collapsed .iconBtn {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  padding: 0;
+  border-radius: var(--radius-control);
+  justify-content: center;
+}
+
+.sidebar.collapsed .backToWpBtn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  margin: 0 auto;
+  justify-content: center;
+  border-radius: var(--radius-control);
+}
+
 /* Header de la Sidebar */
 .sidebarHeader {
   display: flex;
