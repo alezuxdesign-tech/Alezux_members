@@ -228,8 +228,8 @@ class Config extends Module_Base {
 			return;
 		}
 
-		// Si el usuario ya está conectado y no viene a restablecer contraseña
-		if ( is_user_logged_in() && ! in_array( $action, [ 'rp', 'resetpass' ], true ) ) {
+		// Si el usuario ya está conectado y no viene a restablecer contraseña ni a previsualizar
+		if ( is_user_logged_in() && ! isset( $_GET['preview_auth'] ) && ! isset( $_GET['preview'] ) && ! in_array( $action, [ 'rp', 'resetpass' ], true ) ) {
 			if ( current_user_can( 'administrator' ) ) {
 				wp_safe_redirect( admin_url() );
 			} else {
@@ -338,7 +338,12 @@ class Config extends Module_Base {
 		// Password Assets
 		wp_enqueue_style( 'alezux-password-css', $this->get_asset_url( 'assets/css/password-widget.css' ), [], file_exists( __DIR__ . '/assets/css/password-widget.css' ) ? filemtime( __DIR__ . '/assets/css/password-widget.css' ) : ALEZUX_MEMBERS_VERSION );
 		wp_enqueue_script( 'alezux-password-js', $this->get_asset_url( 'assets/js/password-widget.js' ), [ 'jquery' ], file_exists( __DIR__ . '/assets/js/password-widget.js' ) ? filemtime( __DIR__ . '/assets/js/password-widget.js' ) : ALEZUX_MEMBERS_VERSION, true );
+
+		// Custom Split-Screen Auth Assets
+		wp_enqueue_style( 'alezux-custom-auth-css', $this->get_asset_url( 'assets/css/custom-auth.css' ), [], file_exists( __DIR__ . '/assets/css/custom-auth.css' ) ? filemtime( __DIR__ . '/assets/css/custom-auth.css' ) : ALEZUX_MEMBERS_VERSION );
+		wp_enqueue_script( 'alezux-custom-auth-js', $this->get_asset_url( 'assets/js/custom-auth.js' ), [], file_exists( __DIR__ . '/assets/js/custom-auth.js' ) ? filemtime( __DIR__ . '/assets/js/custom-auth.js' ) : ALEZUX_MEMBERS_VERSION, true );
 	}
+
 
 	public function register_elementor_widgets( $widgets_manager ) {
 		require_once __DIR__ . '/widgets/Config_Widget.php';

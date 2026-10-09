@@ -32,11 +32,11 @@ class Recover_Widget extends Widget_Base {
 	}
 
 	public function get_style_depends() {
-		return [ 'alezux-config-css' ];
+		return [ 'alezux-config-css', 'alezux-custom-auth-css' ];
 	}
 
 	public function get_script_depends() {
-		return [ 'alezux-config-js' ];
+		return [ 'alezux-config-js', 'alezux-custom-auth-js' ];
 	}
 
 	protected function register_controls() {
@@ -677,28 +677,14 @@ class Recover_Widget extends Widget_Base {
 	}
 
 	protected function render() {
-		$settings = $this->get_settings_for_display();
-		?>
-		<div class="alezux-auth-form-card">
-			<?php if ( ! empty( $settings['title'] ) ) : ?>
-				<h2 class="alezux-auth-title"><?php echo esc_html( $settings['title'] ); ?></h2>
-			<?php endif; ?>
-
-			<?php if ( ! empty( $settings['description'] ) ) : ?>
-				<p class="alezux-auth-desc"><?php echo esc_html( $settings['description'] ); ?></p>
-			<?php endif; ?>
-
-			<form id="alezux-recover-form" class="alezux-auth-form">
-				<div class="alezux-auth-field">
-					<input type="text" name="user_login" placeholder="<?php echo esc_attr( $settings['placeholder'] ); ?>" required>
-				</div>
-
-				<button type="submit" class="alezux-auth-submit">
-					<span class="alezux-btn-text"><?php echo esc_html( $settings['submit_text'] ); ?></span>
-					<span class="alezux-loader" style="display: none;"></span>
-				</button>
-			</form>
-		</div>
-		<?php
+		$template_path = dirname( __DIR__ ) . '/templates/auth-page.php';
+		if ( file_exists( $template_path ) ) {
+			$standalone = false;
+			$action = 'lostpassword';
+			$css_url = plugin_dir_url( dirname( __FILE__ ) ) . 'assets/css/custom-auth.css';
+			$js_url  = plugin_dir_url( dirname( __FILE__ ) ) . 'assets/js/custom-auth.js';
+			include $template_path;
+		}
 	}
 }
+

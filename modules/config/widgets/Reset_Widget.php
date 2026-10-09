@@ -31,6 +31,14 @@ class Reset_Widget extends Widget_Base {
 		return [ 'alezux-auth' ];
 	}
 
+	public function get_style_depends() {
+		return [ 'alezux-config-css', 'alezux-custom-auth-css' ];
+	}
+
+	public function get_script_depends() {
+		return [ 'alezux-config-js', 'alezux-custom-auth-js' ];
+	}
+
 	protected function register_controls() {
 		$this->start_controls_section(
 			'section_content',
@@ -346,85 +354,14 @@ class Reset_Widget extends Widget_Base {
 	}
 
 	protected function render() {
-		$settings = $this->get_settings_for_display();
-
-		// Si estamos en el editor, mostramos el formulario
-		$is_editor = \Elementor\Plugin::$instance->editor->is_edit_mode();
-
-		$key = isset( $_GET['key'] ) ? sanitize_text_field( $_GET['key'] ) : '';
-		$login = isset( $_GET['login'] ) ? sanitize_user( $_GET['login'] ) : '';
-
-		$error_message = false;
-		$user = false;
-
-		if ( ! $is_editor ) {
-			if ( empty( $key ) || empty( $login ) ) {
-				$error_message = 'Enlace de recuperación inválido o incompleto.';
-			} else {
-				// Verificar Key
-				$user = check_password_reset_key( $key, $login );
-				if ( is_wp_error( $user ) ) {
-					$error_message = 'El enlace ha expirado o no es válido.';
-				}
-			}
+		$template_path = dirname( __DIR__ ) . '/templates/auth-page.php';
+		if ( file_exists( $template_path ) ) {
+			$standalone = false;
+			$action = 'rp';
+			$css_url = plugin_dir_url( dirname( __FILE__ ) ) . 'assets/css/custom-auth.css';
+			$js_url  = plugin_dir_url( dirname( __FILE__ ) ) . 'assets/js/custom-auth.js';
+			include $template_path;
 		}
-
-		?>
-		<div class="alezux-password-form alezux-reset-form">
-			<?php if ( ! empty( $settings['title'] ) ) : ?>
-				<h2 class="alezux-auth-title" style="text-align: center; margin-bottom: 20px;"><?php echo esc_html( $settings['title'] ); ?></h2>
-			<?php endif; ?>
-
-			<?php if ( $error_message && ! $is_editor ) : ?>
-				<div class="alezux-alert error">
-					<p><?php echo esc_html( $error_message ); ?></p>
-					<p><a href="<?php echo esc_url( wp_lostpassword_url() ); ?>" style="text-decoration: underline;">Solicitar nuevo enlace</a></p>
-				</div>
-			<?php else : ?>
-				
-				<form id="alezux-reset-password-form">
-					<div class="field-group password-strength-wrapper">
-						<label><?php esc_html_e( 'Nueva Contraseña', 'alezux-members' ); ?></label>
-						<div class="input-with-eye">
-							<input type="password" name="pass1" id="pass1" required placeholder="••••••••">
-							<span class="alezux-toggle-password"><i class="eicon-preview-medium"></i></span>
-						</div>
-						
-						<!-- Reusing existing strength meter styles -->
-						<div class="password-strength-meter">
-							<div class="meter-fill"></div>
-						</div>
-						<ul class="password-requirements">
-							<li data-req="length"><i class="eicon-check-circle"></i> <?php esc_html_e( 'Mínimo 8 caracteres', 'alezux-members' ); ?></li>
-							<li data-req="upper"><i class="eicon-check-circle"></i> <?php esc_html_e( 'Al menos una mayúscula', 'alezux-members' ); ?></li>
-							<li data-req="number"><i class="eicon-check-circle"></i> <?php esc_html_e( 'Al menos un número', 'alezux-members' ); ?></li>
-							<li data-req="special"><i class="eicon-check-circle"></i> <?php esc_html_e( 'Al menos un signo', 'alezux-members' ); ?></li>
-						</ul>
-					</div>
-
-					<div class="field-group">
-						<label><?php esc_html_e( 'Confirmar Nueva Contraseña', 'alezux-members' ); ?></label>
-						<div class="input-with-eye">
-							<input type="password" name="pass2" id="pass2" required placeholder="••••••••">
-							<span class="alezux-toggle-password"><i class="eicon-preview-medium"></i></span>
-						</div>
-					</div>
-
-					<input type="hidden" name="action" value="alezux_reset_password">
-					<input type="hidden" name="key" value="<?php echo esc_attr( $key ); ?>">
-					<input type="hidden" name="login" value="<?php echo esc_attr( $login ); ?>">
-					<input type="hidden" name="nonce" value="<?php echo wp_create_nonce( 'alezux-auth-nonce' ); ?>">
-					
-					<div class="button-wrapper">
-						<button type="submit" class="alezux-submit-btn">
-							<span class="btn-text"><?php echo esc_html( $settings['submit_text'] ); ?></span>
-							<span class="btn-loader" style="display: none;"><i class="eicon-spinner eicon-animation-spin"></i></span>
-						</button>
-					</div>
-				</form>
-
-			<?php endif; ?>
-		</div>
-		<?php
 	}
 }
+
