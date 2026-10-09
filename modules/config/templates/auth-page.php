@@ -1,7 +1,7 @@
 <?php
 /**
  * ALEZUX MEMBERS - CUSTOM AUTHENTICATION TEMPLATE
- * Replaces standard wp-login.php with a split-screen design.
+ * Replaces standard wp-login.php with high-fidelity Image 2 design.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -19,14 +19,20 @@ $action          = isset( $_REQUEST['action'] ) ? sanitize_text_field( $_REQUEST
 $reset_key       = isset( $_REQUEST['key'] ) ? sanitize_text_field( $_REQUEST['key'] ) : '';
 $reset_login     = isset( $_REQUEST['login'] ) ? sanitize_user( $_REQUEST['login'] ) : '';
 
-$css_url         = ! empty( $css_url ) ? $css_url : plugins_url( 'assets/css/custom-auth.css', dirname( __FILE__ ) );
-$js_url          = ! empty( $js_url ) ? $js_url : plugins_url( 'assets/js/custom-auth.js', dirname( __FILE__ ) );
-$css_ver         = file_exists( dirname( __FILE__ ) . '/assets/css/custom-auth.css' ) ? filemtime( dirname( __FILE__ ) . '/assets/css/custom-auth.css' ) : ALEZUX_MEMBERS_VERSION;
-$js_ver          = file_exists( dirname( __FILE__ ) . '/assets/js/custom-auth.js' ) ? filemtime( dirname( __FILE__ ) . '/assets/js/custom-auth.js' ) : ALEZUX_MEMBERS_VERSION;
+$module_dir      = dirname( __DIR__ );
+$css_url         = ! empty( $css_url ) ? $css_url : plugins_url( 'assets/css/custom-auth.css', $module_dir . '/Config.php' );
+$js_url          = ! empty( $js_url ) ? $js_url : plugins_url( 'assets/js/custom-auth.js', $module_dir . '/Config.php' );
+$css_ver         = file_exists( $module_dir . '/assets/css/custom-auth.css' ) ? filemtime( $module_dir . '/assets/css/custom-auth.css' ) : ALEZUX_MEMBERS_VERSION;
+$js_ver          = file_exists( $module_dir . '/assets/js/custom-auth.js' ) ? filemtime( $module_dir . '/assets/js/custom-auth.js' ) : ALEZUX_MEMBERS_VERSION;
 
 $privacy_url     = get_privacy_policy_url() ? get_privacy_policy_url() : home_url( '/politica-de-privacidad' );
 $terms_url       = home_url( '/terminos-y-condiciones' );
 $standalone      = isset( $standalone ) ? (bool) $standalone : true;
+
+$is_register     = ( $action === 'register' || ( function_exists( 'is_page' ) && is_page( [ 'registro', 'register' ] ) ) );
+$is_recover      = ( in_array( $action, [ 'lostpassword', 'recover' ], true ) );
+$is_reset        = ( in_array( $action, [ 'rp', 'resetpass' ], true ) || ( ! empty( $reset_key ) && ! empty( $reset_login ) ) );
+$is_login        = ( ! $is_register && ! $is_recover && ! $is_reset );
 
 if ( $standalone ) : ?>
 <!DOCTYPE html>
@@ -34,7 +40,7 @@ if ( $standalone ) : ?>
 <head>
   <meta charset="<?php bloginfo( 'charset' ); ?>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?php echo esc_html( $site_name ); ?> &bull; <?php esc_html_e( 'Iniciar Sesión', 'alezux-members' ); ?></title>
+  <title><?php echo esc_html( $site_name ); ?> &bull; <?php esc_html_e( 'Acceso', 'alezux-members' ); ?></title>
   
   <?php if ( $site_icon ) : ?>
     <link rel="icon" href="<?php echo esc_url( $site_icon ); ?>" sizes="32x32">
@@ -55,21 +61,25 @@ if ( $standalone ) : ?>
   <div class="alezux-auth-card">
     
     <!-- ======================================================== -->
-    <!-- PANEL IZQUIERDO: HERO & STEPS (VIBRANT BLUE GRADIENT)    -->
+    <!-- PANEL IZQUIERDO: HERO VIBRANT BLUE (DISEÑO IMAGEN 2)     -->
     <!-- ======================================================== -->
     <div class="alezux-hero-panel">
       <!-- Marca / Logo -->
       <a href="<?php echo esc_url( home_url() ); ?>" class="hero-brand">
         <?php if ( $logo_img ) : ?>
-          <img src="<?php echo esc_url( $logo_img ); ?>" alt="<?php echo esc_attr( $site_name ); ?>" style="max-height: 38px; width: auto; object-fit: contain;">
+          <img src="<?php echo esc_url( $logo_img ); ?>" alt="<?php echo esc_attr( $site_name ); ?>" style="max-height: 36px; width: auto; object-fit: contain;">
         <?php elseif ( $site_icon ) : ?>
-          <img src="<?php echo esc_url( $site_icon ); ?>" alt="<?php echo esc_attr( $site_name ); ?>" style="width: 32px; height: 32px; border-radius: 8px;">
+          <img src="<?php echo esc_url( $site_icon ); ?>" alt="<?php echo esc_attr( $site_name ); ?>" style="width: 30px; height: 30px; border-radius: 8px;">
           <span><?php echo esc_html( $site_name ); ?></span>
         <?php else : ?>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-            <polyline points="2 17 12 22 22 17"></polyline>
-            <polyline points="2 12 12 17 22 12"></polyline>
+          <!-- Logo hexagonal moderno de nodo como en Imagen 2 -->
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="4"></circle>
+            <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line>
+            <line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line>
+            <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line>
+            <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"></line>
           </svg>
           <span><?php echo esc_html( $site_name ); ?></span>
         <?php endif; ?>
@@ -82,7 +92,7 @@ if ( $standalone ) : ?>
         </div>
         <h1 class="hero-title">Start your Journey</h1>
         <p class="hero-subtitle">
-          El conocimiento es el puente hacia tus mayores metas. Accede a tu plataforma y continúa aprendiendo hoy mismo.
+          Follow these simple steps to set up your account and start learning today.
         </p>
       </div>
 
@@ -90,33 +100,33 @@ if ( $standalone ) : ?>
       <div class="hero-cards-grid">
         <div class="hero-step-card active">
           <div class="card-badge">1</div>
-          <div class="card-text">Crea tu cuenta<br>Gratis hoy</div>
+          <div class="card-text">Register your<br>account</div>
         </div>
 
         <div class="hero-step-card glass">
           <div class="card-badge">2</div>
-          <div class="card-text">Completa tu<br>Perfil</div>
+          <div class="card-text">Set up your profile<br>information</div>
         </div>
 
         <div class="hero-step-card glass">
           <div class="card-badge">3</div>
-          <div class="card-text">Accede a tus<br>Cursos</div>
+          <div class="card-text">Access your courses<br>instantly</div>
         </div>
       </div>
     </div>
 
     <!-- ======================================================== -->
-    <!-- PANEL DERECHO: FORMULARIOS DE AUTENTICACIÓN              -->
+    <!-- PANEL DERECHO: FORMULARIOS (WHITE SURFACE - IMAGEN 2)    -->
     <!-- ======================================================== -->
     <div class="alezux-form-panel">
       
       <!-- ---------------------------------------------------- -->
-      <!-- VISTA 1: INICIO DE SESIÓN                            -->
+      <!-- VISTA 1: INICIO DE SESIÓN (WELCOME BACK)             -->
       <!-- ---------------------------------------------------- -->
-      <div id="alezux-view-login" class="auth-view">
+      <div id="alezux-view-login" class="auth-view <?php echo $is_login ? '' : 'is-hidden'; ?>">
         <div class="form-header">
-          <h2 class="form-title">Bienvenido</h2>
-          <p class="form-subtitle">Ingresa tus credenciales para acceder a tu cuenta.</p>
+          <h2 class="form-title">Welcome Back</h2>
+          <p class="form-subtitle">Inicia sesión en tu cuenta para continuar</p>
         </div>
 
         <div class="auth-alert-container"></div>
@@ -127,12 +137,6 @@ if ( $standalone ) : ?>
           <div class="auth-field">
             <label class="field-label" for="alezux-login-username">Correo o Usuario</label>
             <div class="input-wrapper">
-              <span class="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              </span>
               <input 
                 type="text" 
                 id="alezux-login-username" 
@@ -147,24 +151,18 @@ if ( $standalone ) : ?>
           <div class="auth-field">
             <label class="field-label" for="alezux-login-password">Contraseña</label>
             <div class="input-wrapper">
-              <span class="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-              </span>
               <input 
                 type="password" 
                 id="alezux-login-password" 
                 class="auth-input" 
-                placeholder="••••••••" 
+                placeholder="••••••••••••" 
                 required 
                 autocomplete="current-password"
               >
               <button type="button" class="toggle-pwd-btn" aria-label="Mostrar contraseña">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
+                  <circle cx="12" cy="7" r="3"></circle>
                 </svg>
               </button>
             </div>
@@ -191,12 +189,12 @@ if ( $standalone ) : ?>
       </div>
 
       <!-- ---------------------------------------------------- -->
-      <!-- VISTA 2: REGISTRO DE CUENTA                          -->
+      <!-- VISTA 2: REGISTRO DE CUENTA (JOIN US - IMAGEN 2)     -->
       <!-- ---------------------------------------------------- -->
-      <div id="alezux-view-register" class="auth-view is-hidden">
+      <div id="alezux-view-register" class="auth-view <?php echo $is_register ? '' : 'is-hidden'; ?>">
         <div class="form-header">
-          <h2 class="form-title">Crear Cuenta</h2>
-          <p class="form-subtitle">Regístrate en pocos segundos y comienza tu viaje.</p>
+          <h2 class="form-title">Join Us</h2>
+          <p class="form-subtitle">Enter your personal details to get started</p>
         </div>
 
         <div class="auth-alert-container"></div>
@@ -205,33 +203,8 @@ if ( $standalone ) : ?>
           <input type="hidden" id="alezux-register-redirect" value="<?php echo esc_attr( $redirect_to ); ?>">
 
           <div class="auth-field">
-            <label class="field-label" for="alezux-register-name">Nombre Completo</label>
-            <div class="input-wrapper">
-              <span class="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              </span>
-              <input 
-                type="text" 
-                id="alezux-register-name" 
-                class="auth-input" 
-                placeholder="Juan Pérez" 
-                required
-              >
-            </div>
-          </div>
-
-          <div class="auth-field">
             <label class="field-label" for="alezux-register-email">Correo Electrónico</label>
             <div class="input-wrapper">
-              <span class="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                  <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
-              </span>
               <input 
                 type="email" 
                 id="alezux-register-email" 
@@ -243,38 +216,47 @@ if ( $standalone ) : ?>
             </div>
           </div>
 
-          <div class="auth-field">
-            <label class="field-label" for="alezux-register-username">Nombre de Usuario <span style="font-weight:400; opacity:0.6;">(opcional)</span></label>
-            <div class="input-wrapper">
-              <span class="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="4"></circle>
-                  <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
-                </svg>
-              </span>
-              <input 
-                type="text" 
-                id="alezux-register-username" 
-                class="auth-input" 
-                placeholder="juanperez"
-              >
+          <!-- Fila de 2 Columnas: Nombre Completo & Usuario (Imagen 2) -->
+          <div class="auth-row-2col">
+            <div class="auth-field">
+              <label class="field-label" for="alezux-register-name">Full Name</label>
+              <div class="input-wrapper">
+                <input 
+                  type="text" 
+                  id="alezux-register-name" 
+                  class="auth-input" 
+                  placeholder="Juliette Karapetyan" 
+                  required
+                >
+              </div>
+            </div>
+
+            <div class="auth-field">
+              <label class="field-label" for="alezux-register-username">Username</label>
+              <div class="input-wrapper">
+                <input 
+                  type="text" 
+                  id="alezux-register-username" 
+                  class="auth-input" 
+                  placeholder="julietux"
+                >
+                <span class="input-check-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </span>
+              </div>
             </div>
           </div>
 
           <div class="auth-field">
-            <label class="field-label" for="alezux-register-password">Contraseña</label>
+            <label class="field-label" for="alezux-register-password">Password</label>
             <div class="input-wrapper">
-              <span class="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-              </span>
               <input 
                 type="password" 
                 id="alezux-register-password" 
                 class="auth-input" 
-                placeholder="Mínimo 8 caracteres" 
+                placeholder="••••••••••••" 
                 required 
                 autocomplete="new-password"
               >
@@ -285,6 +267,9 @@ if ( $standalone ) : ?>
                 </svg>
               </button>
             </div>
+            <p class="field-helper-text">
+              Mínimo 8 caracteres, mayúsculas, minúsculas, números y símbolos.
+            </p>
             <div class="password-meter-bar">
               <div id="alezux-reg-meter-fill" class="password-meter-fill"></div>
             </div>
@@ -292,12 +277,12 @@ if ( $standalone ) : ?>
 
           <button type="submit" class="auth-submit-btn" style="margin-top: 10px;">
             <span class="auth-spinner"></span>
-            <span class="btn-text">Crear Cuenta</span>
+            <span class="btn-text">Continue</span>
           </button>
 
           <div class="auth-switch-row">
-            ¿Ya tienes una cuenta?
-            <a href="#login" class="auth-link" data-auth-target="login">Inicia sesión</a>
+            Already have an account?
+            <a href="#login" class="auth-link" data-auth-target="login">Log in</a>
           </div>
         </form>
       </div>
@@ -305,10 +290,10 @@ if ( $standalone ) : ?>
       <!-- ---------------------------------------------------- -->
       <!-- VISTA 3: RECUPERACIÓN DE CONTRASEÑA                  -->
       <!-- ---------------------------------------------------- -->
-      <div id="alezux-view-recover" class="auth-view is-hidden">
+      <div id="alezux-view-recover" class="auth-view <?php echo $is_recover ? '' : 'is-hidden'; ?>">
         <div class="form-header">
           <h2 class="form-title">Recuperar Acceso</h2>
-          <p class="form-subtitle">Ingresa tu correo o usuario y te enviaremos un enlace de recuperación.</p>
+          <p class="form-subtitle">Ingresa tu correo o usuario y te enviaremos las instrucciones.</p>
         </div>
 
         <div class="auth-alert-container"></div>
@@ -317,12 +302,6 @@ if ( $standalone ) : ?>
           <div class="auth-field">
             <label class="field-label" for="alezux-recover-login">Correo Electrónico o Usuario</label>
             <div class="input-wrapper">
-              <span class="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                  <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
-              </span>
               <input 
                 type="text" 
                 id="alezux-recover-login" 
@@ -348,7 +327,7 @@ if ( $standalone ) : ?>
       <!-- ---------------------------------------------------- -->
       <!-- VISTA 4: RESTABLECER CONTRASEÑA (RP / RESETPASS)     -->
       <!-- ---------------------------------------------------- -->
-      <div id="alezux-view-reset" class="auth-view is-hidden">
+      <div id="alezux-view-reset" class="auth-view <?php echo $is_reset ? '' : 'is-hidden'; ?>">
         <div class="form-header">
           <h2 class="form-title">Nueva Contraseña</h2>
           <p class="form-subtitle">Crea una nueva contraseña segura para tu cuenta.</p>
@@ -363,12 +342,6 @@ if ( $standalone ) : ?>
           <div class="auth-field">
             <label class="field-label" for="alezux-reset-password">Nueva Contraseña</label>
             <div class="input-wrapper">
-              <span class="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-              </span>
               <input 
                 type="password" 
                 id="alezux-reset-password" 
@@ -392,12 +365,6 @@ if ( $standalone ) : ?>
           <div class="auth-field">
             <label class="field-label" for="alezux-reset-confirm">Confirmar Nueva Contraseña</label>
             <div class="input-wrapper">
-              <span class="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-              </span>
               <input 
                 type="password" 
                 id="alezux-reset-confirm" 
@@ -417,7 +384,7 @@ if ( $standalone ) : ?>
 
           <button type="submit" class="auth-submit-btn" style="margin-top: 14px;">
             <span class="auth-spinner"></span>
-            <span class="btn-text">Restablecer Contraseña</span>
+            <span class="btn-text">Guardar Contraseña</span>
           </button>
 
           <div class="auth-switch-row">
@@ -428,8 +395,8 @@ if ( $standalone ) : ?>
 
       <!-- Footer con Términos -->
       <div class="auth-terms-footer">
-        Al continuar, aceptas nuestros 
-        <a href="<?php echo esc_url( $terms_url ); ?>" target="_blank">Términos de Servicio</a> y 
+        Al registrarte o continuar, confirmas que has leído y aceptas los 
+        <a href="<?php echo esc_url( $terms_url ); ?>" target="_blank">Términos de Servicio</a> y la 
         <a href="<?php echo esc_url( $privacy_url ); ?>" target="_blank">Política de Privacidad</a>.
       </div>
 
@@ -453,4 +420,3 @@ if ( $standalone ) : ?>
 <?php else : ?>
 </div>
 <?php endif; ?>
-

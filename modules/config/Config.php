@@ -91,27 +91,83 @@ class Config extends Module_Base {
     }
 
 	/**
-	 * Configura los filtros y redirecciones solo si la página está seleccionada
+	 * Configura los filtros y redirecciones de autenticación
 	 */
 	public function setup_custom_auth_logic() {
         // Redirección de páginas restringidas (Admin Only) y Privadas (Solo Logueados)
         add_action( 'template_redirect', [ $this, 'check_restricted_pages' ] );
         add_action( 'template_redirect', [ $this, 'check_private_pages' ] );
 
-		$login_page_id = get_option( 'alezux_login_page_id' );
-		
-		// Solo proceder si hay una página válida seleccionada
-		if ( ! $login_page_id || get_post_status( $login_page_id ) !== 'publish' ) {
-			return;
-		}
-
-		// Redirección de /wp-login.php
-		add_action( 'template_redirect', [ $this, 'redirect_to_custom_login' ] );
-		
 		// Sobrescribir URLs nativas de WordPress
 		add_filter( 'login_url', [ $this, 'custom_login_url' ], 10, 3 );
 		add_filter( 'lostpassword_url', [ $this, 'custom_lostpassword_url' ], 10, 2 );
 		add_filter( 'retrieve_password_message', [ $this, 'custom_retrieve_password_message' ], 10, 4 );
+
+		// Reemplazar completamente la plantilla de la página de login por la interfaz moderna standalone (Imagen 2)
+		// Bypasea cualquier tema, cabecera, pie o columnas de Elementor.
+		add_filter( 'template_include', [ $this, 'override_login_page_template' ], 999 );
+
+		$login_page_id = get_option( 'alezux_login_page_id' );
+		if ( $login_page_id && get_post_status( $login_page_id ) === 'publish' ) {
+			// Redirección de /wp-login.php a la página personalizada si aplica
+			add_action( 'template_redirect', [ $this, 'redirect_to_custom_login' ] );
+		}
+	}
+
+	/**
+	 * Sobrescribe la plantilla de la página de login para renderizar la página standalone completa (Imagen 2)
+	 */
+	public function override_login_page_template( $template ) {
+		// Permitir editar la página con Elementor sin bloquear el constructor visual
+		if ( ( class_exists( '\Elementor\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) || isset( $_GET['elementor-preview'] ) ) {
+			return $template;
+		}
+
+		$login_page_id = get_option( 'alezux_login_page_id' );
+		$is_login_page = false;
+
+		// 1. Si coincide con la página de login configurada en opciones de Alezux
+		if ( $login_page_id && is_page( $login_page_id ) ) {
+			$is_login_page = true;
+		}
+
+		// 2. Si no hay ID o coincide con slugs habituales de login o registro
+		if ( ! $is_login_page && is_page( [ 'login', 'iniciar-sesion', 'acceso', 'members-login', 'auth', 'registro', 'register' ] ) ) {
+			$is_login_page = true;
+		}
+
+		// 3. Verificación por URI directa en caso de reglas de reescritura o permalinks
+		if ( ! $is_login_page && isset( $_SERVER['REQUEST_URI'] ) ) {
+			$req_path = trim( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' );
+			if ( in_array( $req_path, [ 'login', 'iniciar-sesion', 'acceso', 'members-login', 'auth', 'registro', 'register' ], true ) ) {
+				$is_login_page = true;
+			}
+		}
+
+		// 4. Si se solicita expresamente vía query param (ej: ?preview_auth=1 o ?alezux_auth=1)
+		if ( isset( $_GET['preview_auth'] ) || isset( $_GET['alezux_auth'] ) ) {
+			$is_login_page = true;
+		}
+
+		if ( $is_login_page ) {
+			$action = isset( $_REQUEST['action'] ) ? sanitize_text_field( $_REQUEST['action'] ) : 'login';
+
+			// Si el usuario ya está conectado y no viene a previsualizar ni a restablecer contraseña
+			if ( is_user_logged_in() && ! isset( $_GET['preview_auth'] ) && ! isset( $_GET['preview'] ) && ! in_array( $action, [ 'rp', 'resetpass' ], true ) ) {
+				if ( current_user_can( 'administrator' ) ) {
+					wp_safe_redirect( admin_url() );
+				} else {
+					$student_page = get_option( 'alezux_student_dashboard_page_id' );
+					wp_safe_redirect( $student_page ? get_permalink( $student_page ) : home_url() );
+				}
+				exit;
+			}
+
+			$this->render_auth_page( true );
+			exit;
+		}
+
+		return $template;
 	}
 
     /**
