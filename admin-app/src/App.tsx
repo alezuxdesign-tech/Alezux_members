@@ -11,9 +11,12 @@ import {
   Layers,
   ArrowLeft,
   Maximize2,
-  Minimize2
+  Minimize2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronRight,
+  ShieldCheck
 } from "lucide-react";
-import { SegmentedControl } from "./components/arc/segmented-control/segmented-control";
 import { OverviewView } from "./views/OverviewView";
 import { CoursesView } from "./views/CoursesView";
 import { StudentsView } from "./views/StudentsView";
@@ -24,11 +27,21 @@ import styles from "./App.module.css";
 
 type TabId = "overview" | "courses" | "students" | "finance" | "marketing" | "settings";
 
+interface NavItemConfig {
+  id: TabId;
+  label: string;
+  icon: React.ReactNode;
+  badge?: string;
+}
+
 export function App() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [accent, setAccent] = useState<string>("violet");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem("crezca_sidebar_collapsed") === "true";
+  });
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -55,95 +68,178 @@ export function App() {
     }
   };
 
+  const toggleSidebar = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("crezca_sidebar_collapsed", String(next));
+      return next;
+    });
+  };
+
   const wpAdminUrl = (window as any).crezca_admin_data?.wp_admin_url 
     || (window as any).alezux_admin_data?.wp_admin_url 
     || "/wp-admin/";
 
-  const navOptions = [
-    { value: "overview" as const, label: "Métricas & Resumen", icon: <BarChart3 size={15} /> },
-    { value: "courses" as const, label: "Cursos & Builder", icon: <GraduationCap size={15} /> },
-    { value: "students" as const, label: "Estudiantes & Accesos", icon: <Users size={15} /> },
-    { value: "finance" as const, label: "Finanzas & Planes", icon: <CreditCard size={15} /> },
-    { value: "marketing" as const, label: "Marketing", icon: <Mail size={15} /> },
-    { value: "settings" as const, label: "Ajustes", icon: <Sliders size={15} /> },
+  const navItems: NavItemConfig[] = [
+    { id: "overview", label: "Métricas & Resumen", icon: <BarChart3 size={18} /> },
+    { id: "courses", label: "Cursos & Builder", icon: <GraduationCap size={18} /> },
+    { id: "students", label: "Estudiantes & Accesos", icon: <Users size={18} /> },
+    { id: "finance", label: "Finanzas & Planes", icon: <CreditCard size={18} /> },
+    { id: "marketing", label: "Marketing & Emails", icon: <Mail size={18} /> },
+    { id: "settings", label: "Configuración", icon: <Sliders size={18} /> },
   ];
+
+  const currentNav = navItems.find((item) => item.id === activeTab) || navItems[0];
 
   return (
     <div className={styles.appShell}>
-      {/* Barra de Navegación Superior */}
-      <header className={styles.topbar}>
-        <div className={styles.brandGroup}>
-          <div className={styles.logoMark}>
-            <Layers size={18} className={styles.logoIcon} />
-          </div>
-          <div>
-            <div className={styles.brandTitleWrap}>
-              <span className={styles.brandName}>Crezca</span>
-              <span className={styles.versionBadge}>v2.0 Arc UI</span>
+      {/* =========================================================
+          SIDEBAR VERTICAL ESTILO ARC UI
+          ========================================================= */}
+      <aside className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ""}`}>
+        {/* Cabecera del Sidebar */}
+        <div className={styles.sidebarHeader}>
+          <div className={styles.brandGroup} title="Crezca - Academia & Membresías">
+            <div className={styles.logoMark}>
+              <Layers size={19} className={styles.logoIcon} />
             </div>
-            <span className={styles.brandSubtitle}>Academia & Membresías</span>
+            {!isCollapsed && (
+              <div className={styles.brandText}>
+                <div className={styles.brandTitleWrap}>
+                  <span className={styles.brandName}>Crezca</span>
+                  <span className={styles.versionBadge}>v2.0 Arc UI</span>
+                </div>
+                <span className={styles.brandSubtitle}>Academia & Membresías</span>
+              </div>
+            )}
           </div>
+
+          <button
+            type="button"
+            className={styles.collapseBtn}
+            onClick={toggleSidebar}
+            title={isCollapsed ? "Expandir barra lateral" : "Contraer barra lateral"}
+            aria-label={isCollapsed ? "Expandir barra lateral" : "Contraer barra lateral"}
+          >
+            {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
         </div>
 
-        {/* Selector de Pestañas Estilo Arc SegmentedControl */}
-        <div className={styles.navWrapper}>
-          <SegmentedControl
-            options={navOptions}
-            value={activeTab}
-            onChange={(val) => setActiveTab(val)}
-            size="md"
-          />
-        </div>
+        {/* Lista de Navegación Vertical */}
+        <nav className={styles.navSection}>
+          {!isCollapsed && (
+            <div className={styles.navSectionLabel}>Plataforma</div>
+          )}
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`${styles.navItem} ${isActive ? styles.active : ""}`}
+                onClick={() => setActiveTab(item.id)}
+                title={isCollapsed ? item.label : undefined}
+              >
+                {isActive && <span className={styles.activeIndicator} />}
+                <span className={styles.navIconWrap}>{item.icon}</span>
+                {!isCollapsed && <span className={styles.navLabel}>{item.label}</span>}
+                {!isCollapsed && item.badge && (
+                  <span className={styles.navBadge}>{item.badge}</span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-        {/* Acciones de la barra */}
-        <div className={styles.topActions}>
+        {/* Pie de la Sidebar */}
+        <div className={styles.sidebarFooter}>
+          {!isCollapsed && (
+            <div className={styles.userCard}>
+              <div className={styles.userAvatar}>
+                <ShieldCheck size={15} />
+              </div>
+              <div className={styles.userInfo}>
+                <span className={styles.userName}>Administrador</span>
+                <span className={styles.userStatus}>
+                  <span className={styles.statusDot} />
+                  Sesión activa
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Botones de acción rápida: Tema y Pantalla Completa */}
+          <div className={styles.footerActionsGrid}>
+            <button
+              type="button"
+              className={styles.iconBtn}
+              onClick={toggleTheme}
+              title={`Cambiar a tema ${theme === "dark" ? "claro" : "oscuro"}`}
+              aria-label="Cambiar tema de color"
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+              {!isCollapsed && <span>{theme === "dark" ? "Modo Claro" : "Modo Oscuro"}</span>}
+            </button>
+
+            <button
+              type="button"
+              className={styles.iconBtn}
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+              aria-label="Alternar pantalla completa"
+            >
+              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              {!isCollapsed && <span>{isFullscreen ? "Reducir" : "Expandir"}</span>}
+            </button>
+          </div>
+
+          {/* Enlace para volver a WordPress */}
           <a
             href={wpAdminUrl}
             className={styles.backToWpBtn}
-            title="Volver al panel tradicional de WordPress"
+            title="Regresar al panel tradicional de WordPress"
           >
             <ArrowLeft size={14} />
-            <span>Volver a WordPress</span>
+            {!isCollapsed && <span>Volver a WordPress</span>}
           </a>
-
-          <button
-            type="button"
-            className={styles.iconBtn}
-            onClick={toggleFullscreen}
-            aria-label="Pantalla completa"
-            title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-          >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-
-          <button
-            type="button"
-            className={styles.iconBtn}
-            onClick={toggleTheme}
-            aria-label="Cambiar tema"
-            title={`Cambiar a tema ${theme === "dark" ? "claro" : "oscuro"}`}
-          >
-            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
         </div>
-      </header>
+      </aside>
 
-      {/* Contenido Principal */}
-      <main className={styles.mainContent}>
-        {activeTab === "overview" && <OverviewView onNavigate={(tab) => setActiveTab(tab as TabId)} />}
-        {activeTab === "courses" && <CoursesView />}
-        {activeTab === "students" && <StudentsView />}
-        {activeTab === "finance" && <FinanceView />}
-        {activeTab === "marketing" && <MarketingView />}
-        {activeTab === "settings" && (
-          <SettingsView
-            currentAccent={accent}
-            onAccentChange={setAccent}
-            currentTheme={theme}
-            onThemeToggle={toggleTheme}
-          />
-        )}
-      </main>
+      {/* =========================================================
+          CONTENIDO PRINCIPAL
+          ========================================================= */}
+      <div className={styles.mainArea}>
+        {/* Cabecera superior del contenido */}
+        <header className={styles.mainHeader}>
+          <div className={styles.headerBreadcrumb}>
+            <span>Crezca</span>
+            <ChevronRight size={14} />
+            <span className={styles.headerTitle}>{currentNav.label}</span>
+          </div>
+
+          <div className={styles.headerActions}>
+            {/* Quick status pill */}
+            <span className={styles.versionBadge}>Arc Design System</span>
+          </div>
+        </header>
+
+        {/* Cuerpo del módulo activo */}
+        <main className={styles.mainBody}>
+          {activeTab === "overview" && <OverviewView onNavigate={(tab) => setActiveTab(tab as TabId)} />}
+          {activeTab === "courses" && <CoursesView />}
+          {activeTab === "students" && <StudentsView />}
+          {activeTab === "finance" && <FinanceView />}
+          {activeTab === "marketing" && <MarketingView />}
+          {activeTab === "settings" && (
+            <SettingsView
+              currentAccent={accent}
+              onAccentChange={setAccent}
+              currentTheme={theme}
+              onThemeToggle={toggleTheme}
+            />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
