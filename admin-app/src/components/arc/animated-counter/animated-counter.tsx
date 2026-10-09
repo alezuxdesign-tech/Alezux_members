@@ -98,13 +98,13 @@ export function AnimatedCounter({ value, label, prefix = "", suffix = "", decima
       )}
       <span className={styles.srOnly}>{text}</span>
       <span className={styles.value} aria-hidden="true">
-        {prefix && <span className={styles.symbol}>{prefix}</span>}
+        {prefix && <span className={styles.prefix}>{prefix}</span>}
         <AnimatePresence initial={false}>
           {parts.map(part => "digit" in part
             ? <Column key={part.key} digit={part.digit} direction={direction} armed={armed} delay={Math.min(part.order * motionTokens.stagger.item, 0.25)} reduceMotion={reduceMotion} />
             : <motion.span key={part.key} className={styles.symbol} {...presence} transition={reduceMotion ? { duration: 0 } : motionTokens.spring.morph}>{part.text}</motion.span>)}
         </AnimatePresence>
-        {suffix && <span className={styles.symbol}>{suffix}</span>}
+        {suffix && <span className={styles.suffix}>{suffix.trim()}</span>}
       </span>
     </span>
   );

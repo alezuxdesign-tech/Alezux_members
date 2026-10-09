@@ -61,7 +61,8 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
           label="Facturación del Mes"
           value={stats.monthlyRevenue}
           prefix="$"
-          suffix=" USD"
+          suffix="USD"
+          decimals={2}
           change={stats.monthlyRevenueChange}
           context="Cobros de cuotas y membresías recurrentes"
           icon={<DollarSign size={16} />}

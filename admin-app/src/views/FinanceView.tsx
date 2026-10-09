@@ -54,6 +54,13 @@ const PLAN_MODAL_TABS: SegmentOption<PlanModalTab>[] = [
   { value: "reglas", label: "Reglas de Liberación" },
 ];
 
+const formatCurrency = (amount: number, decimals: number = 2): string => {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(amount || 0);
+};
+
 export function FinanceView() {
   const [activeTab, setActiveTab] = useState<FinanceTab>("planes");
 
@@ -472,27 +479,28 @@ export function FinanceView() {
           label="Volumen Proyectado"
           value={totalRevenueProjected > 0 ? totalRevenueProjected : 14850}
           prefix="$"
-          suffix=" USD"
+          suffix="USD"
+          decimals={2}
           change="+18%"
           context="Planes vigentes"
         />
         <MetricCard
           label="Alumnos en Financiación"
           value={totalSubscribers > 0 ? totalSubscribers : 142}
-          suffix=" activos"
+          suffix="activos"
           change="+12%"
           context="Suscripciones y cuotas"
         />
         <MetricCard
           label="Transacciones de Venta"
           value={salesTotal > 0 ? salesTotal : 58}
-          suffix=" registradas"
+          suffix="registradas"
           context="Historial de pagos"
         />
         <MetricCard
           label="Planes Disponibles"
           value={plans.length}
-          suffix=" configurados"
+          suffix="configurados"
           context="Stripe Checkout"
         />
       </div>
@@ -526,7 +534,7 @@ export function FinanceView() {
                   </div>
                   <div className={styles.planPriceBox}>
                     <span className={styles.currency}>$</span>
-                    <span className={styles.priceAmount}>{plan.quotaAmount}</span>
+                    <span className={styles.priceAmount}>{formatCurrency(plan.quotaAmount)}</span>
                     <span className={styles.pricePeriod}>
                       {plan.totalQuotas > 1 ? "/cuota" : " total"}
                     </span>
@@ -548,7 +556,7 @@ export function FinanceView() {
                 <div className={styles.planDetails}>
                   <div className={styles.detailRow}>
                     <span>Total a pagar:</span>
-                    <strong className={styles.tabularNums}>${plan.totalAmount} USD</strong>
+                    <strong className={styles.tabularNums}>${formatCurrency(plan.totalAmount)} USD</strong>
                   </div>
                   <div className={styles.detailRow}>
                     <span>Frecuencia:</span>
@@ -701,7 +709,7 @@ export function FinanceView() {
                       <td>{sale.course}</td>
                       <td>
                         <span className={styles.amountText}>
-                          ${sale.amount.toFixed(2)} {sale.currency}
+                          ${formatCurrency(sale.amount)} {sale.currency}
                         </span>
                       </td>
                       <td>
@@ -817,7 +825,7 @@ export function FinanceView() {
                         </div>
                       </td>
                       <td>
-                        <span className={styles.amountText}>${sub.amount.toFixed(2)} USD</span>
+                        <span className={styles.amountText}>${formatCurrency(sub.amount)} USD</span>
                       </td>
                       <td>
                         <span
@@ -1024,7 +1032,7 @@ export function FinanceView() {
                 type="number"
                 min={1}
                 value={createQuotaAmount}
-                hint={`Total a cobrar: $${createTotalQuotas * createQuotaAmount} USD`}
+                hint={`Total a cobrar: $${formatCurrency(createTotalQuotas * createQuotaAmount)} USD`}
                 onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
               />
             </div>
@@ -1221,7 +1229,7 @@ export function FinanceView() {
                 type="number"
                 min={1}
                 value={editQuotaAmount}
-                hint={`Total a cobrar: $${editTotalQuotas * editQuotaAmount} USD`}
+                hint={`Total a cobrar: $${formatCurrency(editTotalQuotas * editQuotaAmount)} USD`}
                 onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
               />
             </div>

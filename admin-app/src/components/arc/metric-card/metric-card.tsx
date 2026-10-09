@@ -11,12 +11,24 @@ export interface MetricCardProps {
   value: number;
   prefix?: string;
   suffix?: string;
+  decimals?: number;
+  locale?: string;
   context?: string;
   change?: string;
   icon?: ReactNode;
 }
 
-export function MetricCard({ label, value, prefix, suffix, context, change, icon }: MetricCardProps) {
+export function MetricCard({
+  label,
+  value,
+  prefix,
+  suffix,
+  decimals = 0,
+  locale = "en-US",
+  context,
+  change,
+  icon,
+}: MetricCardProps) {
   const isUp = change && /^[+]/.test(change);
   const isDown = change && /^[-−]/.test(change);
 
@@ -41,7 +53,14 @@ export function MetricCard({ label, value, prefix, suffix, context, change, icon
       </div>
 
       <div className={styles.numberWrapper}>
-        <AnimatedCounter value={value} prefix={prefix} suffix={suffix} animateOnView />
+        <AnimatedCounter
+          value={value}
+          prefix={prefix}
+          suffix={suffix}
+          decimals={decimals}
+          locale={locale}
+          animateOnView
+        />
       </div>
 
       {context && <p className={styles.context}>{context}</p>}

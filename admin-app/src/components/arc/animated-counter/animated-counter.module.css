@@ -19,7 +19,7 @@
   letter-spacing: var(--tracking-body); 
   line-height: var(--leading-body); 
 }
-.value { display: inline-flex; align-items: flex-start; white-space: nowrap; user-select: none; }
+.value { display: inline-flex; align-items: baseline; white-space: nowrap; user-select: none; }
 .column { 
   --feather: 0.16em; 
   position: relative; 
@@ -34,4 +34,22 @@
 .labelText { display: inline-block; }
 .labelSwap { position: relative; display: block; }
 .symbol { display: inline-block; overflow-x: clip; }
+.prefix {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-right: 2px;
+}
+.suffix {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: normal;
+  margin-left: 6px;
+  line-height: 1;
+}
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
