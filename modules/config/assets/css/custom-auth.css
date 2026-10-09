@@ -1,0 +1,554 @@
+/* ==========================================================================
+   ALEZUX / CREZCA CUSTOM AUTHENTICATION STYLES (ARC UI THEME)
+   Split-screen modern authentication replacing standard wp-login.php
+   ========================================================================== */
+
+:root {
+  --auth-bg: #090d16;
+  --auth-card-bg: #0f1422;
+  --auth-surface: #141b2d;
+  --auth-border: rgba(255, 255, 255, 0.08);
+  --auth-border-focus: #3b82f6;
+  --auth-text: #f8fafc;
+  --auth-text-muted: #94a3b8;
+  --auth-text-subtle: #64748b;
+  --auth-primary: #2563eb;
+  --auth-primary-hover: #1d4ed8;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body.alezux-auth-body {
+  font-family: var(--font-family);
+  background-color: var(--auth-bg);
+  background-image: 
+    radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(99, 102, 241, 0.10) 0%, transparent 45%);
+  color: var(--auth-text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Wrapper principal */
+.alezux-auth-wrapper {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+/* Contenedor Split-Screen (Tarjeta redondeada de 28px) */
+.alezux-auth-card {
+  background: var(--auth-card-bg);
+  border: 1px solid var(--auth-border);
+  border-radius: 28px;
+  box-shadow: 
+    0 25px 60px -15px rgba(0, 0, 0, 0.6),
+    0 0 50px -10px rgba(37, 99, 235, 0.12);
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  overflow: hidden;
+  padding: 14px;
+  gap: 14px;
+  min-height: 620px;
+}
+
+/* ==========================================================================
+   PANEL IZQUIERDO: HERO & STEPS (GRADIENTE AZUL VIBRANTE)
+   ========================================================================== */
+.alezux-hero-panel {
+  background: linear-gradient(150deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%);
+  border-radius: 22px;
+  padding: 38px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  color: #ffffff;
+}
+
+/* Efecto de luz ambiental interior */
+.alezux-hero-panel::before {
+  content: "";
+  position: absolute;
+  top: -20%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.hero-brand svg {
+  flex-shrink: 0;
+}
+
+.hero-middle {
+  margin: 32px 0 28px 0;
+}
+
+/* Badge píldora */
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 18px;
+}
+
+/* Título Hero */
+.hero-title {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+/* Subtítulo Hero */
+.hero-subtitle {
+  font-size: 15px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+  max-width: 440px;
+}
+
+/* Grid de las 3 tarjetas inferiores */
+.hero-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.hero-step-card {
+  border-radius: 16px;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 120px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Tarjeta 1: Blanca activa */
+.hero-step-card.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.hero-step-card.active .card-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.hero-step-card.active .card-text {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+/* Tarjetas 2 y 3: Glass translúcidas */
+.hero-step-card.glass {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.hero-step-card.glass .card-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.hero-step-card.glass .card-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.25;
+}
+
+/* ==========================================================================
+   PANEL DERECHO: FORMULARIOS
+   ========================================================================== */
+.alezux-form-panel {
+  padding: 38px 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--auth-surface);
+  border-radius: 22px;
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.form-title {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--auth-text);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.form-subtitle {
+  font-size: 13.5px;
+  color: var(--auth-text-muted);
+  line-height: 1.4;
+}
+
+/* Alertas de Notificación */
+.auth-alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: authAlertFadeIn 0.25s ease;
+}
+
+@keyframes authAlertFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-alert.error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.auth-alert.success {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+/* Campos de Formulario */
+.auth-field {
+  margin-bottom: 16px;
+}
+
+.field-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--auth-text-muted);
+  margin-bottom: 6px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--auth-text-subtle);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.auth-input {
+  width: 100%;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0 16px 0 42px;
+  color: var(--auth-text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.auth-input.no-icon {
+  padding-left: 16px;
+}
+
+.auth-input:focus {
+  border-color: var(--auth-border-focus);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.auth-input::placeholder {
+  color: #475569;
+}
+
+/* Botón Ojo (Mostrar / Ocultar contraseña) */
+.toggle-pwd-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: var(--auth-text-subtle);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.toggle-pwd-btn:hover {
+  color: var(--auth-text);
+}
+
+/* Fila de Recordarme & Olvidé contraseña */
+.auth-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0 22px 0;
+  font-size: 13px;
+}
+
+.remember-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--auth-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember-label input[type="checkbox"] {
+  accent-color: var(--auth-primary);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.auth-link {
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+  cursor: pointer;
+}
+
+.auth-link:hover {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+
+/* Botón de Enviar (Continuar) */
+.auth-submit-btn {
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: all 0.2s ease;
+}
+
+.auth-submit-btn:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+  transform: translateY(-1px);
+}
+
+.auth-submit-btn:active {
+  transform: translateY(0);
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Spinner de carga */
+.auth-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: authSpin 0.7s linear infinite;
+  display: none;
+}
+
+@keyframes authSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Switcher entre vistas */
+.auth-switch-row {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13.5px;
+  color: var(--auth-text-muted);
+}
+
+.auth-switch-row a {
+  margin-left: 4px;
+}
+
+/* Footer con Términos */
+.auth-terms-footer {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--auth-text-subtle);
+  margin-top: 26px;
+  line-height: 1.45;
+}
+
+.auth-terms-footer a {
+  color: var(--auth-text-muted);
+  text-decoration: underline;
+}
+
+/* Medidor de contraseña */
+.password-meter-bar {
+  height: 4px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.password-meter-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.meter-weak { width: 33%; background: #ef4444; }
+.meter-medium { width: 66%; background: #f59e0b; }
+.meter-strong { width: 100%; background: #22c55e; }
+
+/* ==========================================================================
+   RESPONSIVE DESIGN (TABLETS & MOBILE)
+   ========================================================================== */
+@media (max-width: 900px) {
+  .alezux-auth-card {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    border-radius: 20px;
+    padding: 10px;
+  }
+
+  .alezux-hero-panel {
+    padding: 28px 24px;
+  }
+
+  .hero-title {
+    font-size: 28px;
+  }
+
+  .hero-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .hero-step-card {
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .hero-step-card .card-badge {
+    margin-bottom: 0 !important;
+  }
+
+  .alezux-form-panel {
+    padding: 28px 20px;
+  }
+}
+
+/* ==========================================================================
+   VISTAS DINÁMICAS (LOGIN / REGISTRO / RECUPERACIÓN / RESET)
+   ========================================================================== */
+.auth-view {
+  display: block;
+  animation: authViewFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-view.is-hidden {
+  display: none !important;
+}
+
+@keyframes authViewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

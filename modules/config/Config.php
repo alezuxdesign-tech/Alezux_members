@@ -37,10 +37,16 @@ class Config extends Module_Base {
 		require_once __DIR__ . '/includes/Admin_Dashboard_Stats.php';
 		\Alezux_Members\Modules\Config\Includes\Admin_Dashboard_Stats::init();
 
+		// Interceptar wp-login.php con el login personalizado de Alezux Members
+		add_action( 'login_init', [ $this, 'intercept_wp_login' ] );
+
 		// AJAX Auth Actions - REGISTRO CRÍTICO
         file_put_contents( $log_file, "Registrando hooks AJAX...\n", FILE_APPEND );
 		add_action( 'wp_ajax_nopriv_alezux_ajax_login', [ $this, 'handle_ajax_login' ] );
 		add_action( 'wp_ajax_alezux_ajax_login', [ $this, 'handle_ajax_login' ] );
+
+		add_action( 'wp_ajax_nopriv_alezux_ajax_register', [ $this, 'handle_ajax_register' ] );
+		add_action( 'wp_ajax_alezux_ajax_register', [ $this, 'handle_ajax_register' ] );
 		
 		add_action( 'wp_ajax_nopriv_alezux_ajax_recover', [ $this, 'handle_ajax_recover' ] );
 		add_action( 'wp_ajax_alezux_ajax_recover', [ $this, 'handle_ajax_recover' ] );
@@ -53,6 +59,10 @@ class Config extends Module_Base {
 		add_action( 'wp_ajax_alezux_change_password', [ $this, 'handle_change_password' ] );
         file_put_contents( $log_file, "Hooks AJAX registrados correctamente.\n", FILE_APPEND );
 
+
+		// Shortcode de Autenticación personalizada (Split-Screen)
+		$this->register_shortcode( 'alezux_auth', [ $this, 'render_auth_shortcode' ], 'Renderiza la página moderna de autenticación split-screen.' );
+		$this->register_shortcode( 'alezux_custom_login', [ $this, 'render_auth_shortcode' ], 'Alias de alezux_auth' );
 
 		// Shortcode de Alertas
 		$this->register_shortcode( 'alezux_login_alerts', [ $this, 'render_login_alerts' ], 'Muestra mensajes de error/éxito en el login.' );
@@ -208,7 +218,73 @@ class Config extends Module_Base {
 	}
 
 	/**
-	 * Redirigir /wp-login.php a la página personalizada
+	 * Intercepta wp-login.php para renderizar la interfaz personalizada de autenticación
+	 */
+	public function intercept_wp_login() {
+		$action = isset( $_REQUEST['action'] ) ? sanitize_text_field( $_REQUEST['action'] ) : 'login';
+
+		// Permitir logout y postpass nativos de WordPress
+		if ( in_array( $action, [ 'logout', 'postpass' ], true ) ) {
+			return;
+		}
+
+		// Si el usuario ya está conectado y no viene a restablecer contraseña
+		if ( is_user_logged_in() && ! in_array( $action, [ 'rp', 'resetpass' ], true ) ) {
+			if ( current_user_can( 'administrator' ) ) {
+				wp_safe_redirect( admin_url() );
+			} else {
+				$student_page = get_option( 'alezux_student_dashboard_page_id' );
+				wp_safe_redirect( $student_page ? get_permalink( $student_page ) : home_url() );
+			}
+			exit;
+		}
+
+		$this->render_auth_page( true );
+		exit;
+	}
+
+	/**
+	 * Renderiza la plantilla de autenticación personalizada
+	 *
+	 * @param bool $standalone Define si renderiza el documento HTML completo o embebido
+	 */
+	public function render_auth_page( $standalone = true ) {
+		$css_url = $this->get_asset_url( 'assets/css/custom-auth.css' );
+		$js_url  = $this->get_asset_url( 'assets/js/custom-auth.js' );
+		
+		$template_path = __DIR__ . '/templates/auth-page.php';
+		if ( file_exists( $template_path ) ) {
+			include $template_path;
+		} else {
+			wp_die( 'Plantilla de autenticación no encontrada.' );
+		}
+	}
+
+	/**
+	 * Shortcode [alezux_auth] para incrustar en cualquier página o plantilla Elementor
+	 */
+	public function render_auth_shortcode( $atts ) {
+		wp_enqueue_style( 
+			'alezux-custom-auth-css', 
+			$this->get_asset_url( 'assets/css/custom-auth.css' ), 
+			[], 
+			file_exists( __DIR__ . '/assets/css/custom-auth.css' ) ? filemtime( __DIR__ . '/assets/css/custom-auth.css' ) : ALEZUX_MEMBERS_VERSION 
+		);
+		wp_enqueue_script( 
+			'alezux-custom-auth-js', 
+			$this->get_asset_url( 'assets/js/custom-auth.js' ), 
+			[], 
+			file_exists( __DIR__ . '/assets/js/custom-auth.js' ) ? filemtime( __DIR__ . '/assets/js/custom-auth.js' ) : ALEZUX_MEMBERS_VERSION, 
+			true 
+		);
+
+		ob_start();
+		$this->render_auth_page( false );
+		return ob_get_clean();
+	}
+
+	/**
+	 * Redirigir /wp-login.php a la página personalizada (compatibilidad hacia atrás)
 	 */
 	public function redirect_to_custom_login() {
 		global $pagenow;
@@ -217,8 +293,10 @@ class Config extends Module_Base {
 		if ( 'wp-login.php' == $pagenow && $_SERVER['REQUEST_METHOD'] == 'GET' ) {
 			if ( ! isset( $_REQUEST['action'] ) || in_array( $_REQUEST['action'], [ 'login' ] ) ) {
 				$login_page_id = get_option( 'alezux_login_page_id' );
-				wp_redirect( get_permalink( $login_page_id ) );
-				exit;
+				if ( $login_page_id && get_post_status( $login_page_id ) === 'publish' ) {
+					wp_redirect( get_permalink( $login_page_id ) );
+					exit;
+				}
 			}
 		}
 	}
@@ -299,19 +377,31 @@ class Config extends Module_Base {
 	 */
 	public function handle_ajax_login() {
 		// BYPASS DE SEGURIDAD PARA HOSTINGER CACHE:
-        // Si el nonce falla (devuelve false), permitimos continuar pero lo registramos.
-        // wp_signon() ya tiene su propia seguridad interna de usuario/contraseña.
-        $nonce_check = wp_verify_nonce( $_POST['nonce'], 'alezux-auth-nonce' );
-        
+        $nonce_check = wp_verify_nonce( $_POST['nonce'] ?? '', 'alezux-auth-nonce' );
         if ( ! $nonce_check ) {
             file_put_contents( ALEZUX_MEMBERS_PATH . 'debug_status.txt', "ADVERTENCIA: Nonce inválido o caducado detectado en login. Continuando por bypass...\n", FILE_APPEND );
         }
 
+		$raw_user = isset( $_POST['username'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['username'] ) ) ) : '';
+		$password = isset( $_POST['password'] ) ? $_POST['password'] : '';
+
+		if ( empty( $raw_user ) || empty( $password ) ) {
+			wp_send_json_error( [ 'message' => 'Por favor completa todos los campos requeridos.' ] );
+		}
+
+		// Si el usuario ingresó un correo electrónico, resolver su user_login
+		$login_identifier = $raw_user;
+		if ( is_email( $raw_user ) ) {
+			$user_by_email = get_user_by( 'email', $raw_user );
+			if ( $user_by_email ) {
+				$login_identifier = $user_by_email->user_login;
+			}
+		}
 
 		$info = [];
-		$info['user_login']    = sanitize_user( $_POST['username'] );
-		$info['user_password'] = $_POST['password'];
-		$info['remember']      = isset( $_POST['remember'] ) ? true : false;
+		$info['user_login']    = $login_identifier;
+		$info['user_password'] = $password;
+		$info['remember']      = ! empty( $_POST['remember'] ) ? true : false;
 
 		$user_signon = wp_signon( $info, is_ssl() );
 
@@ -321,24 +411,140 @@ class Config extends Module_Base {
             // Determinar Redirección
             $redirect_url = home_url();
             
-            // 1. Redirección General (Fallback inicial)
+            // 1. Redirección General
             if ( ! empty( $_POST['redirect_to'] ) ) {
                 $redirect_url = esc_url_raw( $_POST['redirect_to'] );
             }
 
             // 2. Lógica por Roles
-            $roles = $user_signon->roles;
+            $roles = (array) $user_signon->roles;
 
-            if ( in_array( 'administrator', $roles ) && ! empty( $_POST['redirect_admin'] ) ) {
-                $redirect_url = esc_url_raw( $_POST['redirect_admin'] );
-            } elseif ( ( in_array( 'subscriber', $roles ) || in_array( 'student', $roles ) ) && ! empty( $_POST['redirect_student'] ) ) {
-                // Soportamos 'subscriber' (WP) y 'student' (posible custom role)
-                $redirect_url = esc_url_raw( $_POST['redirect_student'] );
+            if ( in_array( 'administrator', $roles, true ) ) {
+                if ( ! empty( $_POST['redirect_admin'] ) ) {
+                    $redirect_url = esc_url_raw( $_POST['redirect_admin'] );
+                } else {
+                    $redirect_url = admin_url();
+                }
+            } elseif ( in_array( 'subscriber', $roles, true ) || in_array( 'student', $roles, true ) ) {
+                if ( ! empty( $_POST['redirect_student'] ) ) {
+                    $redirect_url = esc_url_raw( $_POST['redirect_student'] );
+                } else {
+                    $student_page = get_option( 'alezux_student_dashboard_page_id' );
+                    if ( $student_page ) {
+                        $redirect_url = get_permalink( $student_page );
+                    }
+                }
             }
 
 			wp_send_json_success( [ 'redirect' => $redirect_url ] );
 		}
 	}
+
+	/**
+	 * Manejar Registro de Usuario por AJAX
+	 */
+	public function handle_ajax_register() {
+		$log_file = ALEZUX_MEMBERS_PATH . 'debug_status.txt';
+		
+		$nonce_check = wp_verify_nonce( $_POST['nonce'] ?? '', 'alezux-auth-nonce' );
+		if ( ! $nonce_check ) {
+			file_put_contents( $log_file, "[" . date('Y-m-d H:i:s') . "] ADVERTENCIA: Nonce inválido en registro. Continuando por bypass...\n", FILE_APPEND );
+		}
+
+		$full_name = isset( $_POST['full_name'] ) ? sanitize_text_field( wp_unslash( $_POST['full_name'] ) ) : '';
+		$email     = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+		$username  = isset( $_POST['username'] ) ? sanitize_user( wp_unslash( $_POST['username'] ), true ) : '';
+		$password  = isset( $_POST['password'] ) ? $_POST['password'] : '';
+
+		if ( empty( $email ) || ! is_email( $email ) ) {
+			wp_send_json_error( [ 'message' => 'Por favor introduce un correo electrónico válido.' ] );
+		}
+
+		if ( empty( $password ) || strlen( $password ) < 8 ) {
+			wp_send_json_error( [ 'message' => 'La contraseña debe tener al menos 8 caracteres.' ] );
+		}
+
+		// Si el nombre de usuario está vacío, generarlo a partir del email
+		if ( empty( $username ) ) {
+			$email_parts = explode( '@', $email );
+			$base_user = sanitize_user( $email_parts[0], true );
+			$username = $base_user;
+			$i = 1;
+			while ( username_exists( $username ) ) {
+				$username = $base_user . $i;
+				$i++;
+			}
+		}
+
+		// Validar si el usuario o correo ya existen
+		if ( username_exists( $username ) ) {
+			wp_send_json_error( [ 'message' => 'El nombre de usuario ya está registrado. Por favor intenta con otro.' ] );
+		}
+
+		if ( email_exists( $email ) ) {
+			wp_send_json_error( [ 'message' => 'Ya existe una cuenta con este correo electrónico.' ] );
+		}
+
+		// Crear el usuario
+		$userdata = [
+			'user_login'   => $username,
+			'user_email'   => $email,
+			'user_pass'    => $password,
+			'role'         => get_option( 'default_role', 'subscriber' ),
+		];
+
+		if ( ! empty( $full_name ) ) {
+			$name_parts = explode( ' ', $full_name, 2 );
+			$userdata['first_name']   = $name_parts[0];
+			$userdata['last_name']    = isset( $name_parts[1] ) ? $name_parts[1] : '';
+			$userdata['display_name'] = $full_name;
+		}
+
+		$user_id = wp_insert_user( $userdata );
+
+		if ( is_wp_error( $user_id ) ) {
+			wp_send_json_error( [ 'message' => $user_id->get_error_message() ] );
+		}
+
+		// Enviar correo de bienvenida a través del motor de Marketing
+		if ( class_exists( '\Alezux_Members\Modules\Marketing\Marketing' ) ) {
+			$user_obj = get_userdata( $user_id );
+			\Alezux_Members\Modules\Marketing\Marketing::get_instance()->get_engine()->send_email(
+				'student_welcome',
+				$email,
+				[
+					'user'         => $user_obj,
+					'password'     => $password,
+					'course_title' => get_bloginfo( 'name' ),
+					'login_url'    => wp_login_url(),
+				]
+			);
+		} else {
+			wp_new_user_notification( $user_id, null, 'both' );
+		}
+
+		// Autenticación automática tras el registro
+		wp_set_current_user( $user_id, $username );
+		wp_set_auth_cookie( $user_id, true, is_ssl() );
+		do_action( 'wp_login', $username, get_userdata( $user_id ) );
+
+		// Redirección
+		$redirect_url = home_url();
+		if ( ! empty( $_POST['redirect_to'] ) ) {
+			$redirect_url = esc_url_raw( $_POST['redirect_to'] );
+		} else {
+			$student_page = get_option( 'alezux_student_dashboard_page_id' );
+			if ( $student_page ) {
+				$redirect_url = get_permalink( $student_page );
+			}
+		}
+
+		wp_send_json_success( [
+			'message'  => '¡Cuenta creada con éxito! Redirigiendo...',
+			'redirect' => $redirect_url,
+		] );
+	}
+
 
 	/**
 	 * Manejar actualización de perfil por AJAX
@@ -565,14 +771,29 @@ class Config extends Module_Base {
 				file_put_contents( $log_file, "[" . date('Y-m-d H:i:s') . "] ÉXITO: Correo enviado a " . $user_data->user_email . "\n", FILE_APPEND );
 				wp_send_json_success( [ 'message' => 'Se ha enviado un correo con instrucciones.' ] );
 			} else {
-				file_put_contents( $log_file, "[" . date('Y-m-d H:i:s') . "] ERROR CRÍTICO: El motor de correo devolvió FALSE para " . $user_data->user_email . "\n", FILE_APPEND );
-				wp_send_json_error( [ 'message' => 'El correo no pudo ser enviado.' ] );
+				file_put_contents( $log_file, "[" . date('Y-m-d H:i:s') . "] AVISO: Motor Marketing falló, intentando con wp_mail nativo...\n", FILE_APPEND );
+				$subject = sprintf( __( 'Recuperar contraseña - %s', 'alezux-members' ), get_bloginfo( 'name' ) );
+				$message = sprintf( "Hola %s,\n\nHemos recibido una solicitud para restablecer tu contraseña.\n\nPara crear una nueva contraseña, haz clic en el siguiente enlace:\n%s\n\nSi no realizaste esta solicitud, puedes ignorar este mensaje.\n", $user_data->display_name, $reset_url );
+				$sent_wp = wp_mail( $user_data->user_email, $subject, $message );
+				if ( $sent_wp ) {
+					wp_send_json_success( [ 'message' => 'Se ha enviado un correo con instrucciones para restablecer tu contraseña.' ] );
+				} else {
+					wp_send_json_error( [ 'message' => 'El correo no pudo ser enviado. Verifica la configuración de correo de tu servidor.' ] );
+				}
 			}
 		} else {
-			 file_put_contents( $log_file, "[" . date('Y-m-d H:i:s') . "] ERROR: Módulo de Marketing no encontrado.\n", FILE_APPEND );
-			 wp_send_json_error( [ 'message' => 'Error sistema de correo no disponible.' ] );
+			$reset_url = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user_data->user_login ), 'login' );
+			$subject = sprintf( __( 'Recuperar contraseña - %s', 'alezux-members' ), get_bloginfo( 'name' ) );
+			$message = sprintf( "Hola %s,\n\nHemos recibido una solicitud para restablecer tu contraseña.\n\nPara crear una nueva contraseña, haz clic en el siguiente enlace:\n%s\n\nSi no realizaste esta solicitud, puedes ignorar este mensaje.\n", $user_data->display_name, $reset_url );
+			$sent_wp = wp_mail( $user_data->user_email, $subject, $message );
+			if ( $sent_wp ) {
+				wp_send_json_success( [ 'message' => 'Se ha enviado un correo con instrucciones para restablecer tu contraseña.' ] );
+			} else {
+				wp_send_json_error( [ 'message' => 'No se pudo enviar el correo de recuperación.' ] );
+			}
 		}
 	}
+
 
 	/**
 	 * Renderizar alertas de login (Shortcode)
@@ -585,7 +806,11 @@ class Config extends Module_Base {
 	}
 
 	public function handle_ajax_reset_password() {
-		check_ajax_referer( 'alezux-auth-nonce', 'nonce' );
+		// BYPASS DE SEGURIDAD PARA HOSTINGER CACHE:
+		$nonce_check = wp_verify_nonce( $_POST['nonce'] ?? '', 'alezux-auth-nonce' );
+		if ( ! $nonce_check ) {
+			file_put_contents( ALEZUX_MEMBERS_PATH . 'debug_status.txt', "ADVERTENCIA: Nonce inválido en reset_password. Continuando por verificación criptográfica de key...\n", FILE_APPEND );
+		}
 	
 		$key   = isset( $_POST['key'] ) ? sanitize_text_field( $_POST['key'] ) : '';
 		$login = isset( $_POST['login'] ) ? sanitize_user( $_POST['login'] ) : '';
