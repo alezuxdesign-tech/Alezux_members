@@ -1,0 +1,71 @@
+.alezux-recent-logros-widget {
+    font-family: 'Inter', sans-serif;
+    /* Asumiendo la fuente del sitio */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.aleuz-logro-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+    border-radius: 12px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
+.aleuz-logro-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.alezux-logro-avatar {
+    flex-shrink: 0;
+}
+
+.alezux-logro-avatar img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.alezux-logro-content {
+    flex-grow: 1;
+    overflow: hidden;
+    /* Aseguramos que ocupe todo el ancho disponible */
+    width: 100%;
+}
+
+.alezux-logro-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    width: 100%;
+}
+
+.alezux-logro-name {
+    font-weight: 700;
+    font-size: 16px;
+    color: #fff;
+    /* O el color que se ajuste al tema oscuro */
+}
+
+.alezux-logro-time {
+    font-size: 12px;
+    color: #888;
+}
+
+.alezux-logro-message {
+    font-size: 14px;
+    color: #aaa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.4;
+    margin: 0;
+}

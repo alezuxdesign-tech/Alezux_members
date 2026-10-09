@@ -1,0 +1,184 @@
+/* Alezux Listing - User UI */
+
+.alezux-listing-user {
+    background-color: var(--alezux-bg-card, #1a1a1a);
+    padding: var(--alezux-spacing-lg, 40px);
+    border-radius: var(--alezux-border-radius, 50px);
+    box-shadow: var(--alezux-box-shadow, 0 10px 30px rgba(0, 0, 0, 0.3));
+    font-family: 'Manrope', 'Inter', sans-serif;
+    color: var(--alezux-text-main, #ffffff);
+}
+
+.alezux-listing-header {
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+.alezux-listing-title {
+    font-size: 26px;
+    font-weight: 800;
+    margin: 0 0 10px;
+    color: var(--alezux-text-main, #fff);
+}
+
+.alezux-listing-desc {
+    font-size: 15px;
+    color: var(--alezux-text-muted, #a0a0a0);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.alezux-user-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.alezux-user-task-item {
+    background: var(--alezux-bg-base, #0f0f0f);
+    border: 1px solid var(--alezux-border-color, #333);
+    border-radius: 20px;
+    padding: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.alezux-user-task-item:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    transform: translateY(-3px);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-task-content {
+    flex: 1;
+    padding-right: 20px;
+}
+
+.user-task-title {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--alezux-text-main, #fff);
+    margin-bottom: 8px;
+}
+
+.user-task-desc {
+    font-size: 14px;
+    color: var(--alezux-text-muted, #a0a0a0);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.alezux-btn-complete {
+    background-color: transparent;
+    color: var(--alezux-text-main, #fff);
+    border: 2px solid var(--alezux-primary, #6c5ce7);
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alezux-btn-complete:hover {
+    background-color: var(--alezux-primary, #6c5ce7);
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.alezux-btn-complete:disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    transform: none;
+}
+
+.alezux-empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 30px;
+    border: 1px dashed var(--alezux-border-color, #333);
+}
+
+.alezux-empty-state p {
+    font-size: 16px;
+    color: var(--alezux-text-muted, #a0a0a0);
+    margin: 0;
+    font-weight: 600;
+}
+
+.alezux-loading-tasks {
+    text-align: center;
+    padding: 40px;
+    color: var(--alezux-text-muted, #a0a0a0);
+    font-size: 15px;
+}
+
+.alezux-loading-tasks i {
+    margin-right: 8px;
+    color: var(--alezux-primary, #6c5ce7);
+}
+
+.alezux-user-msg {
+    margin-top: 20px;
+    padding: 15px 20px;
+    border-radius: 15px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.alezux-user-msg.success {
+    background-color: rgba(46, 213, 115, 0.1);
+    color: #2ed573;
+    border: 1px solid rgba(46, 213, 115, 0.2);
+}
+
+.alezux-user-msg.error {
+    background-color: rgba(255, 71, 87, 0.1);
+    color: #ff4757;
+    border: 1px solid rgba(255, 71, 87, 0.2);
+}
+
+@media (max-width: 768px) {
+    .alezux-user-task-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    .user-task-action {
+        width: 100%;
+    }
+
+    .alezux-btn-complete {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Tareas Completadas (Estado Negativo) */
+.alezux-user-task-item.is-completed {
+    opacity: 0.6;
+    filter: grayscale(0.85);
+    background: rgba(255, 255, 255, 0.03);
+    border-style: dashed;
+    pointer-events: none;
+}
+
+.alezux-user-task-item.is-completed .user-task-title {
+    text-decoration: line-through;
+    color: var(--alezux-text-muted, #a0a0a0);
+}
+
+.alezux-user-task-item.is-completed .alezux-btn-complete {
+    border-color: #2ed573;
+    color: #2ed573;
+    background: rgba(46, 213, 115, 0.05);
+}

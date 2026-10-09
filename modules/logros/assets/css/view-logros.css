@@ -1,0 +1,428 @@
+/* =========================================
+   VIEW LOGROS WIDGET STYLES (Exclusive)
+   ========================================= */
+
+/* ... (Form styles kept intact) ... */
+
+/* =========================================
+   LOGRO CARD LAYOUT - HORIZONTAL DARK (V3)
+   ========================================= */
+
+/* =========================================
+   VIEW LOGROS TABLE REFINEMENTS
+   ========================================= */
+
+.alezux-logros-table td {
+    vertical-align: middle;
+}
+
+.alezux-logros-table .alezux-student-avatar {
+    flex-shrink: 0;
+}
+
+/* Ensure the message column (LOGRO) allows text wrapping and breaks long words */
+.alezux-logros-table td:first-child .student-name {
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+    white-space: normal !important;
+}
+
+/* Action buttons specifically for logros to avoid conflict with students */
+.alezux-logro-action-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: #fff;
+    padding: 8px !important;
+    min-width: 38px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 6px rgba(118, 75, 162, 0.3);
+    text-decoration: none;
+}
+
+.alezux-logro-action-btn:hover {
+    opacity: 0.9;
+    color: #fff;
+}
+
+.alezux-logro-action-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* Pagination Adjustments for Logros */
+.alezux-logros-pagination {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top: none !important;
+}
+
+/* =========================================
+   Wrapper del Formulario (KEEPING AS IS)
+   ========================================= */
+
+/* Wrapper del Formulario */
+.alezux-logro-form-wrapper {
+    width: 100%;
+    margin: 0 auto;
+    font-family: 'Inter', 'Roboto', sans-serif;
+}
+
+/* Form Container */
+.alezux-logro-form-wrapper .alezux-logro-form {
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    /* Base color, Elementor can override */
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    padding: 40px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    position: relative;
+    z-index: 10;
+}
+
+.alezux-logro-form-wrapper .alezux-logro-form-group {
+    margin-bottom: 24px;
+    position: relative;
+}
+
+/* Labels */
+.alezux-logro-form-wrapper .alezux-logro-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #374151;
+    letter-spacing: 0.02em;
+}
+
+/* Inputs y Selects */
+.alezux-logro-form-wrapper .alezux-logro-input {
+    width: 100%;
+    padding: 14px 16px;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 15px;
+    color: #1f2937;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    outline: none;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+    min-height: 45px;
+}
+
+.alezux-logro-form-wrapper .alezux-logro-input:focus {
+    background-color: #ffffff;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+.alezux-logro-form-wrapper textarea.alezux-logro-input {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+/* Select Styling Override */
+.alezux-logro-form-wrapper select.alezux-logro-input {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+}
+
+/* Caja de carga (Upload Box) */
+.alezux-logro-form-wrapper .alezux-upload-box {
+    border: 2px dashed #d1d5db;
+    background-color: #f8fafc;
+    border-radius: 16px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 240px;
+    overflow: hidden;
+}
+
+.alezux-logro-form-wrapper .alezux-upload-box:hover {
+    /* Hover styles handled by Elementor or fallback handled delicately if needed, 
+       but removing hardcoded here allows Elementor control */
+}
+
+/* Content Placeholder */
+.alezux-logro-form-wrapper .alezux-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    z-index: 2;
+}
+
+/* Icon - Weak Styling */
+.alezux-logro-form-wrapper .alezux-upload-icon i,
+.alezux-logro-form-wrapper .alezux-upload-icon svg {
+    font-size: 48px;
+    /* color: #64748b; REMOVED to allow Elementor default */
+    margin-bottom: 8px;
+    display: inline-block;
+    line-height: 1;
+    /* fill: #64748b; REMOVED */
+}
+
+.alezux-logro-form-wrapper .alezux-upload-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.3;
+    margin: 0;
+}
+
+.alezux-logro-form-wrapper .alezux-upload-subtitle {
+    font-size: 14px;
+    font-weight: 400;
+    color: #64748b;
+    max-width: 280px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Fake Button Look */
+.alezux-logro-form-wrapper .alezux-upload-button-wrapper {
+    margin-top: 10px;
+    pointer-events: auto;
+    /* Re-enable pointer events if we want exact button clicks, but box click is handled */
+}
+
+.alezux-logro-form-wrapper .alezux-upload-btn-fake {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.alezux-logro-form-wrapper .alezux-upload-box:hover .alezux-upload-btn-fake {
+    background-color: #3b82f6;
+    color: #ffffff;
+    border-color: #3b82f6;
+}
+
+/* Preview de imagen */
+.alezux-logro-form-wrapper .alezux-upload-preview {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5;
+    background: transparent;
+}
+
+.alezux-logro-form-wrapper .alezux-upload-preview img {
+    max-height: 220px;
+    max-width: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.alezux-logro-form-wrapper .alezux-remove-img {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #ef4444;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+    z-index: 10;
+}
+
+/* Boton Submit */
+.alezux-logro-form-wrapper .alezux-logro-form-actions {
+    margin-top: 32px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.alezux-logro-form-wrapper .alezux-logro-submit {
+    padding: 14px 32px;
+    background-color: #3b82f6;
+    /* Flat color instead of gradient for easier override */
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.alezux-logro-form-wrapper .alezux-logro-submit:hover {
+    background-color: #2563eb;
+    transform: translateY(-2px);
+}
+
+/* Mensajes de respuesta */
+.alezux-logro-form-wrapper #alezux-logro-response {
+    margin-top: 20px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.alezux-logro-form-wrapper .alezux-success {
+    background-color: #ecfdf5;
+    color: #047857;
+    padding: 15px;
+    border-left: 5px solid #10b981;
+}
+
+.alezux-logro-form-wrapper .alezux-error {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    padding: 15px;
+    border-left: 5px solid #ef4444;
+}
+
+.alezux-logros-filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.alezux-logros-filters input,
+.alezux-logros-filters select {
+    padding: 10px 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 300px;
+}
+
+/* Custom Modals (Mantener estilos de modal existentes) */
+
+.alezux-modal {
+    display: none;
+    position: fixed;
+    z-index: 99999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alezux-modal[style*="display: block"] {
+    display: flex !important;
+}
+
+.alezux-delete-modal-content {
+    background-color: #18181b;
+    color: #fff;
+    border-radius: 16px;
+    padding: 40px 30px;
+    text-align: center;
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    border: 1px solid #27272a;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    margin: auto;
+}
+
+.alezux-delete-icon {
+    font-size: 30px;
+    color: #ef4444;
+    margin-bottom: 20px;
+}
+
+.alezux-delete-modal-content h3 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    color: #fff;
+}
+
+.alezux-delete-modal-content p {
+    color: #a1a1aa;
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 30px;
+}
+
+.alezux-delete-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.alezux-btn-cancel {
+    background: transparent;
+    border: 1px solid #3f3f46;
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+}
+
+.alezux-btn-cancel:hover {
+    background: #27272a;
+}
+
+.alezux-btn-danger-confirm {
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.alezux-btn-danger-confirm:hover {
+    background: #dc2626;
+}
+
+.alezux-modal-content {
+    margin: auto;
+}

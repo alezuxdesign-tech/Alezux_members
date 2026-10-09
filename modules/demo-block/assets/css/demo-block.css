@@ -1,0 +1,5 @@
+/* El CSS específico del módulo es mínimo ahora, ya que usamos clases globales */
+.alezux-demo-block-wrapper {
+	/* Podemos añadir espaciado u overrides específicos aquí si fuera necesario */
+	margin: 20px 0;
+}

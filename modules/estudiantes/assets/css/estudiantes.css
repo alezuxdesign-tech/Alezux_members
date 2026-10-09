@@ -1,0 +1,354 @@
+/* Estudiantes Module Styles */
+
+.alezux-estudiantes-wrapper {
+    /* Inherits background and family from .alezux-finanzas-app */
+    border-radius: 10px;
+}
+
+/* Header Styles */
+.alezux-estudiantes-header {
+    /* Padding and margins handled by .alezux-table-header */
+}
+
+.alezux-header-content {
+    flex: 1;
+    min-width: 200px;
+}
+
+.alezux-estudiantes-title {
+    margin: 0 0 5px 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.alezux-estudiantes-desc {
+    /* Styles handled by .alezux-table-desc */
+}
+
+/* Search Styles - Handled by global alezux-tables.css */
+.alezux-estudiantes-search {
+    /* No specific overrides needed */
+}
+
+/* Pagination handled by .alezux-pagination in alezux-tables.css */
+.alezux-estudiantes-pagination {
+    margin-top: 0;
+}
+
+/* =========================================
+   Nuevos Widgets Styles (Registro & CSV)
+   ========================================= */
+/* Los estilos específicos se han movido a estudiantes-register.css y estudiantes-csv.css */
+
+/* Management Modal Styles */
+.alezux-management-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+}
+
+.alezux-management-modal {
+    background: #1e1e1e;
+    width: 600px;
+    max-width: 95%;
+    max-height: 90vh;
+    border-radius: 12px;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.alezux-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #252525;
+}
+
+.alezux-modal-title {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.alezux-modal-close {
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.alezux-modal-close:hover {
+    color: #fff;
+}
+
+.alezux-modal-body {
+    padding: 24px;
+    color: #e5e5e5;
+}
+
+.alezux-section-title {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #a1a1aa;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 24px;
+}
+
+.alezux-section-title:first-child {
+    margin-top: 0;
+}
+
+/* Form Grid */
+.alezux-manage-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.alezux-full-width {
+    grid-column: span 2;
+}
+
+/* List Styles */
+.alezux-course-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.alezux-course-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    margin-bottom: 8px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.alezux-course-actions button {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: none;
+    font-weight: 500;
+}
+
+.btn-remove-access {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}
+
+.btn-remove-access:hover {
+    background: rgba(239, 68, 68, 0.3);
+}
+
+.btn-grant-access {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+
+.btn-grant-access:hover {
+    background: rgba(16, 185, 129, 0.3);
+}
+
+/* Buttons */
+.alezux-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.alezux-btn-primary {
+    background: #6366f1;
+    color: white;
+}
+
+.alezux-btn-primary:hover {
+    background: #4f46e5;
+}
+
+.alezux-btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.alezux-btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.alezux-btn-block {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Spinner */
+.alezux-spinner {
+    animation: fa-spin 1s infinite linear;
+    display: none;
+}
+
+/* Alert Modal Styles */
+.alezux-alert-modal {
+    background: #1e1e1e;
+    width: 400px;
+    max-width: 90%;
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: alezux-modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes alezux-modal-pop {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.alezux-alert-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+    color: #6366f1;
+    /* Default/Info */
+}
+
+.alezux-alert-icon.success {
+    color: #10b981;
+}
+
+.alezux-alert-icon.error {
+    color: #ef4444;
+}
+
+.alezux-alert-icon.warning {
+    color: #f59e0b;
+}
+
+.alezux-alert-modal h3 {
+    color: #fff;
+    font-size: 1.25rem;
+    margin: 0 0 10px 0;
+    font-weight: 600;
+}
+
+.alezux-alert-modal p {
+    color: #a1a1aa;
+    margin: 0 0 25px 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.alezux-alert-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.alezux-btn-secondary {
+    background: #3f3f46;
+    color: #fff;
+}
+
+.alezux-btn-secondary:hover {
+    background: #52525b;
+}
+
+/* Study Time Pill Style - Refined */
+.alezux-time-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #0f172a;
+    /* Slate 900 */
+    border: 1px solid #1e293b;
+    /* Slate 800 */
+    border-radius: 30px;
+    padding: 4px 12px 4px 4px;
+    gap: 10px;
+    margin-left: 12px;
+    vertical-align: middle;
+    white-space: nowrap;
+    /* Prevent wrapping */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.alezux-time-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #1e293b;
+    /* Slate 800 */
+    border-radius: 50%;
+    color: #3b82f6;
+    /* Blue 500 */
+    font-size: 13px;
+    flex-shrink: 0;
+    /* Don't shrink */
+}
+
+.alezux-time-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1;
+    text-align: left;
+}
+
+.alezux-time-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    color: #94a3b8;
+    /* Slate 400 */
+    font-weight: 600;
+    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+}
+
+.alezux-time-value {
+    font-size: 13px;
+    color: #f8fafc;
+    /* Slate 50 */
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    letter-spacing: -0.3px;
+}

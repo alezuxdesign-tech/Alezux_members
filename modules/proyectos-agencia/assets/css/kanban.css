@@ -1,0 +1,520 @@
+/* CSS for Kanban Board */
+.alezux-kanban-board {
+    font-family: inherit;
+    /* Styles now controlled by Elementor */
+    overflow-x: auto;
+}
+
+.kanban-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.kanban-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+}
+
+#add-project-btn {
+    white-space: nowrap;
+    width: fit-content;
+    flex: 0 0 auto;
+    justify-content: center;
+}
+
+.kanban-container {
+    display: flex;
+    gap: 20px;
+    min-height: 500px;
+}
+
+.kanban-column {
+    flex: 1;
+    min-width: 250px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.kanban-column-header {
+    padding: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    border-bottom: 2px solid #eee;
+    text-align: center;
+    color: #555;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+/* Column Header Colors */
+.kanban-column-header.start {
+    border-bottom-color: #6c757d;
+    color: #6c757d;
+}
+
+.kanban-column-header.process {
+    border-bottom-color: #007bff;
+    color: #007bff;
+}
+
+.kanban-column-header.review {
+    border-bottom-color: #fd7e14;
+    color: #fd7e14;
+}
+
+.kanban-column-header.approved {
+    border-bottom-color: #28a745;
+    color: #28a745;
+}
+
+.kanban-column-header.delivered {
+    border-bottom-color: #6610f2;
+    color: #6610f2;
+}
+
+.kanban-column-body {
+    padding: 15px;
+    flex-grow: 1;
+    background: #f8f9fa;
+    min-height: 200px;
+    /* Drop zone area */
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+/* Kanban Cards */
+.kanban-card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: grab;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-left: 4px solid transparent;
+}
+
+.kanban-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.kanban-card.active {
+    cursor: grabbing;
+}
+
+/* Card Status Borders (match header) */
+.kanban-column[data-status="start"] .kanban-card {
+    border-left-color: #6c757d;
+}
+
+.kanban-column[data-status="process"] .kanban-card {
+    border-left-color: #007bff;
+}
+
+.kanban-column[data-status="review"] .kanban-card {
+    border-left-color: #fd7e14;
+}
+
+.kanban-column[data-status="approved"] .kanban-card {
+    border-left-color: #28a745;
+}
+
+.kanban-column[data-status="delivered"] .kanban-card {
+    border-left-color: #6610f2;
+}
+
+.kanban-card-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 1rem;
+    color: #333;
+}
+
+.kanban-card-meta {
+    font-size: 0.8rem;
+    color: #777;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.kanban-card-step {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kanban-card-step.status-briefing {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.kanban-card-step.status-identity {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.kanban-card-step.status-web_design {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.kanban-card-step.status-development {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.kanban-card-step.status-delivery {
+    background: #d4edda;
+    color: #155724;
+}
+
+.kanban-card-date {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    color: #777;
+    margin-top: 5px;
+    background: #f8f9fa;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.modal-project-dates {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+}
+
+/* Modal */
+.alezux-modal {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.alezux-modal-content {
+    /* Background and typography now controlled by Elementor */
+    padding: 25px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    position: relative;
+    color: inherit;
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-modal:hover {
+    color: black;
+}
+
+/* Stepper UI */
+.alezux-stepper {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 25px;
+    padding: 5px;
+    border-radius: 8px;
+    gap: 5px;
+}
+
+.step-item {
+    flex: 1;
+    text-align: center;
+    padding: 10px 5px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.step-item:hover {
+    background: #dee2e6;
+    color: #495057;
+}
+
+.step-item.active {
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.step-content {
+    padding: 10px 5px;
+    min-height: 200px;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.feedback-box {
+    margin-top: 15px;
+    padding: 15px;
+    background: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 6px;
+    color: #856404;
+}
+
+.guidance-text {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+.step-footer-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eef2f7;
+}
+
+.step-footer-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* Premium Button Overrides */
+.alezux-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.alezux-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.alezux-btn:active {
+    transform: translateY(0);
+}
+
+.alezux-btn-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+}
+
+.alezux-btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    color: white;
+}
+
+.alezux-btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.alezux-btn-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+    color: white;
+}
+
+.alezux-btn-secondary {
+    background: #f8f9fa;
+    color: #495057;
+    border: 1px solid #dee2e6;
+}
+
+.alezux-btn-secondary:hover {
+    background: #e9ecef;
+}
+
+/* Identity Step specific */
+.file-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+.file-item-row:hover {
+    background: #f1f1f1;
+}
+
+.file-link {
+    text-decoration: none;
+    color: #0073aa;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.remove-file {
+    font-size: 18px;
+    line-height: 1;
+    color: #dc3232;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.remove-file:hover {
+    color: #a00;
+}
+
+/* Uploading states */
+.file-item-row.uploading-ghost {
+    background: #fdfdfd;
+    border: 1px dashed #bbb;
+    color: #999;
+}
+
+.fa-spin {
+    margin-right: 5px;
+}
+
+/* Client View Delivery Step */
+.delivery-hero {
+    text-align: center;
+    padding: 30px 20px;
+    background: #fdfdfd;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    border: 1px solid #eef2f7;
+}
+
+.delivery-hero h2 {
+    margin: 15px 0 5px;
+    color: #28a745;
+}
+
+.delivery-folder {
+    background: white;
+    border: 1px solid #eee;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.delivery-folder h4 {
+    margin-top: 0;
+    font-size: 1.1rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.delivery-folder ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.delivery-folder ul li {
+    padding: 10px 0;
+    border-bottom: 1px solid #f9f9f9;
+}
+
+.delivery-folder ul li:last-child {
+    border-bottom: none;
+}
+
+.delivery-folder ul li a {
+    color: #007bff;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.delivery-folder ul li a:hover {
+    color: #0056b3;
+}
+
+.credentials-box {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.credentials-box p {
+    margin: 8px 0;
+}
+
+.credentials-box code {
+    background: #eee;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: #e83e8c;
+}

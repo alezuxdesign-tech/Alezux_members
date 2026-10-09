@@ -1,0 +1,600 @@
+.alezux-formaciones-grid {
+    display: grid !important;
+    grid-template-columns: repeat(var(--alezux-grid-columns, 3), 1fr) !important;
+    gap: var(--alezux-grid-gap, 30px) !important;
+    width: 100%;
+    /* Override Masonry height if present */
+    height: auto !important;
+}
+
+.alezux-formacion-card {
+    /* Hard override against Masonry JS */
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: auto !important;
+    transform: none;
+    /* Reset transform for hover later */
+
+    background-color: #1a1a1a;
+    border-radius: 50px;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+.alezux-formacion-card:hover {
+    transform: translateY(-5px);
+}
+
+.alezux-formacion-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 50px 50px 0 0;
+    /* Solo bordes superiores si hay imagen */
+}
+
+/* Si el borde radio global es 50px, ajustamos la imagen */
+.alezux-formacion-content {
+    padding: 25px;
+}
+
+.alezux-formacion-mentors {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    /* Controlamos el espacio con margin-right en avatars */
+    margin-bottom: 20px;
+}
+
+.alezux-mentors-avatars {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 15px;
+    /* Espacio garantizado contra el texto */
+    vertical-align: middle;
+}
+
+.alezux-mentor-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #1a1a1a;
+    /* Borde más grueso para separar visualmente */
+    margin-left: -15px;
+    /* Overlap */
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    /* IMPRESCINDIBLE: Evita que se aplasten */
+    transition: transform 0.2s, z-index 0s, margin 0.2s, border-color 0.2s;
+    background-color: #2a2a2a;
+    /* Placeholder bg */
+}
+
+.alezux-mentor-avatar:first-child {
+    margin-left: 0;
+}
+
+.alezux-mentor-avatar:hover {
+    z-index: 10;
+    /* Elevar al hacer hover para ver completo */
+    transform: translateY(-3px) scale(1.1);
+    margin-right: 10px;
+    /* Abrir espacio a la derecha */
+    border-color: #6c5ce7;
+    /* Highlight border */
+}
+
+.alezux-mentors-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    flex: 1;
+    /* Ocupar espacio restante */
+    min-width: 0;
+    /* Permitir text-overflow ellipsis */
+}
+
+.alezux-mentors-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #6d7688;
+    /* Un gris azulado similar a la imagen */
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 3px;
+    line-height: 1;
+}
+
+.alezux-mentors-names {
+    font-size: 13px;
+    font-weight: 500;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.alezux-mentor-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.alezux-formacion-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    line-height: 1.3;
+}
+
+.alezux-formacion-title-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.alezux-formacion-excerpt {
+    font-size: 0.9rem;
+    color: #a0a0a0;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.alezux-formacion-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    /* Removed wrap to keep single line layout */
+}
+
+.alezux-formacion-price {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #6c5ce7;
+    white-space: nowrap;
+    margin-right: 10px;
+    /* Reduced specific margin */
+}
+
+.alezux-btn-arrow {
+    /* DEPRECATED but keeping for safety if needed or remove if confident */
+    display: none;
+}
+
+.alezux-formacion-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    line-height: 1.2;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-left: 15px !important;
+    /* Force tighter padding to fit */
+    padding-right: 15px !important;
+}
+
+/* --- Progress Bar --- */
+.alezux-progress-wrapper {
+    width: 100%;
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.alezux-progress-track {
+    width: 100%;
+    height: 6px;
+    background-color: #333;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.alezux-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: #00b894;
+    transition: width 0.5s ease;
+}
+
+.alezux-progress-text {
+    font-size: 12px;
+    color: #aeaeae;
+    text-align: right;
+    font-weight: 500;
+}
+
+white-space: nowrap;
+/* Prevent button text breaking */
+flex-shrink: 0;
+/* Prevent button squashing */
+}
+
+.alezux-formacion-button:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    /* Add slight hover lift */
+}
+
+.alezux-formacion-button .alezux-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alezux-formacion-button .alezux-btn-icon svg {
+    width: 1em;
+    height: 1em;
+    fill: currentColor;
+}
+
+.alezux-formacion-button .alezux-btn-icon i {
+    font-size: 1.1em;
+}
+
+.alezux-btn-icon-left {
+    margin-right: 8px;
+}
+
+.alezux-btn-icon-right {
+    margin-left: 8px;
+}
+
+/* --- Widget Topics List --- */
+.alezux-topics-widget {
+    width: 100%;
+    /* Background handled by Elementor Control */
+    border-radius: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Border handled by Elementor Control */
+}
+
+/* Cabecera (Optional) */
+.alezux-topics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #1f1f1f;
+}
+
+.alezux-topics-header-content {
+    flex: 1;
+    min-width: 0;
+    margin-right: 20px;
+}
+
+.alezux-topics-header-content h3.alezux-topics-header-title {
+    margin: 0 0 4px 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ffffff;
+    font-family: 'Manrope', sans-serif;
+}
+
+.alezux-topics-header-meta {
+    font-size: 0.9rem;
+    color: #888888;
+    font-weight: 500;
+}
+
+.alezux-topics-header-icon {
+    color: #ffffff;
+    font-size: 1.2rem;
+}
+
+/* Lista */
+.alezux-topics-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    /* Spacer between cards as seen in image */
+}
+
+/* Item Card */
+/* The design shows items as separate rows or just a clean list. The image shows large thumbnails. */
+.alezux-topic-item {
+    position: relative;
+    display: flex !important;
+    align-items: center;
+    padding: 0;
+    text-decoration: none !important;
+    transition: all 0.2s ease;
+    background-color: transparent;
+    /* Border handled by Elementor Control */
+    border-bottom: 1px solid transparent;
+    /* Removing default borders */
+    gap: 20px;
+    /* Active State Indicator Bar */
+    /* We can use a pseudo element for the green bar on the far left if needed, 
+       but the image shows the bar IS part of the layout, seemingly separate from the card content. 
+       Let's place it on the left. */
+    padding-left: 20px;
+    /* Space for the active bar */
+}
+
+/* Active State Bar (The green vertical line) */
+.alezux-topic-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    /* Center vertically */
+    height: 70%;
+    /* Not full height, looks cleaner */
+    width: 4px;
+    background-color: transparent;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.alezux-topic-item.is-active::before {
+    background-color: #00b894;
+    /* Green Teal Active Color */
+}
+
+/* Thumbnail Wrapper */
+.alezux-topic-thumbnail-wrapper {
+    position: relative;
+    width: 120px;
+    /* Reduced from 160px for better proportion */
+    height: 68px;
+    /* 16:9 ratio approx */
+    flex-shrink: 0;
+    border-radius: 8px;
+    margin-right: 20px;
+    /* Force spacing between image and text */
+}
+
+.alezux-topic-thumbnail {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 8px;
+    background-color: #2a2a2a;
+}
+
+.alezux-topic-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.alezux-topic-thumbnail.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2a2a;
+    color: #444;
+}
+
+/* Checkmark / Status Icon */
+/* Refined positioning and sizing */
+.alezux-topic-check {
+    position: absolute !important;
+    /* Force absolute */
+    left: -10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50%;
+    background-color: #ffffff;
+    /* Default: White circle */
+    z-index: 20;
+    /* High z-index */
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    border: 2px solid #121212;
+    /* Optional: border matching background to create 'cutout' effect if needed, usually looks cleaner without or with dark border */
+}
+
+/* Checkmark Icon SVG */
+/* FORCE SIZE to prevent giant icon */
+.alezux-topic-check svg {
+    width: 12px !important;
+    height: 12px !important;
+    min-width: 12px !important;
+    /* Prevent collapse */
+    max-width: 12px !important;
+    /* Prevent explosion */
+    stroke: #1a1a1a;
+    /* Dark check on white bg */
+    stroke-width: 3px;
+    display: block;
+}
+
+/* Completed Logic */
+.alezux-topic-check.completed {
+    background-color: #ffffff;
+}
+
+/* Removed: Active state styling for checkmark. It should only visually change if COMPLETED. */
+
+/* Progress Bar Styles */
+.alezux-topics-progress-bar {
+    width: 100%;
+    height: 6px;
+    background-color: #333;
+    /* Default container bg */
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 5px;
+}
+
+.alezux-topics-progress-bar-fill {
+    height: 100%;
+    background-color: #00b894;
+    /* Default fill color */
+    width: 0%;
+    border-radius: 3px;
+    transition: width 0.5s ease-in-out;
+}
+
+.alezux-topics-progress-percentage {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-top: 4px;
+    text-align: right;
+}
+
+/* Text Content */
+.alezux-topic-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.alezux-topic-title {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    font-family: 'Manrope', sans-serif;
+    line-height: 1.2;
+}
+
+.alezux-topic-author {
+    font-size: 0.9rem;
+    color: #a0a0a0;
+    font-weight: 400;
+}
+
+.alezux-elementor-placeholder {
+    padding: 30px;
+    background: #111;
+    border: 1px dashed #333;
+    color: #888;
+    text-align: center;
+    border-radius: 12px;
+    font-family: monospace;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .alezux-topic-thumbnail-wrapper {
+        width: 100px;
+        height: 60px;
+    }
+
+    .alezux-topic-check {
+        width: 20px;
+        height: 20px;
+        left: -10px;
+    }
+
+    .alezux-topic-check svg {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+/* --- BTN COMPLETE TOPIC WIDGET STYLES --- */
+
+.alezux-btn-complete-topic {
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    /* Elementor button defaults usually cover cursor: pointer but ensuring it */
+    cursor: pointer;
+}
+
+.alezux-btn-content-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Ensure hidden states are truly hidden */
+.alezux-btn-state {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+}
+
+/* Initially show the correct one based on parent class, JS will toggle display property directly though */
+.alezux-btn-complete-topic:not(.is-completed) .state-incomplete {
+    display: flex;
+}
+
+.alezux-btn-complete-topic.is-completed .state-completed {
+    display: flex;
+}
+
+
+.alezux-btn-loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute; /* Superponer */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.5); /* Fondo semitransparente opcional */
+    border-radius: 50%;
+    width: 2em;
+    height: 2em;
+    z-index: 10;
+}
+
+/* Spinner Animation */
+@keyframes alezux-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.alezux-btn-loader i,
+.alezux-btn-loader svg {
+    animation: alezux-spin 1s infinite linear;
+    width: 1.5em; /* Tamaño fijo visible */
+    height: 1.5em;
+    color: #fff; /* Asegurar contraste */
+}
+
+/* Cuando está cargando, bajar opacidad del contenido pero NO ocultarlo (evita colapso) */
+.alezux-btn-complete-topic.is-loading .alezux-btn-content-wrapper > .alezux-btn-state {
+    opacity: 0.5;
+    pointer-events: none;
+    /* No display:none ! */
+}
+
+/* Ensure SVG icons behave in button */
+.alezux-btn-complete-topic svg {
+    height: 1em;
+    width: 1em;
+    fill: currentColor;
+}
+
+/* Specific state overrides if needed */
+.alezux-btn-complete-topic.is-completed {
+    /* Styles handled by Elementor Control mostly, but good to have a base class hook */
+}

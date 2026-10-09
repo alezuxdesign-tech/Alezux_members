@@ -1,0 +1,77 @@
+:root {
+    /* Paleta de Colores (Modo Oscuro Premium) */
+    --alezux-bg-base: #0f0f0f;
+    --alezux-bg-card: #1a1a1a;
+    --alezux-bg-input: #252525;
+
+    /* Acento (Vibrant Electric) */
+    --alezux-primary: #6c5ce7;
+    --alezux-primary-hover: #5649c0;
+
+    /* Texto */
+    --alezux-text-main: #ffffff;
+    --alezux-text-muted: #a0a0a0;
+
+    /* Bordes */
+    --alezux-border-color: #333333;
+    --alezux-border-radius: 50px;
+    /* Bordes completamente redondeados */
+    --alezux-border-radius-sm: 12px;
+
+    /* Tipografía */
+    --alezux-font-family: 'Manrope', 'Inter', sans-serif;
+
+    /* Spacing */
+    --alezux-spacing-md: 20px;
+    --alezux-spacing-lg: 40px;
+}
+
+/* Clases Utilitarias Globales */
+
+.alezux-card {
+    background-color: var(--alezux-bg-card);
+    border-radius: var(--alezux-border-radius);
+    padding: var(--alezux-spacing-lg);
+    border: 1px solid var(--alezux-border-color);
+    box-shadow: var(--alezux-box-shadow);
+    color: var(--alezux-text-main);
+    font-family: var(--alezux-font-family);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.alezux-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--alezux-box-shadow);
+    border-color: var(--alezux-primary);
+}
+
+.alezux-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--alezux-text-main);
+    margin-bottom: var(--alezux-spacing-md);
+}
+
+.alezux-text {
+    font-size: 16px;
+    color: var(--alezux-text-muted);
+    line-height: 1.6;
+}
+
+.alezux-btn {
+    display: inline-block;
+    background-color: var(--alezux-primary);
+    color: #fff;
+    padding: 12px 30px;
+    border-radius: var(--alezux-border-radius);
+    /* Pill shape */
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.3s;
+    border: none;
+    cursor: pointer;
+}
+
+.alezux-btn:hover {
+    background-color: var(--alezux-primary-hover);
+}

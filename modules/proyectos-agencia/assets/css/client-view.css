@@ -1,0 +1,325 @@
+/* Client View Timeline CSS */
+.alezux-client-project {
+    font-family: 'Inter', sans-serif;
+    max-width: 1000px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+}
+
+.project-timeline {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.timeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+}
+
+.step-circle {
+    width: 40px;
+    height: 40px;
+    background: #e9ecef;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: #6c757d;
+    margin-bottom: 10px;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.timeline-step:hover .step-circle {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.step-completed-badge {
+    animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+}
+
+.timeline-step.active .step-circle {
+    background: #007bff;
+    color: white;
+    box-shadow: 0 0 0 5px rgba(0, 123, 255, 0.2);
+}
+
+.timeline-step.completed .step-circle {
+    background: #28a745;
+    color: white;
+}
+
+.step-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    text-align: center;
+}
+
+.timeline-step.active .step-label {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.step-line {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: #e9ecef;
+    z-index: -1;
+}
+
+.timeline-step.completed .step-line {
+    background: #28a745;
+}
+
+/* Content Area */
+.step-content {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.step-content h3 {
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.alezux-form-group {
+    margin-bottom: 20px;
+}
+
+.alezux-form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.alezux-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.alezux-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.alezux-btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.alezux-btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.alezux-btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.alezux-btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.alezux-btn-warning {
+    background: #ffc107;
+    color: black;
+}
+
+.delivery-hero {
+    text-align: center;
+    padding: 40px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.delivery-folder {
+    border: 1px solid #eee;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.alezux-client-project .files-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 20px !important;
+    margin-bottom: 30px !important;
+}
+
+.alezux-client-project .file-card {
+    border: 1px solid #e9ecef !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    background: white !important;
+    display: flex !important;
+    flex-direction: column !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+    padding: 0 !important; /* Reset padding to allow full-width preview */
+    margin: 0 !important;
+}
+
+.alezux-client-project .file-card:hover {
+    transform: translateY(-8px) !important;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+    border-color: #007bff !important;
+}
+
+.alezux-client-project .file-preview-link {
+    display: block !important;
+    height: 180px !important;
+    background: #f8f9fa !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border-bottom: 1px solid #f1f3f5 !important;
+}
+
+.alezux-client-project .file-preview-link img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    transition: transform 0.5s ease !important;
+}
+
+.alezux-client-project .file-card:hover .file-preview-link img {
+    transform: scale(1.05) !important;
+}
+
+.alezux-client-project .file-preview-icon {
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 48px !important;
+    color: #adb5bd !important;
+}
+
+.alezux-client-project .file-info {
+    padding: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-grow: 1 !important;
+    text-align: left !important;
+}
+
+.alezux-client-project .file-name {
+    display: block !important;
+    margin-bottom: 15px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    color: #212529 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.4 !important;
+}
+
+.alezux-client-project .file-actions {
+    display: flex !important;
+    gap: 10px !important;
+    margin-top: auto !important;
+    flex-wrap: nowrap !important; /* Ensure buttons stay side-by-side on desktop */
+}
+
+.alezux-client-project .file-actions .alezux-btn {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    font-size: 12px !important;
+    padding: 10px 5px !important;
+    border-radius: 8px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin: 0 !important;
+}
+
+.alezux-client-project .video-preview-icon {
+    height: 180px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #fff5f5 !important;
+    border-bottom: 1px solid #ffe3e3 !important;
+    font-size: 56px !important;
+    color: #dc3545 !important;
+}
+
+.video-preview-icon i {
+    transition: transform 0.3s ease;
+}
+
+.video-card:hover .video-preview-icon i {
+    transform: scale(1.2);
+}
+
+.alezux-btn-secondary {
+    background: #f8f9fa;
+    color: #495057;
+    border: 1px solid #dee2e6;
+}
+
+.alezux-btn-secondary:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+
+/* Responsive adjustment for small screens */
+@media (max-width: 480px) {
+    .file-actions {
+        flex-direction: column;
+    }
+    .file-actions .alezux-btn {
+        width: 100%;
+    }
+}

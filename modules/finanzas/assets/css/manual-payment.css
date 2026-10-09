@@ -1,0 +1,57 @@
+.alezux-manual-pay-wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.alezux-manual-pay-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.alezux-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.alezux-form-group label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.alezux-form-group input,
+.alezux-form-group select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+}
+
+/* Fix for Button - Target the class actually used in PHP/JS */
+.alezux-modal .alezux-btn-primary,
+.alezux-manual-pay-btn {
+    background-color: #007bff !important;
+    color: white !important;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.alezux-modal .alezux-btn-primary:hover,
+.alezux-manual-pay-btn:hover {
+    background-color: #0056b3 !important;
+}
+
+.alezux-success-msg {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #c3e6cb;
+    border-radius: 4px;
+}

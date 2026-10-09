@@ -1,0 +1,58 @@
+/* =========================================
+   Styles: Widget Registro CSV
+   ========================================= */
+
+.alezux-csv-title {
+    margin: 0 0 20px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* CSV Upload Box */
+.alezux-csv-upload-box {
+    border: 2px dashed #444;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #222;
+    transition: all 0.3s ease;
+    color: #888;
+}
+
+.alezux-csv-upload-box:hover,
+.alezux-csv-upload-box.dragover {
+    border-color: var(--alezux-primary, #6c5ce7);
+    background: #2a2a2a;
+    color: #fff;
+}
+
+.alezux-upload-title {
+    margin: 0 0 5px;
+    font-size: 16px;
+    color: inherit;
+}
+
+.alezux-upload-subtitle {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* Progress Bar */
+.alezux-progress-bar {
+    position: relative;
+    width: 100%;
+    background: #333;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.alezux-progress-fill {
+    height: 100%;
+    background: var(--alezux-primary, #6c5ce7);
+    width: 0%;
+    transition: width 0.3s ease;
+}

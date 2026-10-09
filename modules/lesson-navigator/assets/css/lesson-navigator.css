@@ -1,0 +1,99 @@
+.alezux-lesson-navigator-wrapper {
+	width: 100%;
+	margin-top: var(--alezux-spacing-lg, 30px);
+	margin-bottom: var(--alezux-spacing-lg, 30px);
+}
+
+.alezux-ln-container {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 15px;
+}
+
+.alezux-ln-col {
+	flex: 1;
+	min-width: 200px;
+	display: flex;
+}
+
+.alezux-ln-col-prev {
+	justify-content: flex-start;
+}
+
+.alezux-ln-col-next {
+	justify-content: flex-end;
+}
+
+.alezux-ln-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 20px;
+	background-color: var(--alezux-bg-card, #1a1a1a);
+	border: 1px solid var(--alezux-border-color, #333);
+	border-radius: var(--alezux-border-radius, 50px);
+	text-decoration: none !important;
+	transition: all 0.3s ease;
+	box-shadow: var(--alezux-box-shadow, 0 5px 15px rgba(0, 0, 0, 0.2));
+	max-width: 100%;
+}
+
+.alezux-ln-btn:hover {
+	background-color: var(--alezux-primary, #6c5ce7);
+	border-color: var(--alezux-primary, #6c5ce7);
+	transform: translateY(-2px);
+}
+
+.alezux-ln-text-group {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	overflow: hidden; /* Para que funcione el truncado */
+}
+
+.alezux-ln-btn-prev .alezux-ln-text-group {
+	text-align: left;
+}
+
+.alezux-ln-btn-next .alezux-ln-text-group {
+	text-align: right;
+}
+
+.alezux-ln-icon i {
+	font-size: 1rem;
+	color: var(--alezux-text-muted, #a0a0a0);
+	transition: color 0.3s ease;
+}
+
+.alezux-ln-btn:hover .alezux-ln-icon i {
+	color: #ffffff;
+}
+
+.alezux-ln-btn-label {
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--alezux-text-muted, #a0a0a0);
+	margin-bottom: 2px;
+	transition: color 0.3s ease;
+	white-space: nowrap;
+}
+
+.alezux-ln-btn-title {
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: var(--alezux-text-main, #ffffff);
+	transition: color 0.3s ease;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 250px; /* Limita el ancho del texto para evitar botones gigantes */
+}
+
+.alezux-ln-btn:hover .alezux-ln-btn-label,
+.alezux-ln-btn:hover .alezux-ln-btn-title {
+	color: #ffffff;
+}

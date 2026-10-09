@@ -1,0 +1,383 @@
+/* Alezux Listing - Admin UI */
+
+.alezux-listing-admin {
+    background-color: var(--alezux-bg-card, #1a1a1a);
+    padding: var(--alezux-spacing-lg, 40px);
+    border-radius: var(--alezux-border-radius, 50px);
+    box-shadow: var(--alezux-box-shadow, 0 10px 30px rgba(0, 0, 0, 0.3));
+    font-family: 'Manrope', 'Inter', sans-serif;
+    color: var(--alezux-text-main, #ffffff);
+}
+
+.alezux-listing-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.alezux-listing-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 10px;
+    color: var(--alezux-text-main, #fff);
+}
+
+.alezux-listing-desc {
+    font-size: 14px;
+    color: var(--alezux-text-muted, #a0a0a0);
+    margin: 0;
+}
+
+.alezux-listing-form-wrapper {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 25px;
+    border-radius: 30px;
+    border: 1px solid var(--alezux-border-color, #333);
+    margin-bottom: 40px;
+}
+
+.alezux-form-group {
+    margin-bottom: 20px;
+}
+
+.alezux-form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--alezux-text-main, #fff);
+}
+
+.alezux-input {
+    width: 100%;
+    background-color: var(--alezux-bg-base, #0f0f0f);
+    border: 1px solid var(--alezux-border-color, #333);
+    color: var(--alezux-text-main, #fff);
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+textarea.alezux-input {
+    border-radius: 20px;
+    resize: vertical;
+}
+
+.alezux-input:focus {
+    outline: none;
+    border-color: var(--alezux-primary, #6c5ce7);
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
+}
+
+.alezux-btn {
+    background-color: var(--alezux-primary, #6c5ce7);
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.alezux-btn:hover {
+    background-color: var(--alezux-primary-hover, #5649c0);
+    transform: translateY(-2px);
+}
+
+.alezux-btn:disabled,
+.alezux-btn[disabled] {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Modifier para el texto de guardando animado */
+.btn-loading {
+    display: inline-block;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.4;
+    }
+}
+
+.alezux-form-msg {
+    margin-top: 15px;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 13px;
+    display: none;
+    text-align: center;
+}
+
+.alezux-form-msg.success {
+    background-color: rgba(46, 213, 115, 0.1);
+    color: #2ed573;
+    border: 1px solid rgba(46, 213, 115, 0.2);
+}
+
+.alezux-form-msg.error {
+    background-color: rgba(255, 71, 87, 0.1);
+    color: #ff4757;
+    border: 1px solid rgba(255, 71, 87, 0.2);
+}
+
+.alezux-tasks-subtitle {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--alezux-border-color, #333);
+}
+
+.alezux-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.alezux-task-item {
+    background: var(--alezux-bg-base, #0f0f0f);
+    border: 1px solid var(--alezux-border-color, #333);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.alezux-task-item:hover {
+    border-color: var(--alezux-primary, #6c5ce7);
+    transform: translateY(-2px);
+}
+
+.task-info {
+    flex: 1;
+}
+
+.task-title {
+    display: block;
+    font-size: 16px;
+    color: var(--alezux-text-main, #fff);
+    margin-bottom: 5px;
+}
+
+.task-desc {
+    font-size: 13px;
+    color: var(--alezux-text-muted, #a0a0a0);
+    margin: 0 0 8px;
+}
+
+.task-meta {
+    font-size: 11px;
+    color: var(--alezux-text-muted, #a0a0a0);
+    opacity: 0.7;
+}
+
+.alezux-btn-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    margin-right: 8px;
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.alezux-btn-icon:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-3px);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-delete-task {
+    background: rgba(255, 71, 87, 0.1);
+    color: #ff4757;
+    border: 1px solid rgba(255, 71, 87, 0.2);
+    margin-right: 0;
+}
+
+.btn-delete-task:hover {
+    background: #ff4757;
+    color: #fff;
+    border-color: #ff4757;
+}
+
+.alezux-btn-icon i,
+.alezux-btn-icon svg {
+    pointer-events: none;
+    /* Asegurar que el clic vaya al botón y no al ícono */
+}
+
+.alezux-btn-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    display: inline-block;
+}
+
+/* Modal Styles */
+.alezux-listing-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: inherit;
+    padding: 20px;
+}
+
+.alezux-listing-modal-content {
+    background: var(--alezux-bg-card, #1a1a1a);
+    border: 1px solid var(--alezux-border-color, #333);
+    border-radius: 30px;
+    padding: 35px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    position: relative;
+    animation: alezuxModalFadeIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.alezux-listing-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 20px;
+}
+
+.alezux-listing-modal-header h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.history-task-name {
+    display: block;
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.alezux-listing-modal-close {
+    cursor: pointer;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff !important;
+    flex-shrink: 0;
+}
+
+.alezux-listing-modal-close i,
+.alezux-listing-modal-close svg {
+    font-size: 16px;
+    color: #fff !important;
+    fill: #fff !important;
+}
+
+.alezux-listing-modal-close:hover {
+    background: #ff4757;
+    color: #fff !important;
+    border-color: #ff4757;
+    transform: rotate(90deg);
+}
+
+/* History Table Styles */
+.alezux-table-wrapper {
+    margin-top: 10px;
+    border-radius: 15px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.alezux-listing-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.alezux-listing-table th {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 15px 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--alezux-text-muted, #a0a0a0);
+    text-align: left;
+    letter-spacing: 1px;
+}
+
+.alezux-listing-table td {
+    padding: 15px 20px;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.alezux-listing-table tr:last-child td {
+    border-bottom: none;
+}
+
+.alezux-listing-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+@keyframes alezuxModalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.alezux-loading-tasks,
+.alezux-no-tasks,
+.alezux-error-notice {
+    text-align: center;
+    padding: 30px;
+    font-size: 14px;
+    color: var(--alezux-text-muted, #a0a0a0);
+}
+
+.alezux-error-notice {
+    color: #ff4757;
+}

@@ -1,0 +1,490 @@
+.alezux-config-card {
+    background-color: var(--alezux-bg-card, #fff);
+    border-radius: var(--alezux-border-radius, 20px);
+    box-shadow: var(--alezux-box-shadow, 0 4px 10px rgba(0, 0, 0, 0.1));
+    padding: 20px;
+    /* Padding for the closed state mainly */
+    overflow: visible;
+    transition: all 0.3s ease;
+    border: 1px solid var(--alezux-border-color, #eee);
+    cursor: pointer;
+    /* Indicate it's clickable */
+    position: relative;
+}
+
+/* Header Section */
+.alezux-config-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* Remove bottom margin/border in closed state if desired, or keep it */
+    padding-bottom: 0;
+    border-bottom: none;
+    transition: all 0.3s ease;
+}
+
+
+
+/* Layout Variations */
+.alezux-config-header.alezux-layout-left {
+    /* Avatar Left: [Avatar] [Info] [Toggle] */
+    flex-direction: row;
+}
+
+.alezux-config-header.alezux-layout-left .alezux-config-avatar {
+    order: -1;
+    /* Move to start */
+    margin-right: 15px;
+    /* Spacing between avatar and name */
+    margin-left: 0;
+}
+
+.alezux-config-header.alezux-layout-left .alezux-config-info {
+    order: 0;
+    text-align: left;
+    margin-right: auto;
+    /* Push toggle to the end if desired, or keep spaced */
+    flex: 1;
+    /* Take up space */
+}
+
+.alezux-config-header.alezux-layout-left .alezux-config-toggle {
+    order: 1;
+    /* Keep at end */
+    margin-left: 15px;
+}
+
+/* Default (Right) Layout: [Info] [Avatar] [Toggle] is current HTML flow */
+.alezux-config-header.alezux-layout-right .alezux-config-info {
+    text-align: right;
+    order: 0;
+}
+
+.alezux-config-header.alezux-layout-right .alezux-config-avatar {
+    order: 1;
+    margin-left: 15px;
+}
+
+.alezux-config-header.alezux-layout-right .alezux-config-toggle {
+    order: 2;
+}
+
+.alezux-config-info {
+    flex: 1;
+    padding-right: 15px;
+}
+
+.alezux-config-name {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.alezux-config-email {
+    margin: 5px 0 0;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.alezux-config-avatar {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.alezux-config-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Border is now handled by Elementor control */
+}
+
+/* Toggle Icon */
+.alezux-config-toggle {
+    margin-left: 15px;
+    color: var(--alezux-primary, #6c5ce7);
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+    display: none;
+    /* Hidden by default, shown via PHP logic or always show? User asked for "input-select" style */
+}
+
+/* If we want a specific toggle icon, we can add it in PHP and style here. 
+   Assuming we add a chevron. */
+.alezux-config-toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.alezux-config-card.active .alezux-config-toggle-icon {
+    transform: rotate(180deg);
+}
+
+
+/* Menu Section */
+.alezux-config-menu {
+    display: none;
+    /* Hidden by default */
+    flex-direction: column;
+    position: absolute;
+    top: calc(100% + 15px);
+    right: 0;
+    z-index: 100;
+    width: max-content;
+    background-color: var(--alezux-bg-card, #fff);
+    border: 1px solid var(--alezux-border-color, #eee);
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    animation: alezuxFadeInUp 0.2s ease-out forwards;
+    z-index: 1000;
+}
+
+@keyframes alezuxFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.alezux-config-card.active .alezux-config-menu {
+    display: flex;
+}
+
+
+
+.alezux-config-menu-separator {
+    margin: 5px 0;
+    border-top: 1px solid var(--alezux-border-color, #eee);
+    width: 100%;
+}
+
+.alezux-config-menu-item {
+    transition: background-color 0.2s ease;
+    border-radius: 10px;
+    padding: 0;
+}
+
+.alezux-config-menu-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.alezux-config-menu-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: #333;
+    transition: color 0.2s ease;
+    width: 100%;
+}
+
+.alezux-config-menu-icon {
+    width: var(--alezux-icon-size, 24px);
+    /* Dynamic size */
+    height: var(--alezux-icon-size, 24px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: #555;
+    /* Default color */
+    font-size: 1.1rem;
+    /* Adjust font size relative to container? */
+}
+
+/* Ensure icon svg or font scales */
+.alezux-config-menu-icon i,
+.alezux-config-menu-icon svg {
+    width: 100%;
+    height: 100%;
+    font-size: inherit;
+}
+
+
+.alezux-config-menu-text {
+    font-weight: 500;
+    flex: 1;
+}
+
+/* Styling for the header hover to indicate interactivity */
+.alezux-config-card:hover {
+    background-color: var(--alezux-bg-card-hover, var(--alezux-bg-card, #fff));
+    /* Can add a subtle hover effect if desired */
+    box-shadow: var(--alezux-box-shadow-hover, 0 6px 15px rgba(0, 0, 0, 0.15));
+}
+
+/* --- AUTH FORMS & CUSTOM MODAL --- */
+
+.alezux-auth-form-card {
+    background: var(--alezux-bg-card, #1a1a1a);
+    padding: 40px;
+    border-radius: var(--alezux-border-radius, 20px);
+    border: 1px solid var(--alezux-border-color, #333);
+    box-shadow: var(--alezux-box-shadow, 0 10px 30px rgba(0, 0, 0, 0.3));
+    width: 100%;
+}
+
+.alezux-auth-title {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.alezux-auth-desc {
+    color: #aaa;
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+.alezux-auth-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.alezux-auth-field {
+    margin-bottom: 20px;
+}
+
+.alezux-input-wrapper {
+    position: relative !important;
+    width: 100% !important;
+}
+
+.alezux-toggle-password {
+    position: absolute !important;
+    right: 15px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    cursor: pointer !important;
+    color: #888;
+    z-index: 10 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    width: 24px !important;
+    height: 24px !important;
+    pointer-events: all !important;
+    outline: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+}
+
+.alezux-eye-icon {
+    width: 20px !important;
+    height: 20px !important;
+    display: block;
+    pointer-events: none !important;
+}
+
+.alezux-toggle-password:hover {
+    color: var(--alezux-primary, #6c5ce7);
+}
+
+.alezux-auth-field input[type="text"],
+.alezux-auth-field input[type="password"],
+.alezux-auth-field input[type="email"] {
+    width: 100%;
+    background: #252525;
+    border: 1px solid #444;
+    padding: 12px 15px;
+    padding-right: 45px;
+    /* Espacio para el icono del ojo */
+    border-radius: 12px;
+    color: #fff;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    display: block;
+    margin: 0;
+}
+
+.alezux-auth-field input:focus {
+    border-color: var(--alezux-primary, #6c5ce7);
+    outline: none;
+    background: #2a2a2a;
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+}
+
+.alezux-auth-submit {
+    background: var(--alezux-primary, #6c5ce7);
+    color: #fff;
+    border: none;
+    padding: 14px 30px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.alezux-auth-submit:hover {
+    background: var(--alezux-primary-hover, #5649c0);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
+}
+
+/* --- Button Alignment via Selectors (Handled in Widget PHP) --- */
+
+.alezux-auth-extra {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.alezux-remember-me {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ccc;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.alezux-auth-footer {
+    margin-top: 25px;
+    text-align: center;
+}
+
+.alezux-auth-link {
+    color: var(--alezux-primary, #6c5ce7);
+    text-decoration: none;
+    font-size: 14px;
+    transition: opacity 0.2s;
+}
+
+.alezux-auth-link:hover {
+    opacity: 0.8;
+}
+
+/* Modales Personalizados */
+.alezux-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2147483647;
+    /* Max Z-Index posible para asegurar visibilidad sobre todo */
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.alezux-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.alezux-modal-card {
+    background: #1a1a1a;
+    width: 90%;
+    max-width: 400px;
+    padding: 30px;
+    border-radius: 24px;
+    border: 1px solid #333;
+    text-align: center;
+    transform: scale(0.8);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.alezux-modal-overlay.active .alezux-modal-card {
+    transform: scale(1);
+}
+
+.alezux-modal-icon {
+    font-size: 50px;
+    margin-bottom: 20px;
+}
+
+.alezux-modal-icon.error {
+    color: #ff7675;
+}
+
+.alezux-modal-icon.success {
+    color: #55efc4;
+}
+
+.alezux-modal-title {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.alezux-modal-message {
+    color: #aaa;
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.alezux-modal-close {
+    background: #333;
+    color: #fff;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.alezux-modal-close:hover {
+    background: #444;
+}
+
+/* Loader */
+.alezux-loader {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: alezux-spin 0.8s linear infinite;
+}
+
+@keyframes alezux-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Alerts */
+.alezux-auth-alert {
+    padding: 12px 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.alezux-auth-alert.error {
+    background: rgba(255, 118, 117, 0.1);
+    border: 1px solid #ff7675;
+    color: #ff7675;
+}

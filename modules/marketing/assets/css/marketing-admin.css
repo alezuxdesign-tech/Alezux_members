@@ -1,0 +1,283 @@
+/* Marketing Admin Styles */
+
+.alezux-marketing-wrapper {
+    /* Uses inherited alezux-table styles */
+}
+
+/* --- BUTTONS (Independent class to avoid conflicts) --- */
+.alezux-marketing-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 6px rgba(118, 75, 162, 0.3);
+    text-decoration: none;
+}
+
+.alezux-marketing-btn:hover {
+    opacity: 0.9;
+    color: #fff;
+}
+
+.alezux-marketing-btn.primary {
+    /* Just reuse base style or add specific overrides if needed */
+}
+
+/* --- MODALS --- */
+.alezux-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    align-items: center;
+    justify-content: center;
+}
+
+.alezux-modal-content {
+    background-color: #fff;
+    margin: auto;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+/* Dark Mode Modal Defaults (Can be overridden by Elementor controls) */
+@media (prefers-color-scheme: dark) {
+    .alezux-modal-content {
+        background: #1a202c;
+        color: #e2e8f0;
+        border: 1px solid #2d3748;
+    }
+}
+
+.alezux-close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #a0aec0;
+    line-height: 1;
+}
+
+.alezux-close-modal:hover {
+    color: #fff;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: inherit;
+}
+
+.alezux-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+    background-color: rgba(255, 255, 255, 0.05);
+    /* Transparent-ish for dark mode compat */
+    color: inherit;
+}
+
+.alezux-input:focus {
+    border-color: #667eea;
+    outline: none;
+}
+
+small {
+    color: #718096;
+    font-size: 0.85em;
+    display: block;
+    margin-top: 4px;
+}
+
+/* Switch Slider */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background-color: #2e7d32;
+}
+
+input:checked+.slider:before {
+    transform: translateX(20px);
+}
+
+/* --- PREVIEW FEATURE --- */
+.editor-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #2d3748;
+    padding-bottom: 10px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: #718096;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+.preview-container {
+    border: 1px solid #2d3748;
+    background: #fff;
+    /* Email preview usually needs white background */
+    color: #000;
+    padding: 20px;
+    border-radius: 6px;
+    min-height: 300px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* --- UPLOAD BOX --- */
+.alezux-upload-box {
+    border: 2px dashed #4a5568;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    color: #a0aec0;
+    margin-top: 5px;
+}
+
+.alezux-upload-box:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.alezux-upload-icon {
+    font-size: 32px;
+    color: #48bb78;
+    /* Green icon */
+    margin-bottom: 10px;
+    display: block;
+}
+
+.alezux-upload-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: inherit;
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* Dark mode overrides for upload title if needed */
+@media (prefers-color-scheme: dark) {
+    .alezux-upload-title {
+        color: #fff;
+    }
+}
+
+.alezux-upload-desc {
+    font-size: 11px;
+    color: #718096;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.alezux-upload-btn-styled {
+    background: #4a5568;
+    color: #9ae6b4;
+    /* Light Green text */
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.alezux-upload-box:hover .alezux-upload-btn-styled {
+    background: #2d3748;
+}
+
+.alezux-preview-image {
+    max-width: 150px;
+    max-height: 80px;
+    display: block;
+    margin: 0 auto 15px auto;
+    border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.remove-image-link {
+    display: block;
+    color: #e53e3e;
+    font-size: 11px;
+    margin-top: 5px;
+    text-decoration: underline;
+    cursor: pointer;
+}

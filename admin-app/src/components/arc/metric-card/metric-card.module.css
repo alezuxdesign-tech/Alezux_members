@@ -1,0 +1,77 @@
+.card { 
+  min-width: 0; 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius-surface); 
+  padding: var(--space-6); 
+  background: var(--surface); 
+  box-shadow: var(--shadow-resting); 
+  transition: border-color var(--duration-fast) var(--ease-standard), 
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-raised);
+}
+
+.top { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: var(--space-3); 
+  margin-bottom: var(--space-4); 
+}
+
+.labelGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.labelText { 
+  color: var(--text-secondary); 
+  font-size: var(--text-sm); 
+  font-weight: 500;
+}
+
+.badge { 
+  display: inline-flex; 
+  flex: 0 0 auto; 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius-pill); 
+  padding: 3px 8px; 
+  color: var(--text-secondary); 
+  font-size: var(--text-xs); 
+  font-variant-numeric: tabular-nums; 
+  font-weight: 500;
+}
+
+.badge[data-trend="up"] { 
+  background: color-mix(in oklab, var(--success) 14%, transparent); 
+  color: var(--success); 
+  border-color: transparent;
+}
+
+.badge[data-trend="down"] { 
+  background: color-mix(in oklab, var(--danger) 14%, transparent); 
+  color: var(--danger); 
+  border-color: transparent;
+}
+
+.numberWrapper {
+  margin: var(--space-2) 0;
+}
+
+.context { 
+  margin: var(--space-2) 0 0; 
+  color: var(--text-muted); 
+  font-size: var(--text-xs); 
+  line-height: var(--leading-body); 
+}

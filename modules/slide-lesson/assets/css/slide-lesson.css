@@ -1,0 +1,288 @@
+﻿.alezux-slide-lesson-container {
+    position: relative;
+    width: 100%;
+    padding: 20px 0;
+    /* Quitamos flex/gap del contenedor porque las flechas serÃ¡n absolutas */
+    display: block;
+}
+
+.alezux-slide-wrapper {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 20px 10px;
+    /* Padding para que la sombra no se corte y espacio para flechas si estÃ¡n dentro */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* Firefox */
+    width: 100%;
+}
+
+.alezux-slide-wrapper::-webkit-scrollbar {
+    display: none;
+    /* Safari and Chrome */
+}
+
+.alezux-slide-item {
+    flex: 0 0 auto;
+    width: 300px;
+    /* Fixed width for cards */
+    scroll-snap-align: center;
+    border-radius: var(--alezux-border-radius, 20px);
+    overflow: hidden;
+    background: var(--alezux-bg-card, #1a1a1a);
+    box-shadow: var(--alezux-box-shadow, 0 4px 15px rgba(0, 0, 0, 0.3));
+    border: 1px solid var(--alezux-border-color, #333);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.alezux-slide-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+    border-color: var(--alezux-primary, #6c5ce7);
+}
+
+.alezux-slide-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+}
+
+.alezux-slide-item img {
+    width: 100%;
+    height: 200px;
+    /* Aspect ratio */
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s ease;
+}
+
+.alezux-slide-item:hover img {
+    transform: scale(1.05);
+}
+
+/* Efecto Resplandor (Shine) personalizado */
+.alezux-slide-item::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 20%;
+    height: 100%;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.1) 10%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 90%);
+    filter: blur(3px);
+    -webkit-filter: blur(3px);
+    transform: skewX(-20deg);
+    transition: all 1s ease-in-out;
+    pointer-events: none;
+    /* Asegurar que no interfiera con clicks */
+    z-index: 5;
+}
+
+.alezux-slide-item:hover::after {
+    animation: alezux-shine 1.5s infinite linear;
+}
+
+@keyframes alezux-shine {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 200%;
+    }
+}
+
+/* Contenido del Item */
+.alezux-slide-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0) 100%);
+    z-index: 2;
+}
+
+.alezux-slide-title {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0px 0px;
+    /* Force white text */
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Botones de NavegaciÃ³n */
+.alezux-slide-nav {
+    /* Estilos Base Visuales */
+    background-color: var(--alezux-nav-bg, #f1c40f);
+    color: var(--alezux-nav-color, #333);
+
+    /* Permitir que Elementor controle el borde */
+    /* border se maneja via control de Elementor */
+
+    /* TAMAÃ‘O ESTRICTO DEL CONTENEDOR */
+    width: var(--alezux-nav-size, 40px);
+    height: var(--alezux-nav-size, 40px);
+    min-width: var(--alezux-nav-size, 40px);
+    min-height: var(--alezux-nav-size, 40px);
+
+    /* FUENTE RELATIVA AL TAMAÃ‘O O PERSONALIZADA */
+    font-size: var(--alezux-nav-icon-size, calc(var(--alezux-nav-size, 40px) * 0.4)) !important;
+    line-height: 1 !important;
+
+    border-radius: var(--alezux-nav-radius, 50%);
+    cursor: pointer;
+
+    /* FLEXBOX PARA CENTRADO PERFECTO */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+
+    /* POSICIONAMIENTO ABSOLUTO */
+    position: absolute !important;
+    z-index: 10;
+
+    /* VARIABLE CONTROL DE POSICION */
+    top: var(--alezux-nav-top, auto) !important;
+    bottom: var(--alezux-nav-bottom, auto) !important;
+    left: var(--alezux-nav-left, auto) !important;
+    right: var(--alezux-nav-right, auto) !important;
+
+    /* TRANSFORM PARA OFFSETS FINOS (X/Y) */
+    transform: translate(var(--alezux-nav-x, 0), var(--alezux-nav-y, 0));
+}
+
+/* REGLAS PARA EVITAR SVG GIGANTE - AGRESIVO */
+.alezux-slide-nav i,
+.alezux-slide-nav svg,
+.alezux-slide-nav svg path {
+    /* TamaÃ±o mÃ¡ximo relativo al contenedor, no al viewport ni al documento */
+    width: 1em !important;
+    height: 1em !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+
+    font-size: inherit !important;
+    line-height: 1 !important;
+    display: block !important;
+
+    /* Color Fix */
+    fill: currentColor !important;
+    color: inherit !important;
+    stroke: currentColor !important;
+}
+
+/* Default positions: Arriba Derecha */
+.alezux-slide-nav-prev {
+    --alezux-nav-top: 6px;
+    --alezux-nav-right: 60px;
+    --alezux-nav-left: auto;
+    --alezux-nav-bottom: auto;
+    --alezux-nav-y: -50%;
+}
+
+.alezux-slide-nav-next {
+    --alezux-nav-top: 6px;
+    --alezux-nav-right: 0px;
+    --alezux-nav-left: auto;
+    --alezux-nav-bottom: auto;
+    --alezux-nav-y: -50%;
+}
+
+.alezux-slide-nav:hover {
+    /* Efecto Hover */
+    background-color: var(--alezux-nav-bg-hover, #f39c12);
+    color: var(--alezux-nav-color-hover, #000);
+    transform: translate(var(--alezux-nav-x, 0), var(--alezux-nav-y, 0)) scale(1.1);
+}
+
+
+
+/* Estilos para Lecciones Bloqueadas (Fase 5) */
+.alezux-slide-item.is-locked {
+    position: relative;
+    cursor: not-allowed;
+}
+
+.alezux-slide-item.is-locked .alezux-slide-link.locked-cursor {
+    cursor: not-allowed;
+}
+
+/* Efecto Blur y Escala de Grises en la imagen */
+.alezux-slide-item.is-locked img {
+    filter: grayscale(100%) blur(3px);
+    transition: filter 0.3s ease;
+}
+
+/* Overlay Gris semi-transparente */
+.alezux-slide-item.is-locked .alezux-lock-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(128, 128, 128, 0.4);
+    /* Gris semi-transparente */
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: inherit;
+    /* Heredar borde de la tarjeta */
+}
+
+/* Icono de Candado */
+.alezux-slide-item.is-locked .alezux-lock-icon {
+    font-size: 40px;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 11;
+}
+
+/* Asegurar que el título siga visible pero quizás un poco atenuado o igual */
+.alezux-slide-item.is-locked .alezux-slide-content {
+    z-index: 12;
+    /* Por encima del overlay gris si se quiere legible, o debajo si se quiere tapar todo */
+}
+
+
+/* --- Modo de Posición: Por Defecto (Flechas centradas) --- */
+.alezux-slide-lesson-container.alezux-nav-mode-default {
+    position: relative;
+}
+
+.alezux-slide-lesson-container.alezux-nav-mode-default .alezux-slide-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.alezux-slide-lesson-container.alezux-nav-mode-default .alezux-slide-nav-prev {
+    left: 0;
+}
+
+.alezux-slide-lesson-container.alezux-nav-mode-default .alezux-slide-nav-next {
+    right: 0;
+}
+
+/* Ocultar titulo en modo por defecto */
+.alezux-slide-lesson-container.alezux-nav-mode-default .alezux-slide-title {
+    display: none;
+}
+
+/* Estado deshabilitado (bloqueado) para las flechas */
+.alezux-slide-nav.alezux-nav-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: default;
+}
