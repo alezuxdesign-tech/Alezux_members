@@ -1,0 +1,59 @@
+.root {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background-color: var(--control-track);
+  padding: 2px;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.root:hover:not(:disabled) {
+  background-color: var(--control-track-hover);
+  border-color: var(--border-strong);
+}
+
+.root:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.root[data-state="checked"] {
+  background-color: var(--control-on);
+  border-color: var(--control-on);
+}
+
+.root:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.thumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--control-thumb);
+  box-shadow: var(--control-thumb-shadow);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.sm {
+  width: 36px;
+  height: 20px;
+}
+
+.sm .thumb {
+  width: 14px;
+  height: 14px;
+}

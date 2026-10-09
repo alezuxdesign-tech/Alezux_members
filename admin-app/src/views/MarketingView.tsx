@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Mail, Zap, Send, Check, Clock, Eye, Edit3 } from "lucide-react";
+import { Zap, Send, Check, Eye } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
+import { Switch } from "../components/arc/switch/switch";
+import { Input } from "../components/arc/input/input";
 import { api, MarketingAutomation } from "../services/api";
 import styles from "./MarketingView.module.css";
 
@@ -52,23 +54,23 @@ export function MarketingView() {
                 <Zap size={14} className={styles.zapIcon} />
                 <span>{auto.triggerEvent}</span>
               </div>
-              <div
-                className={[styles.switch, auto.enabled ? styles.switchActive : ""].join(" ")}
-                onClick={() => handleToggle(auto.id, auto.enabled)}
-                title={auto.enabled ? "Desactivar automatización" : "Activar automatización"}
-              >
-                <div className={styles.switchThumb} />
-              </div>
+              <Switch
+                checked={auto.enabled}
+                onCheckedChange={() => handleToggle(auto.id, auto.enabled)}
+                aria-label={`Activar automatización ${auto.name}`}
+              />
             </div>
 
             <h3 className={styles.cardTitle}>{auto.name}</h3>
             <p className={styles.subjectText}>
-              <strong>Asunto:</strong> "{auto.subject}"
+              <span className={styles.subjectLabel}>Asunto:</span> &ldquo;{auto.subject}&rdquo;
             </p>
 
             <div className={styles.statsRow}>
               <span className={styles.statLabel}>Enviados en total:</span>
-              <Badge variant="neutral">{auto.sentCount.toLocaleString()} correos</Badge>
+              <Badge variant="neutral" size="sm">
+                <span className={styles.tabularNums}>{auto.sentCount.toLocaleString()}</span> correos
+              </Badge>
             </div>
 
             <div className={styles.cardActions}>
@@ -85,12 +87,12 @@ export function MarketingView() {
         isOpen={!!selectedAuto}
         onClose={() => setSelectedAuto(null)}
         title={selectedAuto ? selectedAuto.name : ""}
-        description="Plantilla de correo automático con variables dinámicas {user_name}, {user_email}..."
+        description="Plantilla de correo automático con variables dinámicas de personalización."
         footer={
           <>
             {testSent && (
               <span className={styles.testSuccessNotice}>
-                <Check size={16} /> ¡Correo de prueba enviado al admin!
+                <Check size={16} /> Correo de prueba enviado
               </span>
             )}
             <Button variant="ghost" onClick={() => setSelectedAuto(null)}>
@@ -108,11 +110,9 @@ export function MarketingView() {
         {selectedAuto && (
           <div className={styles.templateEditor}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Línea de Asunto</label>
-              <input
-                type="text"
+              <Input
+                label="Línea de Asunto"
                 defaultValue={selectedAuto.subject}
-                className={styles.input}
               />
             </div>
 

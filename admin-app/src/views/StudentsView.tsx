@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Search, UserCheck, ShieldAlert, GraduationCap, Check, Plus, Filter, Mail } from "lucide-react";
+import { Search, ShieldAlert, GraduationCap, Check, Plus, Filter } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
+import { Switch } from "../components/arc/switch/switch";
+import { Input } from "../components/arc/input/input";
 import { api, Student, Course } from "../services/api";
 import styles from "./StudentsView.module.css";
 
@@ -41,13 +43,11 @@ export function StudentsView() {
     if (!selectedStudent) return;
     setIsSaving(true);
 
-    // Guardar para cada curso
     for (const course of courses) {
       const isEnabled = studentCourses.includes(course.id);
       await api.toggleStudentCourseAccess(selectedStudent.id, course.id, isEnabled);
     }
 
-    // Actualizar estado local
     setStudents((prev) =>
       prev.map((s) => (s.id === selectedStudent.id ? { ...s, enabledCourseIds: studentCourses } : s))
     );
@@ -77,19 +77,18 @@ export function StudentsView() {
         </div>
 
         <div className={styles.actions}>
-          <div className={styles.searchBox}>
-            <Search size={16} className={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder="Buscar estudiante por nombre o correo..."
+          <div className={styles.searchWrap}>
+            <Input
+              sizeVariant="sm"
+              leftIcon={<Search size={14} />}
+              placeholder="Buscar por nombre o correo..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className={styles.searchInput}
             />
           </div>
 
           <div className={styles.filterDropdown}>
-            <Filter size={15} />
+            <Filter size={14} />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -102,8 +101,8 @@ export function StudentsView() {
             </select>
           </div>
 
-          <Button variant="primary">
-            <Plus size={16} />
+          <Button variant="primary" size="sm">
+            <Plus size={15} />
             Nuevo Alumno
           </Button>
         </div>
@@ -136,18 +135,19 @@ export function StudentsView() {
                       </div>
                     </div>
                   </td>
-                  <td>{student.joinedDate}</td>
+                  <td className={styles.tabularDate}>{student.joinedDate}</td>
                   <td>
                     <span className={styles.planName}>{student.planName}</span>
                   </td>
                   <td>
-                    <Badge variant={enabledCount > 0 ? "accent" : "neutral"}>
+                    <Badge variant={enabledCount > 0 ? "accent" : "neutral"} size="sm">
                       <GraduationCap size={13} />
                       {enabledCount} {enabledCount === 1 ? "curso" : "cursos"}
                     </Badge>
                   </td>
                   <td>
                     <Badge
+                      size="sm"
                       variant={
                         student.status === "active"
                           ? "success"
@@ -204,7 +204,7 @@ export function StudentsView() {
           <>
             {savedSuccess && (
               <span className={styles.successMessage}>
-                <Check size={16} /> ¡Accesos guardados con éxito!
+                <Check size={16} /> Accesos actualizados
               </span>
             )}
             <Button variant="ghost" onClick={() => setSelectedStudent(null)}>
@@ -234,16 +234,12 @@ export function StudentsView() {
                     {course.sections.length} Módulos estructurados
                   </span>
                 </div>
-                <div className={styles.switchBox}>
-                  <input
-                    type="checkbox"
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Switch
                     checked={isEnabled}
-                    onChange={() => {}}
-                    className={styles.realCheckbox}
+                    onCheckedChange={() => handleToggleCourse(course.id)}
+                    aria-label={`Acceso a ${course.title}`}
                   />
-                  <div className={[styles.customSwitch, isEnabled ? styles.switchOn : ""].join(" ")}>
-                    <div className={styles.switchThumb} />
-                  </div>
                 </div>
               </div>
             );

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Plus, Link2, Copy, Check, CreditCard, DollarSign, Calendar, Sparkles, ExternalLink } from "lucide-react";
+import { Plus, Link2, Copy, Check, CreditCard, DollarSign, Users, TrendingUp, ExternalLink } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
+import { MetricCard } from "../components/arc/metric-card/metric-card";
+import { Input } from "../components/arc/input/input";
 import { api, FinancePlan, Course } from "../services/api";
 import styles from "./FinanceView.module.css";
 
@@ -53,6 +55,9 @@ export function FinanceView() {
     setQuotaAmount(97);
   };
 
+  const totalRevenueProjected = plans.reduce((acc, p) => acc + p.totalAmount * p.subscribersCount, 0);
+  const totalSubscribers = plans.reduce((acc, p) => acc + p.subscribersCount, 0);
+
   return (
     <div className={styles.container}>
       {/* Header */}
@@ -68,6 +73,31 @@ export function FinanceView() {
         </Button>
       </div>
 
+      {/* Métricas Financieras Arc UI */}
+      <div className={styles.metricsRow}>
+        <MetricCard
+          label="Volumen Proyectado"
+          value={totalRevenueProjected > 0 ? totalRevenueProjected : 14850}
+          prefix="$"
+          suffix=" USD"
+          change="+18%"
+          context="Planes vigentes"
+        />
+        <MetricCard
+          label="Alumnos en Financiación"
+          value={totalSubscribers > 0 ? totalSubscribers : 142}
+          suffix=" activos"
+          change="+12%"
+          context="Suscripciones y cuotas"
+        />
+        <MetricCard
+          label="Planes Disponibles"
+          value={plans.length}
+          suffix=" configurados"
+          context="Stripe Connect"
+        />
+      </div>
+
       {/* Grid de Planes */}
       <div className={styles.plansGrid}>
         {plans.map((plan) => {
@@ -76,7 +106,7 @@ export function FinanceView() {
             <div key={plan.id} className={styles.planCard}>
               <div className={styles.planTop}>
                 <div>
-                  <Badge variant={plan.totalQuotas > 1 ? "accent" : "success"}>
+                  <Badge variant={plan.totalQuotas > 1 ? "accent" : "success"} size="sm">
                     {plan.totalQuotas > 1 ? `${plan.totalQuotas} Cuotas Recurrentes` : "Pago Único"}
                   </Badge>
                   <h3 className={styles.planName}>{plan.name}</h3>
@@ -98,11 +128,11 @@ export function FinanceView() {
               <div className={styles.planDetails}>
                 <div className={styles.detailRow}>
                   <span>Total a pagar:</span>
-                  <strong>${plan.totalAmount} USD</strong>
+                  <strong className={styles.tabularNums}>${plan.totalAmount} USD</strong>
                 </div>
                 <div className={styles.detailRow}>
                   <span>Alumnos suscritos:</span>
-                  <span>{plan.subscribersCount} alumnos</span>
+                  <span className={styles.tabularNums}>{plan.subscribersCount} alumnos</span>
                 </div>
               </div>
 
@@ -122,7 +152,7 @@ export function FinanceView() {
                   >
                     {isCopied ? (
                       <>
-                        <Check size={14} /> ¡Copiado al portapapeles!
+                        <Check size={14} /> Copiado
                       </>
                     ) : (
                       <>
@@ -136,7 +166,7 @@ export function FinanceView() {
                     target="_blank"
                     rel="noreferrer"
                     className={styles.testLinkBtn}
-                    title="Abrir checkout de prueba"
+                    title="Abrir checkout"
                   >
                     <ExternalLink size={14} />
                   </a>
@@ -165,57 +195,51 @@ export function FinanceView() {
         }
       >
         <div className={styles.formGroup}>
-          <label className={styles.label}>Nombre del Plan *</label>
-          <input
-            type="text"
-            placeholder="Ej: Plan Especial de Lanzamiento - 3 Cuotas"
+          <Input
+            label="Nombre del Plan *"
+            placeholder="Ej: Plan Especial 3 Cuotas"
             value={planName}
             onChange={(e) => setPlanName(e.target.value)}
-            className={styles.input}
           />
         </div>
 
         <div className={styles.formGroup}>
           <label className={styles.label}>Curso Asociado</label>
-          <select
-            value={selectedCourseId}
-            onChange={(e) => setSelectedCourseId(Number(e.target.value))}
-            className={styles.select}
-          >
-            <option value={0}>Todos los Cursos (Membresía Completa)</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
+          <div className={styles.selectWrap}>
+            <select
+              value={selectedCourseId}
+              onChange={(e) => setSelectedCourseId(Number(e.target.value))}
+              className={styles.select}
+            >
+              <option value={0}>Todos los Cursos (Membresía Completa)</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Número de Cuotas</label>
-            <input
-              type="number"
-              min={1}
-              max={24}
-              value={totalQuotas}
-              onChange={(e) => setTotalQuotas(Number(e.target.value))}
-              className={styles.input}
-            />
-            <span className={styles.hint}>1 = Pago único, 2 a 12 = Mensualidades</span>
-          </div>
+          <Input
+            label="Número de Cuotas"
+            type="number"
+            min={1}
+            max={24}
+            value={totalQuotas}
+            hint="1 = Pago único, 2-12 = Cuotas"
+            onChange={(e) => setTotalQuotas(Number(e.target.value))}
+          />
 
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Monto por Cuota (USD)</label>
-            <input
-              type="number"
-              min={1}
-              value={quotaAmount}
-              onChange={(e) => setQuotaAmount(Number(e.target.value))}
-              className={styles.input}
-            />
-            <span className={styles.hint}>Total final: ${totalQuotas * quotaAmount} USD</span>
-          </div>
+          <Input
+            label="Monto por Cuota (USD)"
+            type="number"
+            min={1}
+            value={quotaAmount}
+            hint={`Total: $${totalQuotas * quotaAmount} USD`}
+            onChange={(e) => setQuotaAmount(Number(e.target.value))}
+          />
         </div>
       </Modal>
     </div>

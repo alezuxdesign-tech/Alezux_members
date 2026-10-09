@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Sliders, Key, Shield, Check, Palette } from "lucide-react";
+import { Key, Shield, Check, Palette, Moon, Sun } from "lucide-react";
 import { Button } from "../components/arc/button/button";
+import { SegmentedControl } from "../components/arc/segmented-control/segmented-control";
+import { Input } from "../components/arc/input/input";
 import styles from "./SettingsView.module.css";
 
 interface SettingsViewProps {
@@ -29,6 +31,11 @@ export function SettingsView({ currentAccent, onAccentChange, currentTheme, onTh
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
+
+  const themeOptions = [
+    { value: "dark", label: "Modo Oscuro" },
+    { value: "light", label: "Modo Claro" },
+  ];
 
   return (
     <div className={styles.container}>
@@ -70,10 +77,18 @@ export function SettingsView({ currentAccent, onAccentChange, currentTheme, onTh
           </div>
 
           <div className={styles.themeToggleRow}>
-            <span>Modo de visualización:</span>
-            <Button variant="secondary" size="sm" onClick={onThemeToggle}>
-              Cambiar a modo {currentTheme === "dark" ? "Claro (Light)" : "Oscuro (Dark)"}
-            </Button>
+            <div className={styles.themeLabelBox}>
+              <span className={styles.themeLabel}>Tema Visual:</span>
+              <span className={styles.themeSub}>Paleta de color activa del panel</span>
+            </div>
+            <SegmentedControl
+              options={themeOptions}
+              value={currentTheme}
+              onChange={(val) => {
+                if (val !== currentTheme) onThemeToggle();
+              }}
+              size="sm"
+            />
           </div>
         </div>
 
@@ -88,24 +103,21 @@ export function SettingsView({ currentAccent, onAccentChange, currentTheme, onTh
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>Publishable Key</label>
-            <input
-              type="text"
+            <Input
+              label="Publishable Key"
               placeholder="pk_live_..."
               value={stripePublic}
               onChange={(e) => setStripePublic(e.target.value)}
-              className={styles.input}
             />
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>Secret Key</label>
-            <input
+            <Input
+              label="Secret Key"
               type="password"
               placeholder="sk_live_..."
               value={stripeSecret}
               onChange={(e) => setStripeSecret(e.target.value)}
-              className={styles.input}
             />
           </div>
         </div>
@@ -121,21 +133,19 @@ export function SettingsView({ currentAccent, onAccentChange, currentTheme, onTh
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>Clases separadas por comas</label>
-            <input
-              type="text"
+            <Input
+              label="Clases separadas por comas"
               value={adminCssClasses}
               onChange={(e) => setAdminCssClasses(e.target.value)}
-              className={styles.input}
+              hint="Cualquier bloque con estas clases no será visible para los alumnos."
             />
-            <span className={styles.hint}>Cualquier bloque con estas clases no será visible para los alumnos.</span>
           </div>
         </div>
 
         <div className={styles.footerActions}>
           {saved && (
             <span className={styles.saveNotice}>
-              <Check size={16} /> ¡Ajustes guardados correctamente!
+              <Check size={16} /> Ajustes guardados correctamente
             </span>
           )}
           <Button variant="primary" onClick={handleSave}>

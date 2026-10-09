@@ -39,12 +39,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  transition: all var(--duration-fast);
+  transition: border-color var(--duration-fast);
 }
 
 .card:hover {
   border-color: var(--border-strong);
-  transform: translateY(-2px);
 }
 
 .cardTop {
@@ -84,6 +83,12 @@
   line-height: 1.4;
 }
 
+.subjectLabel {
+  font-weight: 600;
+  color: var(--foreground);
+  margin-right: var(--space-1);
+}
+
 .statsRow {
   display: flex;
   align-items: center;
@@ -98,39 +103,14 @@
   color: var(--text-muted);
 }
 
+.tabularNums {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
 .cardActions {
   display: flex;
   justify-content: flex-end;
-}
-
-/* Switch */
-.switch {
-  width: 40px;
-  height: 22px;
-  background: var(--control-track);
-  border-radius: var(--radius-pill);
-  padding: 2px;
-  cursor: pointer;
-  transition: background var(--duration-fast);
-  display: flex;
-  align-items: center;
-}
-
-.switchActive {
-  background: var(--control-on);
-}
-
-.switchThumb {
-  width: 18px;
-  height: 18px;
-  background: #ffffff;
-  border-radius: 50%;
-  transition: transform var(--duration-fast) var(--ease-standard);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.switchActive .switchThumb {
-  transform: translateX(18px);
 }
 
 /* Modal Template Editor */
@@ -152,8 +132,8 @@
   color: var(--text-secondary);
 }
 
-.input, .textarea {
-  background: var(--surface-muted);
+.textarea {
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   padding: var(--space-3);
@@ -164,7 +144,7 @@
   transition: border-color var(--duration-fast);
 }
 
-.input:focus, .textarea:focus {
+.textarea:focus {
   border-color: var(--accent);
 }
 

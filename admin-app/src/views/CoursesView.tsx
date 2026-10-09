@@ -6,17 +6,14 @@ import {
   FileText, 
   Trash2, 
   Check, 
-  BookOpen, 
   Clock, 
   ChevronRight, 
-  ChevronDown,
-  Sparkles,
-  ExternalLink,
-  Edit2
+  ChevronDown
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
+import { Input } from "../components/arc/input/input";
 import { api, Course, CourseSection, CourseLesson } from "../services/api";
 import styles from "./CoursesView.module.css";
 
@@ -354,13 +351,11 @@ export function CoursesView() {
         }
       >
         <div className={styles.formGroup}>
-          <label className={styles.label}>Título del Curso *</label>
-          <input
-            type="text"
+          <Input
+            label="Título del Curso *"
             placeholder="Ej: Master en Automatizaciones de IA..."
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            className={styles.input}
           />
         </div>
 
@@ -376,13 +371,11 @@ export function CoursesView() {
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.label}>URL de Miniatura / Portada</label>
-          <input
-            type="text"
+          <Input
+            label="URL de Miniatura / Portada"
             placeholder="https://..."
             value={newThumbnail}
             onChange={(e) => setNewThumbnail(e.target.value)}
-            className={styles.input}
           />
         </div>
       </Modal>
