@@ -41,6 +41,7 @@ import {
   FinancePlan
 } from "../services/api";
 import { ModuleSkeleton } from "../components/arc/skeleton";
+import { FileDropzone, formatFileSize } from "../components/arc/file-dropzone/file-dropzone";
 import styles from "./CoursesView.module.css";
 
 interface EditingTopicState {
@@ -854,20 +855,6 @@ export function CoursesView() {
                         {topicsCount} {topicsCount === 1 ? "Topic" : "Topics"}
                       </span>
                       <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() =>
-                          setEditingModuleCover({
-                            sectionId: section.id,
-                            sectionTitle: section.title,
-                            cover: section.cover || "",
-                          })
-                        }
-                        title="Cambiar la imagen de portada de este módulo"
-                      >
-                        <ImageIcon size={14} /> Portada
-                      </Button>
-                      <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleOpenAddTopic(section.id)}
@@ -889,40 +876,6 @@ export function CoursesView() {
                   {/* Contenido Expandido del Módulo */}
                   {!isCollapsed && (
                     <>
-                      {/* Barra de Portada Expandida del Módulo */}
-                      <div className={styles.moduleCoverBar}>
-                        <div
-                          className={styles.moduleCoverBarPreview}
-                          onClick={() =>
-                            setEditingModuleCover({
-                              sectionId: section.id,
-                              sectionTitle: section.title,
-                              cover: section.cover || "",
-                            })
-                          }
-                          title="Cambiar imagen de portada"
-                        >
-                          {section.cover ? (
-                            <img src={section.cover} alt={section.title} className={styles.moduleCoverBarImg} />
-                          ) : (
-                            <div className={styles.moduleCoverBarPlaceholder}>
-                              <ImageIcon size={18} />
-                              <span>Sin portada</span>
-                            </div>
-                          )}
-                          <span className={styles.moduleCoverChangeHint}>Cambiar</span>
-                        </div>
-                        <div className={styles.moduleCoverBarInputs}>
-                          <label className={styles.miniLabel}>URL de Portada del Módulo:</label>
-                          <input
-                            type="text"
-                            value={section.cover || ""}
-                            onChange={(e) => handleUpdateSectionCover(section.id, e.target.value)}
-                            placeholder="https://... (URL de la imagen de portada para este módulo)"
-                            className={styles.moduleCoverInlineInput}
-                          />
-                        </div>
-                      </div>
                     <div className={styles.topicsContainer}>
                       {section.lessons && section.lessons.length > 0 ? (
                         section.lessons.map((lesson, lIdx) => (
@@ -947,7 +900,7 @@ export function CoursesView() {
                               />
                             ) : (
                               <div className={styles.topicThumbPlaceholder}>
-                                <ImageIcon size={18} />
+                                <Video size={16} />
                               </div>
                             )}
 
@@ -1062,8 +1015,8 @@ export function CoursesView() {
             isOpen={true}
             onClose={() => setEditingModuleCover(null)}
             title={`Portada del Módulo: ${editingModuleCover.sectionTitle}`}
-            description="Configura la imagen de portada para este módulo. Esta imagen acompañará el temario y las lecciones del módulo."
-            maxWidth="640px"
+            description="Arrastra o selecciona la imagen de portada para este módulo directamente desde tu equipo."
+            maxWidth="620px"
             footer={
               <>
                 <Button variant="ghost" onClick={() => setEditingModuleCover(null)}>
@@ -1075,17 +1028,6 @@ export function CoursesView() {
               </>
             }
           >
-            <div className={styles.formGroup}>
-              <Input
-                label="URL de Imagen de Portada del Módulo *"
-                placeholder="https://... (Enlace directo a la imagen)"
-                value={editingModuleCover.cover}
-                onChange={(e) =>
-                  setEditingModuleCover({ ...editingModuleCover, cover: e.target.value })
-                }
-              />
-            </div>
-
             {editingModuleCover.cover ? (
               <div className={styles.coverModalPreviewWrapper}>
                 <img
@@ -1096,35 +1038,42 @@ export function CoursesView() {
                     (e.target as HTMLElement).style.display = "none";
                   }}
                 />
-                <span className={styles.pageSubtitle}>Previsualización en proporción 16:9</span>
-              </div>
-            ) : (
-              <div className={styles.coverModalPlaceholderWrapper}>
-                <ImageIcon size={36} />
-                <p>Pega un enlace de imagen para ver la previsualización del módulo.</p>
-              </div>
-            )}
-
-            {/* Muestras rápidas de portadas */}
-            <div className={styles.imageSuggestions}>
-              <span className={styles.miniLabel}>Sugerencias de imágenes HD para formación:</span>
-              <div className={styles.suggestionChips}>
-                {[
-                  { label: "Marketing / Negocios", url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80" },
-                  { label: "Tecnología / Código", url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80" },
-                  { label: "Estrategia / Datos", url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80" },
-                  { label: "Creatividad / Video", url: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=600&auto=format&fit=crop&q=80" },
-                ].map((sug, sIdx) => (
-                  <button
-                    key={sIdx}
-                    type="button"
-                    className={styles.suggestionChip}
-                    onClick={() => setEditingModuleCover({ ...editingModuleCover, cover: sug.url })}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginTop: "6px" }}>
+                  <span className={styles.pageSubtitle}>Previsualización (16:9)</span>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setEditingModuleCover({ ...editingModuleCover, cover: "" })}
                   >
-                    {sug.label}
-                  </button>
-                ))}
+                    <Trash2 size={13} /> Quitar Portada
+                  </Button>
+                </div>
               </div>
+            ) : null}
+
+            <div style={{ marginTop: editingModuleCover.cover ? "16px" : "0" }}>
+              <FileDropzone
+                accept="image/*"
+                multiple={false}
+                maxFiles={1}
+                label={editingModuleCover.cover ? "Arrastra otra imagen para reemplazarla" : "Arrastra la imagen de portada aquí"}
+                description="o haz clic para buscar en tu equipo"
+                note="Recomendado: 1280x720 (16:9) - PNG, JPG, JPEG, WebP"
+                onFilesChange={(files: File[]) => {
+                  if (files && files.length > 0) {
+                    const file = files[0];
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      if (ev.target?.result) {
+                        setEditingModuleCover((prev) =>
+                          prev ? { ...prev, cover: ev.target!.result as string } : null
+                        );
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
             </div>
           </Modal>
         )}
@@ -1139,7 +1088,7 @@ export function CoursesView() {
                 ? "Nuevo Topic / Lección"
                 : `Editar: ${editingTopicState.topic.title}`
             }
-            description="Configura el título, portada, video, notas y archivos complementarios descargables."
+            description="Configura el título, video, duración, notas y recursos descargables."
             maxWidth="740px"
             footer={
               <>
@@ -1164,34 +1113,6 @@ export function CoursesView() {
                   })
                 }
               />
-            </div>
-
-            {/* Portada de la lección */}
-            <div className={styles.formGroup}>
-              <Input
-                label="URL de Portada / Miniatura del Topic"
-                placeholder="https://... (URL de la imagen de portada)"
-                value={editingTopicState.topic.cover || ""}
-                onChange={(e) =>
-                  setEditingTopicState({
-                    ...editingTopicState,
-                    topic: { ...editingTopicState.topic, cover: e.target.value },
-                  })
-                }
-              />
-              {editingTopicState.topic.cover && (
-                <div className={styles.coverPreviewRow}>
-                  <img
-                    src={editingTopicState.topic.cover}
-                    alt="Preview Portada"
-                    className={styles.coverPreviewImg}
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
-                    }}
-                  />
-                  <span className={styles.pageSubtitle}>Previsualización de Portada</span>
-                </div>
-              )}
             </div>
 
             {/* Link del Video y Duración */}
@@ -1245,11 +1166,70 @@ export function CoursesView() {
             {/* Archivos Complementarios Descargables */}
             <div className={styles.filesSection}>
               <div className={styles.filesHeader}>
-                <span className={styles.filesTitle}>
-                  Archivos Complementarios ({editingTopicState.topic.files?.length || 0})
-                </span>
-                <span className={styles.pageSubtitle}>Recursos descargables para el alumno</span>
+                <div>
+                  <span className={styles.filesTitle}>
+                    Archivos Complementarios ({editingTopicState.topic.files?.length || 0})
+                  </span>
+                  <p className={styles.pageSubtitle} style={{ margin: "2px 0 0" }}>
+                    Recursos y materiales descargables para los alumnos
+                  </p>
+                </div>
               </div>
+
+              {/* FileDropzone para subir recursos complementarios */}
+              <FileDropzone
+                multiple={true}
+                maxFiles={10}
+                label="Arrastra archivos complementarios aquí"
+                description="o haz clic para buscarlos en tu equipo"
+                note="PDF, ZIP, DOCX, XLSX, plantillas, etc. (Máx. 50MB)"
+                onFilesChange={(files: File[]) => {
+                  if (files && files.length > 0) {
+                    files.forEach((file) => {
+                      if (file.size < 8 * 1024 * 1024) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                          const dataUrl = (e.target?.result as string) || "";
+                          const newAttachment: CourseFileAttachment = {
+                            id: `f-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                            name: file.name,
+                            size: formatFileSize(file.size),
+                            url: dataUrl,
+                          };
+                          setEditingTopicState((prev) => {
+                            if (!prev) return null;
+                            return {
+                              ...prev,
+                              topic: {
+                                ...prev.topic,
+                                files: [...(prev.topic.files || []), newAttachment],
+                              },
+                            };
+                          });
+                        };
+                        reader.readAsDataURL(file);
+                      } else {
+                        const newAttachment: CourseFileAttachment = {
+                          id: `f-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                          name: file.name,
+                          size: formatFileSize(file.size),
+                          url: URL.createObjectURL(file),
+                        };
+                        setEditingTopicState((prev) => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            topic: {
+                              ...prev.topic,
+                              files: [...(prev.topic.files || []), newAttachment],
+                            },
+                          };
+                        });
+                      }
+                    });
+                  }
+                }}
+              />
 
               {/* Lista de archivos actuales */}
               {editingTopicState.topic.files && editingTopicState.topic.files.length > 0 && (
@@ -1258,16 +1238,26 @@ export function CoursesView() {
                     <div key={file.id || fIdx} className={styles.fileItem}>
                       <div className={styles.fileItemLeft}>
                         <Paperclip size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
-                        <span>{file.name}</span>
+                        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                          <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {file.name}
+                          </span>
+                          {file.size && (
+                            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                              {file.size}
+                            </span>
+                          )}
+                        </div>
                         {file.url && (
                           <a
                             href={file.url}
                             target="_blank"
+                            download={file.name}
                             rel="noopener noreferrer"
                             className={styles.fileItemLink}
-                            title="Probar enlace"
+                            title="Descargar o previsualizar recurso"
                           >
-                            <ExternalLink size={12} />
+                            <ExternalLink size={13} />
                           </a>
                         )}
                       </div>
@@ -1284,15 +1274,15 @@ export function CoursesView() {
                 </div>
               )}
 
-              {/* Caja para añadir nuevo archivo */}
+              {/* Opción para añadir recurso por enlace web */}
               <div className={styles.addFileBox}>
                 <Input
-                  placeholder="Nombre: Ej: Plantilla_PDF.pdf"
+                  placeholder="Nombre: Ej: Guía PDF o Enlace Drive"
                   value={newFileName}
                   onChange={(e) => setNewFileName(e.target.value)}
                 />
                 <Input
-                  placeholder="URL de descarga: https://..."
+                  placeholder="URL: https://drive.google.com/..."
                   value={newFileUrl}
                   onChange={(e) => setNewFileUrl(e.target.value)}
                 />
@@ -1302,7 +1292,7 @@ export function CoursesView() {
                   onClick={handleAddFileToTopic}
                   disabled={!newFileName.trim() || !newFileUrl.trim()}
                 >
-                  <Plus size={14} /> Añadir Archivo
+                  <Plus size={14} /> Añadir
                 </Button>
               </div>
             </div>
