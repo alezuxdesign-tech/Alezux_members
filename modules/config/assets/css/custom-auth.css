@@ -24,22 +24,23 @@
 }
 
 html, body.alezux-auth-body {
-  min-height: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
-/* Fondo de página completo standalone */
+/* Fondo de página completo standalone (100% Pantalla Completa Edge-to-Edge) */
 body.alezux-auth-body {
   font-family: var(--font-family);
-  background-color: var(--auth-page-bg);
-  background-image: 
-    radial-gradient(circle at 20% 20%, rgba(29, 104, 237, 0.14) 0%, transparent 45%),
-    radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.12) 0%, transparent 50%);
+  background: #ffffff;
   color: var(--auth-text-dark);
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  display: block;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -55,25 +56,52 @@ div.alezux-auth-body {
   width: 100%;
 }
 
-/* Wrapper centralizado */
-.alezux-auth-wrapper {
-  width: 100%;
-  max-width: 1060px;
-  margin: 0 auto;
+div.alezux-auth-body .alezux-auth-wrapper {
+  max-width: 1100px;
+  min-height: auto;
+  height: auto;
 }
 
-/* Tarjeta Split-Screen (Marco blanco redondeado 32px) */
-.alezux-auth-card {
-  background: var(--auth-card-bg);
-  border-radius: 32px;
-  box-shadow: 
-    0 25px 70px -15px rgba(0, 0, 0, 0.55),
-    0 0 50px rgba(29, 104, 237, 0.15);
-  display: grid;
-  grid-template-columns: 1.12fr 1fr;
+div.alezux-auth-body .alezux-auth-card {
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  min-height: 640px;
+  height: auto;
   padding: 12px;
   gap: 12px;
-  min-height: 650px;
+}
+
+div.alezux-auth-body .alezux-hero-panel {
+  border-radius: 20px;
+  min-height: auto;
+}
+
+div.alezux-auth-body .alezux-form-panel {
+  border-radius: 20px;
+  min-height: auto;
+}
+
+/* Wrapper pantalla completa */
+.alezux-auth-wrapper {
+  width: 100%;
+  min-height: 100vh;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Tarjeta Split-Screen Pantalla Completa (Edge-to-Edge) */
+.alezux-auth-card {
+  background: var(--auth-card-bg);
+  border-radius: 0;
+  box-shadow: none;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  padding: 0;
+  gap: 0;
+  min-height: 100vh;
+  height: 100vh;
+  width: 100%;
   position: relative;
   overflow: hidden;
 }
@@ -83,14 +111,16 @@ div.alezux-auth-body {
    ========================================================================== */
 .alezux-hero-panel {
   background: linear-gradient(150deg, #1d63ed 0%, #2563eb 50%, #3b82f6 100%);
-  border-radius: 24px;
-  padding: 42px 38px;
+  border-radius: 0;
+  padding: 56px 64px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
   overflow: hidden;
   color: #ffffff;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 /* Glow interior sutil */
@@ -123,52 +153,55 @@ div.alezux-auth-body {
 }
 
 .hero-middle {
-  margin: 36px 0 28px 0;
+  margin: auto 0;
+  padding: 40px 0;
   z-index: 2;
+  max-width: 520px;
 }
 
 /* Píldora translúcida */
 .hero-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.32);
   border-radius: 9999px;
-  padding: 6px 14px;
-  font-size: 13px;
+  padding: 7px 16px;
+  font-size: 13.5px;
   font-weight: 600;
   color: #ffffff;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* Título Hero */
 .hero-title {
-  font-size: 38px;
+  font-size: 44px;
   font-weight: 800;
   line-height: 1.12;
   letter-spacing: -0.025em;
   color: #ffffff;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 /* Subtítulo Hero */
 .hero-subtitle {
-  font-size: 14.5px;
-  line-height: 1.5;
+  font-size: 15.5px;
+  line-height: 1.55;
   color: rgba(255, 255, 255, 0.88);
-  max-width: 420px;
+  max-width: 460px;
 }
 
 /* Grid de las 3 tarjetas inferiores */
 .hero-cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 14px;
   z-index: 2;
+  max-width: 580px;
 }
 
 .hero-step-card {
@@ -243,12 +276,16 @@ div.alezux-auth-body {
    PANEL DERECHO: FORMULARIOS (FONDO BLANCO LIMPIO - IMAGEN 2)
    ========================================================================== */
 .alezux-form-panel {
-  padding: 40px 46px;
+  padding: 50px 60px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   background: #ffffff;
-  border-radius: 24px;
+  border-radius: 0;
+  min-height: 100vh;
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .form-header {
@@ -513,10 +550,12 @@ div.alezux-auth-body {
 
 /* Footer con Términos */
 .auth-terms-footer {
+  width: 100%;
+  max-width: 440px;
   text-align: center;
   font-size: 11.5px;
   color: #94a3b8;
-  margin-top: 24px;
+  margin: 24px auto 0 auto;
   line-height: 1.5;
 }
 
@@ -529,6 +568,9 @@ div.alezux-auth-body {
    VISTAS DINÁMICAS (LOGIN / REGISTRO / RECUPERACIÓN / RESET)
    ========================================================================== */
 .auth-view {
+  width: 100%;
+  max-width: 440px;
+  margin: auto 0;
   display: block;
   animation: authViewFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -552,15 +594,30 @@ div.alezux-auth-body {
    RESPONSIVE DESIGN (TABLETS & MOBILE)
    ========================================================================== */
 @media (max-width: 900px) {
+  body.alezux-auth-body {
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .alezux-auth-wrapper {
+    height: auto;
+    min-height: 100vh;
+  }
+
   .alezux-auth-card {
     grid-template-columns: 1fr;
-    min-height: auto;
-    border-radius: 24px;
-    padding: 10px;
+    min-height: 100vh;
+    height: auto;
   }
 
   .alezux-hero-panel {
-    padding: 30px 24px;
+    min-height: auto;
+    padding: 40px 24px;
+  }
+
+  .hero-middle {
+    margin: 24px 0;
+    padding: 0;
   }
 
   .hero-title {
@@ -570,6 +627,7 @@ div.alezux-auth-body {
   .hero-cards-grid {
     grid-template-columns: 1fr;
     gap: 8px;
+    max-width: 100%;
   }
 
   .hero-step-card {
@@ -584,7 +642,8 @@ div.alezux-auth-body {
   }
 
   .alezux-form-panel {
-    padding: 30px 20px;
+    min-height: auto;
+    padding: 40px 24px 60px 24px;
   }
 
   .auth-row-2col {
