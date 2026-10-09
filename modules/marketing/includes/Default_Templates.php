@@ -170,6 +170,65 @@ class Default_Templates {
 						</p>
 					' . $footer
 				];
+
+			case 'payment_reminder':
+				return [
+					'subject' => 'Recordatorio: Próxima cuota de {{plan_name}} - {{site_name}}',
+					'content' => $header . '
+						<h2>Recordatorio de Renovación</h2>
+						<p>Hola {{user.name}},</p>
+						<p>Te recordamos que tu próxima cuota o renovación para tu membresía <strong>{{plan_name}}</strong> se procesará el <strong>{{renewal_date}}</strong>.</p>
+						<div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #0073aa; margin: 20px 0;">
+							<p><strong>Monto programado:</strong> {{price}}</p>
+							<p><strong>Fecha estimada:</strong> {{renewal_date}}</p>
+						</div>
+						<p>Por favor asegúrate de tener fondos disponibles para continuar sin interrupciones en tu formación.</p>
+						<p style="text-align: center;">
+							<a href="{{home_url}}" class="btn">Ver Mi Cuenta</a>
+						</p>
+					' . $footer
+				];
+
+			case 'subscription_cancelled':
+				return [
+					'subject' => 'Confirmación de Suscripción Cancelada - {{plan_name}}',
+					'content' => $header . '
+						<h2>Suscripción Cancelada</h2>
+						<p>Hola {{user.name}},</p>
+						<p>Te informamos que tu suscripción a <strong>{{plan_name}}</strong> ha sido cancelada.</p>
+						<p>Tendrás acceso a todo el contenido y beneficios hasta el <strong>{{end_date}}</strong>.</p>
+						<p>Esperamos verte pronto de regreso para seguir creciendo juntos.</p>
+						<p style="text-align: center;">
+							<a href="{{home_url}}" class="btn">Ir a la Plataforma</a>
+						</p>
+					' . $footer
+				];
+
+			case 'inactivity_alert':
+				return [
+					'subject' => '¡Te extrañamos en {{site_name}}!',
+					'content' => $header . '
+						<h2>¡Hola {{user.name}}!</h2>
+						<p>Hemos notado que llevas <strong>{{days_inactive}} días</strong> sin ingresar a la plataforma.</p>
+						<p>Recuerda que la constancia es clave para dominar nuevas habilidades. Tienes lecciones pendientes esperándote.</p>
+						<p style="text-align: center;">
+							<a href="{{login_url}}" class="btn">Continuar Aprendiendo</a>
+						</p>
+					' . $footer
+				];
+
+			case 'course_completed':
+				return [
+					'subject' => '¡Felicitaciones por graduarte de {{course_title}}!',
+					'content' => $header . '
+						<h2>¡Felicitaciones {{user.name}}! 🎉</h2>
+						<p>¡Has alcanzado el 100% de progreso en el curso <strong>{{course_title}}</strong>!</p>
+						<p>Tu constancia y disciplina han dado frutos. Ya puedes acceder a tu certificado y compartir tu logro.</p>
+						<p style="text-align: center;">
+							<a href="{{login_url}}" class="btn">Ver Mi Certificado</a>
+						</p>
+					' . $footer
+				];
 			
 			default:
 				return [

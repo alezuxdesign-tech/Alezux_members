@@ -106,6 +106,11 @@ class Email_Engine {
 				'description' => 'Se envía automáticamente si el estudiante no ingresa por varios días.',
 				'variables'   => [ '{{user.name}}', '{{days_inactive}}', '{{login_url}}', '{{site_name}}', '{{logo_url}}' ]
 			],
+			'course_completed' => [
+				'title'       => 'Graduación - Curso Completado',
+				'description' => 'Se envía automáticamente cuando un estudiante completa el 100% de un curso y obtiene su certificado.',
+				'variables'   => [ '{{user.name}}', '{{course_title}}', '{{login_url}}', '{{site_name}}', '{{logo_url}}' ]
+			],
 		];
 
 		return apply_filters( 'alezux_marketing_email_types', $types );

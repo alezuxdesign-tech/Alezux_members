@@ -78,11 +78,14 @@ export interface FinancePlan {
 export interface MarketingAutomation {
   id: string;
   name: string;
+  category: "all" | "registro" | "finanzas" | "cursos" | "logros";
   triggerEvent: string;
   subject: string;
   body: string;
   enabled: boolean;
   sentCount: number;
+  variables?: string[];
+  description?: string;
 }
 
 // Datos Mock de respaldo (usados en Vite local dev o si la API de WP aún no tiene datos)
@@ -264,31 +267,148 @@ const MOCK_PLANS: FinancePlan[] = [
 
 const MOCK_AUTOMATIONS: MarketingAutomation[] = [
   {
-    id: "auto-1",
-    name: "Bienvenida y Acceso al Campus",
-    triggerEvent: "Al registrarse / comprar plan",
-    subject: "¡Bienvenido a la Academia! Tus credenciales de acceso",
-    body: "Hola {user_name}, te damos la más cordial bienvenida a nuestra comunidad. Tu usuario es {user_email}.",
+    id: "student_welcome",
+    name: "Registro - Bienvenida",
+    category: "registro",
+    triggerEvent: "Al registrarse o adquirir membresía",
+    subject: "Bienvenido a {{site_name}} - Tus Credenciales",
+    body: "¡Hola {{user.first_name}}! Tu cuenta ha sido creada exitosamente. Estamos emocionados de tenerte aquí.\n\nUsuario: {{user.username}}\nContraseña: {{password}}\nCurso: {{course_title}}\n\nIngresa a la plataforma aquí: {{login_url}}",
     enabled: true,
     sentCount: 1420,
+    variables: ["{{user.name}}", "{{user.username}}", "{{user.email}}", "{{password}}", "{{course_title}}", "{{login_url}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía automáticamente cuando un estudiante se registra exitosamente en la plataforma.",
   },
   {
-    id: "auto-2",
-    name: "Recordatorio de Pago de Cuota",
-    triggerEvent: "3 días antes del cobro de cuota recurrente",
-    subject: "Aviso importante: Próxima cuota de tu membresía",
-    body: "Hola {user_name}, te recordamos que en 3 días se procesará tu cuota de {amount}.",
+    id: "user_recover_password",
+    name: "Seguridad - Recuperar Contraseña",
+    category: "registro",
+    triggerEvent: "Al solicitar recuperar contraseña",
+    subject: "Recuperación de Contraseña - {{site_name}}",
+    body: "Hola {{user.name}},\n\nHemos recibido una solicitud para restablecer tu contraseña. Si no fuiste tú, puedes ignorar este correo.\n\nPara restablecerla, haz clic en el siguiente enlace:\n{{reset_link}}",
+    enabled: true,
+    sentCount: 215,
+    variables: ["{{user.name}}", "{{reset_link}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía cuando un usuario solicita restablecer su contraseña desde el formulario de acceso.",
+  },
+  {
+    id: "admin_reset_password",
+    name: "Seguridad - Reset por Admin",
+    category: "registro",
+    triggerEvent: "Al actualizar clave desde panel admin",
+    subject: "Tu contraseña ha sido restablecida",
+    body: "Hola {{user.name}},\n\nUn administrador ha actualizado tus credenciales de acceso a la plataforma.\n\nNueva contraseña: {{new_password}}\n\nTe recomendamos cambiarla después de iniciar sesión en {{login_url}}",
+    enabled: true,
+    sentCount: 48,
+    variables: ["{{user.name}}", "{{new_password}}", "{{password}}", "{{login_url}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía cuando un administrador restablece manualmente la contraseña de un usuario.",
+  },
+  {
+    id: "payment_success",
+    name: "Finanzas - Pago Exitoso",
+    category: "finanzas",
+    triggerEvent: "Al procesar cobro exitosamente",
+    subject: "Confirmación de Pago - {{plan_name}}",
+    body: "¡Pago Recibido!\n\nHola {{user.name}}, hemos procesado tu pago correctamente para la membresía {{plan_name}} por un importe de {{price}} (Referencia: {{amount}}).\n\n¡Gracias por tu confianza!",
+    enabled: true,
+    sentCount: 940,
+    variables: ["{{user.name}}", "{{plan_name}}", "{{price}}", "{{date}}", "{{amount}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía al usuario confirmando que su pago se ha procesado correctamente.",
+  },
+  {
+    id: "payment_failed",
+    name: "Finanzas - Pago Fallido",
+    category: "finanzas",
+    triggerEvent: "Al fallar cobro recurrente o cuota",
+    subject: "Acción Requerida: Pago Fallido de {{plan_name}}",
+    body: "Hola {{user.name}},\n\nIntentamos procesar la renovación de tu membresía {{plan_name}} pero la transacción ha fallado.\n\nPor favor actualiza tu método de pago para evitar la interrupción de tus accesos formativos en {{retry_url}}.",
+    enabled: true,
+    sentCount: 34,
+    variables: ["{{user.name}}", "{{plan_name}}", "{{attempt_date}}", "{{retry_url}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía cuando un intento de pago o renovación de cuota falla.",
+  },
+  {
+    id: "payment_reminder",
+    name: "Finanzas - Recordatorio Renovación",
+    category: "finanzas",
+    triggerEvent: "3 días antes de renovación de cuota",
+    subject: "Recordatorio: Próxima cuota de {{plan_name}} - {{site_name}}",
+    body: "Hola {{user.name}},\n\nTe recordamos que tu próxima cuota o renovación para tu membresía {{plan_name}} se procesará el {{renewal_date}} por un valor de {{price}}.\n\nAsegúrate de tener fondos disponibles para continuar sin pausas.",
     enabled: true,
     sentCount: 680,
+    variables: ["{{user.name}}", "{{plan_name}}", "{{renewal_date}}", "{{price}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía días antes de que una suscripción se renueve automáticamente.",
   },
   {
-    id: "auto-3",
-    name: "Felicitación por Curso Completado",
-    triggerEvent: "Al alcanzar el 100% de progreso",
-    subject: "¡Felicidades por graduarte! Tu certificado está listo",
-    body: "¡Increíble trabajo {user_name}! Has completado con éxito {course_title}.",
-    enabled: false,
+    id: "subscription_cancelled",
+    name: "Finanzas - Suscripción Cancelada",
+    category: "finanzas",
+    triggerEvent: "Al cancelar membresía o plan",
+    subject: "Confirmación de Suscripción Cancelada - {{plan_name}}",
+    body: "Hola {{user.name}},\n\nTe informamos que tu suscripción a {{plan_name}} ha sido cancelada. Mantendrás acceso a los contenidos hasta el {{end_date}}.\n\nEsperamos verte pronto de regreso.",
+    enabled: true,
+    sentCount: 86,
+    variables: ["{{user.name}}", "{{plan_name}}", "{{end_date}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía cuando una suscripción es cancelada por el usuario o administrador.",
+  },
+  {
+    id: "achievement_assigned",
+    name: "Logros - Nuevo Logro Desbloqueado",
+    category: "logros",
+    triggerEvent: "Al desbloquear insignia o logro",
+    subject: "¡Ganaste un nuevo Logro! - {{achievement_name}}",
+    body: "¡Felicidades, {{user.name}}!\n\nHas desbloqueado un nuevo logro en la academia: {{achievement_name}}.\n\n{{achievement_desc}}\n\n¡Sigue adelante con tu progreso!",
+    enabled: true,
+    sentCount: 520,
+    variables: ["{{user.name}}", "{{achievement_name}}", "{{achievement_desc}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía cuando un estudiante desbloquea un nuevo logro o insignia.",
+  },
+  {
+    id: "inactivity_alert",
+    name: "Retención - Alerta de Inactividad",
+    category: "logros",
+    triggerEvent: "Tras 7+ días continuos de inactividad",
+    subject: "¡Te extrañamos en {{site_name}}!",
+    body: "¡Hola {{user.name}}!\n\nHemos notado que llevas {{days_inactive}} días sin ingresar a la plataforma. No pierdas el ritmo, tus lecciones están esperándote para continuar.\n\nIngresa aquí: {{login_url}}",
+    enabled: true,
+    sentCount: 184,
+    variables: ["{{user.name}}", "{{days_inactive}}", "{{login_url}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía automáticamente si el estudiante no ingresa por varios días seguidos.",
+  },
+  {
+    id: "course_available",
+    name: "Cursos - Nuevo Curso Disponible",
+    category: "cursos",
+    triggerEvent: "Al publicar un nuevo curso formativo",
+    subject: "¡Nuevo Curso Lanzado: {{course_name}}!",
+    body: "Hola {{user.name}},\n\nEstamos muy emocionados de presentarte el nuevo curso disponible en la plataforma:\n{{course_name}}\n\nEsperamos que este contenido te ayude a seguir creciendo profesionalmente.",
+    enabled: true,
+    sentCount: 3100,
+    variables: ["{{user.name}}", "{{course_name}}", "{{courses_list}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Notificación enviada a todos los usuarios cuando se publica un nuevo curso.",
+  },
+  {
+    id: "lesson_available",
+    name: "Cursos - Nuevas Lecciones Disponibles",
+    category: "cursos",
+    triggerEvent: "Al publicar nuevas lecciones",
+    subject: "Novedades en tu curso: {{course_name}}",
+    body: "Hola {{user.name}},\n\nSe ha añadido nuevo contenido al curso {{course_name}} en el que estás inscrito.\n\n¡No pierdas el ritmo y continúa con tu formación!",
+    enabled: true,
+    sentCount: 1980,
+    variables: ["{{user.name}}", "{{course_name}}", "{{lessons_list}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Notificación a los alumnos inscritos cuando se añaden nuevas lecciones a un curso.",
+  },
+  {
+    id: "course_completed",
+    name: "Graduación - Curso Completado",
+    category: "cursos",
+    triggerEvent: "Al alcanzar el 100% del curso",
+    subject: "¡Felicitaciones por graduarte de {{course_title}}!",
+    body: "¡Increíble trabajo {{user.name}}!\n\nHas completado el 100% del curso {{course_title}}. Tu constancia ha rendido frutos y tu certificado oficial ya está disponible en tu panel.",
+    enabled: true,
     sentCount: 312,
+    variables: ["{{user.name}}", "{{course_title}}", "{{login_url}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Se envía cuando un alumno completa satisfactoriamente el 100% de los módulos de un curso.",
   },
 ];
 
@@ -453,11 +573,82 @@ class ApiService {
 
   // --- MARKETING ---
   async getAutomations(): Promise<MarketingAutomation[]> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}marketing/automations`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            return data;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("API Error fetching automations, using mock fallback:", e);
+    }
     return MOCK_AUTOMATIONS;
   }
 
   async toggleAutomation(id: string, enabled: boolean): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}marketing/automations/${id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ enabled }),
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error toggling automation:", e);
+    }
     return true;
+  }
+
+  async saveAutomation(id: string, data: { subject: string; body: string; enabled: boolean }): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}marketing/automations/${id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(data),
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error saving automation:", e);
+    }
+    return true;
+  }
+
+  async sendTestEmail(id: string, email?: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}marketing/send-test`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ id, email }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          return { success: json.success ?? true };
+        }
+      }
+    } catch (e) {
+      console.warn("API Error sending test email:", e);
+    }
+    return { success: true };
   }
 }
 

@@ -64,6 +64,25 @@ class Admin_Api {
 				'callback'            => [ $this, 'create_finance_plan' ],
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
+
+			// Marketing & Automatizaciones de Email
+			register_rest_route( $namespace, '/marketing/automations', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_marketing_automations' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/marketing/automations/(?P<id>[a-zA-Z0-9_-]+)', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'save_marketing_automation' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/marketing/send-test', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'send_marketing_test_email' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
 		}
 	}
 
@@ -384,4 +403,202 @@ class Admin_Api {
 			'checkoutUrl' => $checkout_url,
 		] );
 	}
+
+	/**
+	 * Obtener listado completo de automatizaciones de correo de marketing
+	 */
+	public function get_marketing_automations() {
+		global $wpdb;
+		$table = $wpdb->prefix . 'alezux_marketing_templates';
+		$table_logs = $wpdb->prefix . 'alezux_marketing_logs';
+
+		if ( ! class_exists( '\Alezux_Members\Modules\Marketing\Marketing' ) && file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/Marketing.php' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/Marketing.php';
+		}
+		if ( ! class_exists( '\Alezux_Members\Modules\Marketing\Includes\Email_Engine' ) && file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Email_Engine.php' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Email_Engine.php';
+		}
+		if ( file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php';
+		}
+
+		$engine = new \Alezux_Members\Modules\Marketing\Includes\Email_Engine();
+		$registered_types = $engine->get_registered_types();
+
+		// Plantillas guardadas en base de datos
+		$saved_templates = [];
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table'" ) === $table ) {
+			$saved_templates = $wpdb->get_results( "SELECT * FROM $table", OBJECT_K );
+		}
+
+		// Conteo histórico de logs enviados
+		$log_counts = [];
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_logs'" ) === $table_logs ) {
+			$counts = $wpdb->get_results( "SELECT type, COUNT(*) as count FROM $table_logs GROUP BY type", OBJECT_K );
+			if ( is_array( $counts ) ) {
+				$log_counts = $counts;
+			}
+		}
+
+		$categories_map = [
+			'student_welcome'        => 'registro',
+			'user_recover_password'  => 'registro',
+			'admin_reset_password'   => 'registro',
+			'payment_success'        => 'finanzas',
+			'payment_failed'         => 'finanzas',
+			'payment_reminder'       => 'finanzas',
+			'subscription_cancelled' => 'finanzas',
+			'achievement_assigned'   => 'logros',
+			'inactivity_alert'       => 'logros',
+			'course_available'       => 'cursos',
+			'lesson_available'       => 'cursos',
+			'course_completed'       => 'cursos',
+		];
+
+		$triggers_map = [
+			'student_welcome'        => 'Al registrarse o adquirir membresía',
+			'user_recover_password'  => 'Al solicitar recuperar contraseña',
+			'admin_reset_password'   => 'Al actualizar clave desde panel admin',
+			'payment_success'        => 'Al procesar cobro exitosamente',
+			'payment_failed'         => 'Al fallar cobro recurrente o cuota',
+			'payment_reminder'       => '3 días antes de renovación de cuota',
+			'subscription_cancelled' => 'Al cancelar membresía o plan',
+			'achievement_assigned'   => 'Al desbloquear insignia o logro',
+			'course_available'       => 'Al publicar un nuevo curso formativo',
+			'lesson_available'       => 'Al publicar nuevas lecciones',
+			'inactivity_alert'       => 'Tras 7+ días continuos de inactividad',
+			'course_completed'       => 'Al alcanzar el 100% del curso',
+		];
+
+		$result = [];
+		foreach ( $registered_types as $type_key => $info ) {
+			$saved = isset( $saved_templates[ $type_key ] ) ? $saved_templates[ $type_key ] : null;
+			$default = class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' )
+				? \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $type_key )
+				: [ 'subject' => $info['title'], 'content' => '' ];
+
+			$subject = $saved && ! empty( $saved->subject ) ? $saved->subject : ( isset( $default['subject'] ) ? $default['subject'] : $info['title'] );
+			$body = $saved && ! empty( $saved->content ) ? $saved->content : ( isset( $default['content'] ) ? $default['content'] : '' );
+			$is_active = $saved ? (bool) $saved->is_active : true;
+			$sent_count = isset( $log_counts[ $type_key ] ) ? (int) $log_counts[ $type_key ]->count : 0;
+
+			$result[] = [
+				'id'           => $type_key,
+				'name'         => $info['title'],
+				'description'  => $info['description'],
+				'category'     => isset( $categories_map[ $type_key ] ) ? $categories_map[ $type_key ] : 'general',
+				'triggerEvent' => isset( $triggers_map[ $type_key ] ) ? $triggers_map[ $type_key ] : 'Disparo automático por evento',
+				'subject'      => $subject,
+				'body'         => $body,
+				'enabled'      => $is_active,
+				'sentCount'    => $sent_count,
+				'variables'    => isset( $info['variables'] ) ? $info['variables'] : [],
+			];
+		}
+
+		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * Guardar o actualizar plantilla de correo de marketing
+	 */
+	public function save_marketing_automation( $request ) {
+		$type = sanitize_text_field( $request->get_param( 'id' ) );
+		$params = $request->get_json_params();
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'alezux_marketing_templates';
+
+		// Verificar existencia de la tabla
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table'" ) !== $table ) {
+			return new \WP_Error( 'table_missing', 'La tabla de plantillas de marketing no existe todavía', [ 'status' => 500 ] );
+		}
+
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE type = %s", $type ) );
+
+		$subject = isset( $params['subject'] ) ? sanitize_text_field( $params['subject'] ) : ( $row ? $row->subject : '' );
+		$content = isset( $params['body'] ) ? wp_unslash( $params['body'] ) : ( $row ? $row->content : '' );
+		$is_active = isset( $params['enabled'] ) ? ( $params['enabled'] ? 1 : 0 ) : ( $row ? (int) $row->is_active : 1 );
+
+		if ( $row ) {
+			$wpdb->update(
+				$table,
+				[
+					'subject'   => $subject,
+					'content'   => $content,
+					'is_active' => $is_active,
+				],
+				[ 'type' => $type ]
+			);
+		} else {
+			$wpdb->insert(
+				$table,
+				[
+					'type'      => $type,
+					'subject'   => $subject,
+					'content'   => $content,
+					'is_active' => $is_active,
+				]
+			);
+		}
+
+		return rest_ensure_response( [
+			'success' => true,
+			'id'      => $type,
+			'enabled' => (bool) $is_active,
+			'subject' => $subject,
+		] );
+	}
+
+	/**
+	 * Enviar correo de prueba para una plantilla de marketing
+	 */
+	public function send_marketing_test_email( $request ) {
+		$params = $request->get_json_params();
+		$type = sanitize_text_field( isset( $params['id'] ) ? $params['id'] : '' );
+		$email = sanitize_email( isset( $params['email'] ) && ! empty( $params['email'] ) ? $params['email'] : wp_get_current_user()->user_email );
+
+		if ( empty( $type ) || ! is_email( $email ) ) {
+			return new \WP_Error( 'invalid_data', 'Tipo de automatización o correo destinatario inválido', [ 'status' => 400 ] );
+		}
+
+		if ( ! class_exists( '\Alezux_Members\Modules\Marketing\Marketing' ) && file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/Marketing.php' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/Marketing.php';
+		}
+		if ( ! class_exists( '\Alezux_Members\Modules\Marketing\Includes\Email_Engine' ) && file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Email_Engine.php' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Email_Engine.php';
+		}
+
+		$marketing = \Alezux_Members\Modules\Marketing\Marketing::get_instance();
+		$engine = $marketing->get_engine();
+
+		$current_user = wp_get_current_user();
+		$sample_data = [
+			'user'             => $current_user,
+			'plan_name'        => 'Plan Pro Anual VIP',
+			'course_name'      => 'Master en Marketing Digital',
+			'course_title'     => 'Master en Marketing Digital',
+			'price'            => '$97 USD',
+			'amount'           => '$97 USD',
+			'date'             => date( 'd/m/Y' ),
+			'renewal_date'     => date( 'd/m/Y', strtotime( '+30 days' ) ),
+			'end_date'         => date( 'd/m/Y', strtotime( '+1 year' ) ),
+			'achievement_name' => 'Graduado Master 2026',
+			'achievement_desc' => 'Completaste con éxito todos los módulos de la formación.',
+			'days_inactive'    => '7',
+			'password'         => '********',
+			'new_password'     => '********',
+			'reset_link'       => home_url( '/wp-login.php?action=rp' ),
+			'courses_list'     => '<ul><li>Módulo Avanzado de Funnels</li><li>Copywriting Persuasivo</li></ul>',
+			'lessons_list'     => '<ul><li>Clase 1: Configuración de Campañas</li><li>Clase 2: Retargeting Dinámico</li></ul>',
+		];
+
+		$sent = $engine->send_email( $type, $email, $sample_data, true );
+
+		return rest_ensure_response( [
+			'success' => (bool) $sent,
+			'email'   => $email,
+		] );
+	}
 }
+

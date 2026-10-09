@@ -24,78 +24,135 @@
   color: var(--text-muted);
 }
 
+/* Métricas */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Filtros & Búsqueda */
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.searchWrapper {
+  min-width: 260px;
+  max-width: 380px;
+  flex: 1;
+}
+
+/* Grid de Automatizaciones */
 .automationsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--space-6);
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: var(--space-5);
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-surface);
-  padding: var(--space-6);
+  padding: var(--space-5);
   box-shadow: var(--shadow-resting);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  transition: border-color var(--duration-fast);
+  transition: border-color var(--duration-fast), transform var(--duration-fast);
 }
 
 .card:hover {
   border-color: var(--border-strong);
+  transform: translateY(-2px);
 }
 
-.cardTop {
+.cardHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.badgeGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .triggerBadge {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 4px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--accent);
   background: var(--accent-subtle);
-  padding: 3px 8px;
+  padding: 2px 8px;
   border-radius: var(--radius-pill);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .zapIcon {
   color: var(--accent);
+  flex-shrink: 0;
 }
 
 .cardTitle {
-  margin: 0;
+  margin: 0 0 var(--space-1) 0;
   font-family: var(--font-display);
   font-size: var(--text-base);
   font-weight: 600;
   color: var(--foreground);
 }
 
-.subjectText {
+.cardDescription {
   margin: 0;
   font-size: var(--text-xs);
-  color: var(--text-secondary);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.subjectBox {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
   line-height: 1.4;
+  word-break: break-word;
 }
 
 .subjectLabel {
   font-weight: 600;
-  color: var(--foreground);
-  margin-right: var(--space-1);
+  color: var(--text-secondary);
+  margin-right: 4px;
 }
 
-.statsRow {
+.subjectText {
+  color: var(--foreground);
+}
+
+.cardFooter {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: auto;
   padding-top: var(--space-3);
   border-top: 1px solid var(--border);
+}
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .statLabel {
@@ -108,16 +165,65 @@
   font-weight: 600;
 }
 
-.cardActions {
+/* Empty State */
+.emptyState {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10) var(--space-4);
+  text-align: center;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-surface);
+}
+
+.emptyIcon {
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.emptySubtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 
 /* Modal Template Editor */
-.templateEditor {
+.modalBody {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.statusToggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.statusLabel {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.statusHint {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .formGroup {
@@ -140,10 +246,11 @@
   padding: var(--space-3);
   color: var(--foreground) !important;
   font-size: var(--text-sm);
+  font-family: inherit;
   outline: none !important;
   box-shadow: none !important;
-  font-family: inherit;
   transition: border-color var(--duration-fast);
+  resize: vertical;
 }
 
 .textarea:focus {
@@ -151,21 +258,78 @@
   box-shadow: 0 0 0 1px var(--accent) !important;
 }
 
-.tagsHint {
+.variablesSection {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
-  flex-wrap: wrap;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+  background: var(--surface-muted);
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
 }
 
-.tagsHint code {
-  background: var(--surface-muted);
+.variablesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.copiedHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--success);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.variablesPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.varPill {
+  background: var(--surface);
   border: 1px solid var(--border);
-  padding: 2px 6px;
   border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: monospace;
   color: var(--accent);
+  cursor: pointer;
+  transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast);
+}
+
+.varPill:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.testSection {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.testInputWrapper {
+  flex: 1;
+}
+
+.saveSuccessNotice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--success);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  margin-right: auto;
 }
 
 .testSuccessNotice {
