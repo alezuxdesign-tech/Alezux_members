@@ -52,7 +52,7 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
-			// Finanzas & Planes
+			// Finanzas, Ventas, Suscripciones & Planes
 			register_rest_route( $namespace, '/finance/plans', [
 				'methods'             => 'GET',
 				'callback'            => [ $this, 'get_finance_plans' ],
@@ -63,6 +63,50 @@ class Admin_Api {
 				'methods'             => 'POST',
 				'callback'            => [ $this, 'create_finance_plan' ],
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/finance/plans/(?P<id>\d+)', [
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'update_finance_plan' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'DELETE',
+					'callback'            => [ $this, 'delete_finance_plan' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/finance/sales', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_finance_sales' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/finance/subscriptions', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_finance_subscriptions' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/finance/subscriptions/(?P<id>\d+)/payment', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'register_subscription_payment' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/finance/settings', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_finance_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'save_finance_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
 			] );
 
 			// Marketing & Automatizaciones de Email
@@ -371,16 +415,35 @@ class Admin_Api {
 	public function get_finance_plans() {
 		global $wpdb;
 		$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
+		$subs_table  = $wpdb->prefix . 'alezux_finanzas_subscriptions';
 		$plans = [];
 
 		if ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table ) {
+			// Conteo de suscripciones por plan
+			$counts_by_plan = [];
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$subs_table'" ) === $subs_table ) {
+				$sub_counts = $wpdb->get_results( "SELECT plan_id, COUNT(*) as count FROM $subs_table GROUP BY plan_id" );
+				foreach ( $sub_counts as $sc ) {
+					$counts_by_plan[ $sc->plan_id ] = (int) $sc->count;
+				}
+			}
+
 			$rows = $wpdb->get_results( "SELECT * FROM $plans_table ORDER BY id DESC" );
 			foreach ( $rows as $row ) {
 				$course_title = 'Todos los Cursos';
 				if ( ! empty( $row->course_id ) ) {
 					$course_title = get_the_title( $row->course_id ) ?: "Curso #{$row->course_id}";
 				}
-				$checkout_url = home_url( "/?alezux_action=checkout&token={$row->token}" );
+
+				// Token fallback
+				$token = $row->token;
+				if ( empty( $token ) ) {
+					$token = bin2hex( random_bytes( 16 ) );
+					$wpdb->update( $plans_table, [ 'token' => $token ], [ 'id' => $row->id ] );
+				}
+
+				$checkout_url = home_url( "/?alezux_action=checkout&token={$token}" );
+				$subs_count = isset( $counts_by_plan[ $row->id ] ) ? $counts_by_plan[ $row->id ] : 0;
 
 				$plans[] = [
 					'id'               => (int) $row->id,
@@ -390,9 +453,12 @@ class Admin_Api {
 					'totalQuotas'      => (int) $row->total_quotas,
 					'quotaAmount'      => (float) $row->quota_amount,
 					'totalAmount'      => (float) ( $row->total_quotas * $row->quota_amount ),
-					'token'            => $row->token,
+					'frequency'        => ! empty( $row->frequency ) ? $row->frequency : 'month',
+					'whatsapp_number'  => ! empty( $row->whatsapp_number ) ? $row->whatsapp_number : '',
+					'access_rules'     => ! empty( $row->access_rules ) ? json_decode( $row->access_rules, true ) : [],
+					'token'            => $token,
 					'checkoutUrl'      => $checkout_url,
-					'subscribersCount' => 38,
+					'subscribersCount' => $subs_count,
 				];
 			}
 		}
@@ -409,28 +475,396 @@ class Admin_Api {
 		$course_id = (int) $params['courseId'];
 		$total_quotas = max( 1, (int) $params['totalQuotas'] );
 		$quota_amount = (float) $params['quotaAmount'];
-		$token = 'token_' . wp_generate_password( 12, false );
+		$frequency = sanitize_text_field( isset( $params['frequency'] ) && ! empty( $params['frequency'] ) ? $params['frequency'] : 'month' );
+		if ( $total_quotas === 1 ) {
+			$frequency = 'contado';
+		}
+		$whatsapp_number = sanitize_text_field( isset( $params['whatsapp_number'] ) ? $params['whatsapp_number'] : '' );
+		$rules = isset( $params['access_rules'] ) ? $params['access_rules'] : [];
+		$token = bin2hex( random_bytes( 16 ) );
 
 		global $wpdb;
 		$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
 
+		$stripe_product_id = null;
+		$stripe_price_id = null;
+
+		// Si Stripe está configurado, crear producto y precio
+		if ( class_exists( '\Alezux_Members\Modules\Finanzas\Includes\Stripe_API' ) ) {
+			$stripe = \Alezux_Members\Modules\Finanzas\Includes\Stripe_API::get_instance();
+			$interval = ( $total_quotas == 1 ) ? 'contado' : $frequency;
+			$stripe_result = $stripe->create_plan( $name, $quota_amount, $interval );
+			if ( ! is_wp_error( $stripe_result ) && is_array( $stripe_result ) ) {
+				$stripe_product_id = $stripe_result['product_id'] ?? null;
+				$stripe_price_id   = $stripe_result['price_id'] ?? null;
+			}
+		}
+
 		$wpdb->insert( $plans_table, [
-			'name'         => $name,
-			'course_id'    => $course_id,
-			'total_quotas' => $total_quotas,
-			'quota_amount' => $quota_amount,
-			'token'        => $token,
+			'name'              => $name,
+			'course_id'         => $course_id,
+			'stripe_product_id' => $stripe_product_id,
+			'stripe_price_id'   => $stripe_price_id,
+			'total_quotas'      => $total_quotas,
+			'quota_amount'      => $quota_amount,
+			'frequency'         => $frequency,
+			'whatsapp_number'   => $whatsapp_number,
+			'access_rules'      => json_encode( $rules ),
+			'token'             => $token,
 		] );
 
 		$plan_id = $wpdb->insert_id;
 		$checkout_url = home_url( "/?alezux_action=checkout&token={$token}" );
+		$course_title = 'Todos los Cursos';
+		if ( $course_id > 0 ) {
+			$course_title = get_the_title( $course_id ) ?: "Curso #{$course_id}";
+		}
 
 		return rest_ensure_response( [
-			'id'          => $plan_id,
-			'name'        => $name,
-			'courseId'    => $course_id,
-			'token'       => $token,
-			'checkoutUrl' => $checkout_url,
+			'id'               => $plan_id,
+			'name'             => $name,
+			'courseId'         => $course_id,
+			'courseTitle'      => $course_title,
+			'totalQuotas'      => $total_quotas,
+			'quotaAmount'      => $quota_amount,
+			'totalAmount'      => (float) ( $total_quotas * $quota_amount ),
+			'frequency'        => $frequency,
+			'whatsapp_number'  => $whatsapp_number,
+			'access_rules'     => $rules,
+			'token'            => $token,
+			'checkoutUrl'      => $checkout_url,
+			'subscribersCount' => 0,
+		] );
+	}
+
+	/**
+	 * Actualizar configuración de un Plan de Pago existente
+	 */
+	public function update_finance_plan( $request ) {
+		global $wpdb;
+		$plan_id = (int) $request->get_param( 'id' );
+		$params = $request->get_json_params();
+		$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
+
+		$plan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $plans_table WHERE id = %d", $plan_id ) );
+		if ( ! $plan ) {
+			return new \WP_Error( 'not_found', 'El plan no existe.', [ 'status' => 404 ] );
+		}
+
+		$data_to_update = [];
+		if ( isset( $params['name'] ) ) {
+			$data_to_update['name'] = sanitize_text_field( $params['name'] );
+		}
+		if ( isset( $params['courseId'] ) ) {
+			$data_to_update['course_id'] = (int) $params['courseId'];
+		}
+		if ( isset( $params['totalQuotas'] ) ) {
+			$data_to_update['total_quotas'] = max( 1, (int) $params['totalQuotas'] );
+		}
+		if ( isset( $params['quotaAmount'] ) ) {
+			$data_to_update['quota_amount'] = (float) $params['quotaAmount'];
+		}
+		if ( isset( $params['frequency'] ) ) {
+			$data_to_update['frequency'] = sanitize_text_field( $params['frequency'] );
+		}
+		if ( isset( $params['whatsapp_number'] ) ) {
+			$data_to_update['whatsapp_number'] = sanitize_text_field( $params['whatsapp_number'] );
+		}
+		if ( isset( $params['access_rules'] ) ) {
+			$data_to_update['access_rules'] = json_encode( $params['access_rules'] );
+		}
+
+		if ( ! empty( $data_to_update ) ) {
+			$wpdb->update( $plans_table, $data_to_update, [ 'id' => $plan_id ] );
+		}
+
+		return rest_ensure_response( [
+			'success' => true,
+			'message' => 'Plan actualizado correctamente.',
+		] );
+	}
+
+	/**
+	 * Eliminar un Plan de Pago
+	 */
+	public function delete_finance_plan( $request ) {
+		global $wpdb;
+		$plan_id = (int) $request->get_param( 'id' );
+		$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
+
+		$deleted = $wpdb->delete( $plans_table, [ 'id' => $plan_id ] );
+		if ( $deleted ) {
+			return rest_ensure_response( [
+				'success' => true,
+				'message' => 'Plan eliminado correctamente.',
+			] );
+		}
+		return new \WP_Error( 'not_found', 'No se pudo eliminar el plan.', [ 'status' => 404 ] );
+	}
+
+	/**
+	 * Obtener Historial de Ventas / Transacciones
+	 */
+	public function get_finance_sales( $request ) {
+		global $wpdb;
+		$t_trans = $wpdb->prefix . 'alezux_finanzas_transactions';
+		$t_plans = $wpdb->prefix . 'alezux_finanzas_plans';
+		$t_subs  = $wpdb->prefix . 'alezux_finanzas_subscriptions';
+		$t_users = $wpdb->users;
+
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$t_trans'" ) !== $t_trans ) {
+			return rest_ensure_response( [ 'rows' => [], 'total' => 0, 'pages' => 1 ] );
+		}
+
+		$search = sanitize_text_field( $request->get_param( 'search' ) ?: '' );
+		$status = sanitize_text_field( $request->get_param( 'status' ) ?: '' );
+		$page   = max( 1, (int) ( $request->get_param( 'page' ) ?: 1 ) );
+		$limit  = min( 100, max( 5, (int) ( $request->get_param( 'limit' ) ?: 20 ) ) );
+		$offset = ( $page - 1 ) * $limit;
+
+		$sql = "SELECT SQL_CALC_FOUND_ROWS 
+					t.*, 
+					u.display_name as user_name, 
+					u.user_email, 
+					p.name as plan_name, 
+					p.total_quotas, 
+					p.frequency,
+					s.quotas_paid as sub_quotas_paid,
+					s.status as sub_status
+				FROM $t_trans t
+				LEFT JOIN $t_users u ON t.user_id = u.ID
+				LEFT JOIN $t_plans p ON t.plan_id = p.id
+				LEFT JOIN $t_subs s ON t.subscription_id = s.id
+				WHERE 1=1";
+
+		$args = [];
+		if ( ! empty( $search ) ) {
+			$sql .= " AND (u.display_name LIKE %s OR u.user_email LIKE %s OR t.transaction_ref LIKE %s)";
+			$args[] = '%' . $wpdb->esc_like( $search ) . '%';
+			$args[] = '%' . $wpdb->esc_like( $search ) . '%';
+			$args[] = '%' . $wpdb->esc_like( $search ) . '%';
+		}
+		if ( ! empty( $status ) ) {
+			$sql .= " AND t.status = %s";
+			$args[] = $status;
+		}
+
+		$sql .= " ORDER BY t.created_at DESC LIMIT %d OFFSET %d";
+		$args[] = $limit;
+		$args[] = $offset;
+
+		$results = $wpdb->get_results( $wpdb->prepare( $sql, $args ) );
+		$total_rows = (int) $wpdb->get_var( "SELECT FOUND_ROWS()" );
+
+		$data = [];
+		foreach ( $results as $row ) {
+			$payment_desc = 'Pago Único';
+			if ( $row->total_quotas > 1 ) {
+				$curr_q = $row->sub_quotas_paid ?: 1;
+				$payment_desc = "Recurrente ({$curr_q}/{$row->total_quotas})";
+			} elseif ( $row->total_quotas == 1 ) {
+				$payment_desc = 'De Contado';
+			}
+
+			$data[] = [
+				'id'           => (int) $row->id,
+				'student'      => $row->user_name ? $row->user_name : ( $row->user_email ?: 'Usuario #' . $row->user_id ),
+				'studentEmail' => $row->user_email ?: '',
+				'method'       => $row->method ? ucfirst( $row->method ) : 'Stripe',
+				'amount'       => (float) $row->amount,
+				'currency'     => $row->currency ?: 'USD',
+				'course'       => $row->plan_name ?: 'Plan General',
+				'quotasDesc'   => $payment_desc,
+				'status'       => $row->status ?: 'succeeded',
+				'date'         => date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $row->created_at ) ),
+				'ref'          => $row->transaction_ref ?: 'tx_' . substr( md5( $row->id ), 0, 10 ),
+			];
+		}
+
+		return rest_ensure_response( [
+			'rows'  => $data,
+			'total' => $total_rows,
+			'pages' => ceil( $total_rows / $limit ) ?: 1,
+		] );
+	}
+
+	/**
+	 * Obtener Listado de Suscripciones & Cuotas
+	 */
+	public function get_finance_subscriptions( $request ) {
+		global $wpdb;
+		$t_subs  = $wpdb->prefix . 'alezux_finanzas_subscriptions';
+		$t_plans = $wpdb->prefix . 'alezux_finanzas_plans';
+		$t_users = $wpdb->users;
+
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$t_subs'" ) !== $t_subs ) {
+			return rest_ensure_response( [ 'rows' => [], 'total' => 0, 'pages' => 1 ] );
+		}
+
+		$search = sanitize_text_field( $request->get_param( 'search' ) ?: '' );
+		$page   = max( 1, (int) ( $request->get_param( 'page' ) ?: 1 ) );
+		$limit  = min( 100, max( 5, (int) ( $request->get_param( 'limit' ) ?: 20 ) ) );
+		$offset = ( $page - 1 ) * $limit;
+
+		$sql = "SELECT SQL_CALC_FOUND_ROWS 
+					s.*, 
+					u.display_name, 
+					u.user_email, 
+					p.name as plan_name, 
+					p.total_quotas, 
+					p.quota_amount 
+				FROM $t_subs s
+				LEFT JOIN $t_users u ON s.user_id = u.ID
+				LEFT JOIN $t_plans p ON s.plan_id = p.id
+				WHERE 1=1";
+
+		$args = [];
+		if ( ! empty( $search ) ) {
+			$sql .= " AND (u.display_name LIKE %s OR u.user_email LIKE %s)";
+			$args[] = '%' . $wpdb->esc_like( $search ) . '%';
+			$args[] = '%' . $wpdb->esc_like( $search ) . '%';
+		}
+
+		$sql .= " ORDER BY s.created_at DESC LIMIT %d OFFSET %d";
+		$args[] = $limit;
+		$args[] = $offset;
+
+		$results = $wpdb->get_results( $wpdb->prepare( $sql, $args ) );
+		$total_rows = (int) $wpdb->get_var( "SELECT FOUND_ROWS()" );
+
+		$data = [];
+		foreach ( $results as $row ) {
+			$next_payment = '—';
+			if ( $row->status === 'active' && $row->next_payment_date ) {
+				$next_payment = date_i18n( get_option( 'date_format' ), strtotime( $row->next_payment_date ) );
+				if ( strtotime( $row->next_payment_date ) < time() ) {
+					$next_payment .= ' (Atrasado)';
+				}
+			} elseif ( $row->status === 'completed' ) {
+				$next_payment = 'Pagado Totalmente';
+			}
+
+			$percent = 0;
+			if ( (int) $row->total_quotas > 0 ) {
+				$percent = round( ( (int) $row->quotas_paid / (int) $row->total_quotas ) * 100 );
+			}
+
+			$data[] = [
+				'id'             => (int) $row->id,
+				'student'        => $row->display_name ?: ( $row->user_email ?: 'Usuario #' . $row->user_id ),
+				'studentEmail'   => $row->user_email ?: '',
+				'studentAvatar'  => get_avatar_url( $row->user_id, [ 'size' => 48 ] ),
+				'plan'           => $row->plan_name ?: 'Plan de Pagos',
+				'totalQuotas'    => (int) $row->total_quotas,
+				'quotasPaid'     => (int) $row->quotas_paid,
+				'percent'        => min( 100, $percent ),
+				'amount'         => (float) $row->quota_amount,
+				'status'         => $row->status ?: 'active',
+				'nextPayment'    => $next_payment,
+				'nextPaymentRaw' => $row->next_payment_date,
+				'stripeId'       => $row->stripe_subscription_id ?: '',
+			];
+		}
+
+		return rest_ensure_response( [
+			'rows'  => $data,
+			'total' => $total_rows,
+			'pages' => ceil( $total_rows / $limit ) ?: 1,
+		] );
+	}
+
+	/**
+	 * Registrar Pago Manual para una Suscripción
+	 */
+	public function register_subscription_payment( $request ) {
+		global $wpdb;
+		$sub_id = (int) $request->get_param( 'id' );
+		$params = $request->get_json_params();
+		$amount = (float) ( $params['amount'] ?? 0 );
+		$note   = sanitize_text_field( $params['note'] ?? '' );
+
+		$t_subs  = $wpdb->prefix . 'alezux_finanzas_subscriptions';
+		$t_trans = $wpdb->prefix . 'alezux_finanzas_transactions';
+		$t_plans = $wpdb->prefix . 'alezux_finanzas_plans';
+
+		$sub = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t_subs WHERE id = %d", $sub_id ) );
+		if ( ! $sub ) {
+			return new \WP_Error( 'not_found', 'Suscripción no encontrada.', [ 'status' => 404 ] );
+		}
+
+		$plan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t_plans WHERE id = %d", $sub->plan_id ) );
+		$total_quotas = $plan ? (int) $plan->total_quotas : 1;
+		$new_quotas_paid = (int) $sub->quotas_paid + 1;
+		$new_status = $sub->status;
+
+		if ( $sub->status === 'past_due' || $sub->status === 'canceled' ) {
+			$new_status = 'active';
+		}
+		if ( $new_quotas_paid >= $total_quotas ) {
+			$new_status = 'completed';
+		}
+
+		$wpdb->update(
+			$t_subs,
+			[
+				'quotas_paid'       => $new_quotas_paid,
+				'status'            => $new_status,
+				'last_payment_date' => current_time( 'mysql' ),
+			],
+			[ 'id' => $sub_id ]
+		);
+
+		// Insertar registro de transacción
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$t_trans'" ) === $t_trans ) {
+			$wpdb->insert(
+				$t_trans,
+				[
+					'user_id'         => $sub->user_id,
+					'subscription_id' => $sub->id,
+					'plan_id'         => $sub->plan_id,
+					'amount'          => $amount > 0 ? $amount : ( $plan ? $plan->quota_amount : 0 ),
+					'currency'        => 'USD',
+					'method'          => 'manual',
+					'transaction_ref' => 'MANUAL-' . strtoupper( wp_generate_password( 8, false ) ),
+					'status'          => 'succeeded',
+					'data'            => json_encode( [ 'note' => $note, 'registered_by' => get_current_user_id() ] ),
+				]
+			);
+		}
+
+		return rest_ensure_response( [
+			'success'    => true,
+			'message'    => "Pago manual registrado. Cuota {$new_quotas_paid} de {$total_quotas}.",
+			'status'     => $new_status,
+			'quotasPaid' => $new_quotas_paid,
+		] );
+	}
+
+	/**
+	 * Obtener credenciales de Stripe para el Dashboard
+	 */
+	public function get_finance_settings() {
+		return rest_ensure_response( [
+			'stripe_public_key' => get_option( 'alezux_stripe_public_key', '' ),
+			'stripe_secret_key' => get_option( 'alezux_stripe_secret_key', '' ),
+			'webhook_url'       => home_url( '/?alezux_webhook=stripe' ),
+		] );
+	}
+
+	/**
+	 * Guardar credenciales de Stripe
+	 */
+	public function save_finance_settings( $request ) {
+		$params = $request->get_json_params();
+		if ( isset( $params['stripe_public_key'] ) ) {
+			update_option( 'alezux_stripe_public_key', sanitize_text_field( $params['stripe_public_key'] ) );
+		}
+		if ( isset( $params['stripe_secret_key'] ) ) {
+			update_option( 'alezux_stripe_secret_key', sanitize_text_field( $params['stripe_secret_key'] ) );
+		}
+		return rest_ensure_response( [
+			'success' => true,
+			'message' => 'Configuración de pasarela guardada correctamente.',
 		] );
 	}
 

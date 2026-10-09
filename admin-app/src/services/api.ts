@@ -70,9 +70,48 @@ export interface FinancePlan {
   totalQuotas: number;
   quotaAmount: number;
   totalAmount: number;
+  frequency?: string;
+  whatsapp_number?: string;
+  access_rules?: any;
   token: string;
   checkoutUrl: string;
   subscribersCount: number;
+}
+
+export interface SaleTransaction {
+  id: number;
+  student: string;
+  studentEmail: string;
+  method: string;
+  amount: number;
+  currency: string;
+  course: string;
+  quotasDesc: string;
+  status: "succeeded" | "pending" | "failed" | "refunded" | string;
+  date: string;
+  ref: string;
+}
+
+export interface SubscriptionItem {
+  id: number;
+  student: string;
+  studentEmail: string;
+  studentAvatar: string;
+  plan: string;
+  totalQuotas: number;
+  quotasPaid: number;
+  percent: number;
+  amount: number;
+  status: "active" | "completed" | "past_due" | "canceled" | "pending" | string;
+  nextPayment: string;
+  nextPaymentRaw?: string;
+  stripeId?: string;
+}
+
+export interface FinanceSettings {
+  stripe_public_key: string;
+  stripe_secret_key: string;
+  webhook_url?: string;
 }
 
 export interface MarketingAutomation {
@@ -286,6 +325,136 @@ const MOCK_PLANS: FinancePlan[] = [
     token: "token_all_access_annual",
     checkoutUrl: `${window.location.origin}/?alezux_action=checkout&token=token_all_access_annual`,
     subscribersCount: 230,
+  },
+];
+
+const MOCK_SALES: SaleTransaction[] = [
+  {
+    id: 501,
+    student: "Carlos Mendoza",
+    studentEmail: "carlos.mendoza@empresa.com",
+    method: "Stripe",
+    amount: 97,
+    currency: "USD",
+    course: "Master en Marketing Digital & Performance",
+    quotasDesc: "Recurrente (2/4)",
+    status: "succeeded",
+    date: "08/10/2026 16:45",
+    ref: "ch_3N1abc992kd",
+  },
+  {
+    id: 502,
+    student: "Valeria Gómez",
+    studentEmail: "valeria.g@marketingagency.io",
+    method: "Stripe",
+    amount: 297,
+    currency: "USD",
+    course: "Desarrollo Web Full Stack con WordPress",
+    quotasDesc: "Pago Único",
+    status: "succeeded",
+    date: "07/10/2026 11:20",
+    ref: "ch_3M4xyz881aa",
+  },
+  {
+    id: 503,
+    student: "Sebastián Rivas",
+    studentEmail: "srivas@digitalgrowth.com",
+    method: "Stripe",
+    amount: 49,
+    currency: "USD",
+    course: "Membresía All-Access Anual",
+    quotasDesc: "Recurrente (1/12)",
+    status: "succeeded",
+    date: "06/10/2026 18:05",
+    ref: "ch_3L9qwe772bb",
+  },
+  {
+    id: 504,
+    student: "Mariana Silva",
+    studentEmail: "mariana.silva@outlook.com",
+    method: "Stripe",
+    amount: 97,
+    currency: "USD",
+    course: "Master en Marketing Digital & Performance",
+    quotasDesc: "Recurrente (1/4)",
+    status: "failed",
+    date: "05/10/2026 09:30",
+    ref: "ch_3K2err661cc",
+  },
+  {
+    id: 505,
+    student: "Andrés Delgado",
+    studentEmail: "adelgado@innovacion.pe",
+    method: "Manual",
+    amount: 97,
+    currency: "USD",
+    course: "Master en Marketing Digital & Performance",
+    quotasDesc: "Recurrente (3/4)",
+    status: "succeeded",
+    date: "04/10/2026 14:15",
+    ref: "MANUAL-9821ABCD",
+  },
+];
+
+const MOCK_SUBSCRIPTIONS: SubscriptionItem[] = [
+  {
+    id: 201,
+    student: "Carlos Mendoza",
+    studentEmail: "carlos.mendoza@empresa.com",
+    studentAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+    plan: "Master Full Access - 4 Cuotas",
+    totalQuotas: 4,
+    quotasPaid: 2,
+    percent: 50,
+    amount: 97,
+    status: "active",
+    nextPayment: "08/11/2026",
+    nextPaymentRaw: "2026-11-08",
+    stripeId: "sub_1N1xyz993",
+  },
+  {
+    id: 202,
+    student: "Sebastián Rivas",
+    studentEmail: "srivas@digitalgrowth.com",
+    studentAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80",
+    plan: "Membresía All-Access Anual",
+    totalQuotas: 12,
+    quotasPaid: 1,
+    percent: 8,
+    amount: 49,
+    status: "active",
+    nextPayment: "06/11/2026",
+    nextPaymentRaw: "2026-11-06",
+    stripeId: "sub_1M4abc882",
+  },
+  {
+    id: 203,
+    student: "Mariana Silva",
+    studentEmail: "mariana.silva@outlook.com",
+    studentAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
+    plan: "Master Full Access - 4 Cuotas",
+    totalQuotas: 4,
+    quotasPaid: 1,
+    percent: 25,
+    amount: 97,
+    status: "past_due",
+    nextPayment: "05/10/2026 (Atrasado)",
+    nextPaymentRaw: "2026-10-05",
+    stripeId: "sub_1K2err661",
+  },
+  {
+    id: 204,
+    student: "Andrés Delgado",
+    studentEmail: "adelgado@innovacion.pe",
+    studentAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+    plan: "Master Full Access - 4 Cuotas",
+    totalQuotas: 4,
+    quotasPaid: 4,
+    percent: 100,
+    amount: 97,
+    status: "completed",
+    nextPayment: "Pagado Totalmente",
+    stripeId: "sub_1J9qwe550",
   },
 ];
 
@@ -569,7 +738,10 @@ class ApiService {
           headers: { "X-WP-Nonce": this.nonce },
         });
         if (res.ok) {
-          return await res.json();
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            return data;
+          }
         }
       }
     } catch (e) {
@@ -578,21 +750,193 @@ class ApiService {
     return MOCK_PLANS;
   }
 
-  async createPlan(data: { name: string; courseId: number; courseTitle: string; totalQuotas: number; quotaAmount: number }): Promise<FinancePlan> {
+  async createPlan(data: Partial<FinancePlan>): Promise<FinancePlan> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}finance/create-plan`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(data),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error creating plan:", e);
+    }
+
     const token = `token_${Math.random().toString(36).substring(2, 10)}`;
     const newPlan: FinancePlan = {
       id: Date.now(),
-      name: data.name,
-      courseId: data.courseId,
-      courseTitle: data.courseTitle,
-      totalQuotas: data.totalQuotas,
-      quotaAmount: data.quotaAmount,
-      totalAmount: data.totalQuotas * data.quotaAmount,
+      name: data.name || "Nuevo Plan",
+      courseId: data.courseId || 0,
+      courseTitle: data.courseTitle || "Todos los Cursos",
+      totalQuotas: data.totalQuotas || 1,
+      quotaAmount: data.quotaAmount || 97,
+      totalAmount: (data.totalQuotas || 1) * (data.quotaAmount || 97),
+      frequency: data.frequency || "month",
+      whatsapp_number: data.whatsapp_number || "",
       token,
       checkoutUrl: `${window.location.origin}/?alezux_action=checkout&token=${token}`,
       subscribersCount: 0,
     };
     return newPlan;
+  }
+
+  async updatePlan(id: number, data: Partial<FinancePlan>): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}finance/plans/${id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(data),
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error updating plan:", e);
+    }
+    return true;
+  }
+
+  async deletePlan(id: number): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}finance/plans/${id}`, {
+          method: "DELETE",
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error deleting plan:", e);
+    }
+    return true;
+  }
+
+  async getSales(params?: { search?: string; status?: string; page?: number; limit?: number }): Promise<{ rows: SaleTransaction[]; total: number; pages: number }> {
+    try {
+      if (this.wpData) {
+        const searchParams = new URLSearchParams();
+        if (params?.search) searchParams.append("search", params.search);
+        if (params?.status) searchParams.append("status", params.status);
+        if (params?.page) searchParams.append("page", params.page.toString());
+        if (params?.limit) searchParams.append("limit", params.limit.toString());
+
+        const res = await fetch(`${this.rootUrl}finance/sales?${searchParams.toString()}`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.rows) && data.rows.length > 0) {
+            return data;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("API Error fetching sales:", e);
+    }
+    return {
+      rows: MOCK_SALES,
+      total: MOCK_SALES.length,
+      pages: 1,
+    };
+  }
+
+  async getSubscriptions(params?: { search?: string; page?: number; limit?: number }): Promise<{ rows: SubscriptionItem[]; total: number; pages: number }> {
+    try {
+      if (this.wpData) {
+        const searchParams = new URLSearchParams();
+        if (params?.search) searchParams.append("search", params.search);
+        if (params?.page) searchParams.append("page", params.page.toString());
+        if (params?.limit) searchParams.append("limit", params.limit.toString());
+
+        const res = await fetch(`${this.rootUrl}finance/subscriptions?${searchParams.toString()}`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.rows) && data.rows.length > 0) {
+            return data;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("API Error fetching subscriptions:", e);
+    }
+    return {
+      rows: MOCK_SUBSCRIPTIONS,
+      total: MOCK_SUBSCRIPTIONS.length,
+      pages: 1,
+    };
+  }
+
+  async registerManualPayment(subscriptionId: number, amount: number, note?: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}finance/subscriptions/${subscriptionId}/payment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ amount, note }),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error registering manual payment:", e);
+    }
+    return { success: true, message: "Pago manual registrado correctamente (Modo simulación)." };
+  }
+
+  async getFinanceSettings(): Promise<FinanceSettings> {
+    const defaultSettings: FinanceSettings = {
+      stripe_public_key: "",
+      stripe_secret_key: "",
+      webhook_url: `${window.location.origin}/?alezux_webhook=stripe`,
+    };
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}finance/settings`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error fetching finance settings:", e);
+    }
+    return defaultSettings;
+  }
+
+  async saveFinanceSettings(settings: FinanceSettings): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}finance/settings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(settings),
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error saving finance settings:", e);
+    }
+    return true;
   }
 
   // --- MARKETING ---
