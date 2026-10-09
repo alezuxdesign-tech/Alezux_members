@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Crezca
  * Description: Sistema integral y modular para gestión de academias, membresías, cursos en línea, estudiantes, finanzas, marketing y panel de administración moderno impulsado por Arc UI.
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: Crezca
  * Text Domain: crezca
  */
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Definir constantes del plugin Crezca
-define( 'CREZCA_VERSION', '2.0.0' );
+define( 'CREZCA_VERSION', '2.1.0' );
 define( 'CREZCA_FILE', __FILE__ );
 define( 'CREZCA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CREZCA_URL', plugin_dir_url( __FILE__ ) );

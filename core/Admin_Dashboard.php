@@ -153,16 +153,18 @@ class Admin_Dashboard {
 			ALEZUX_MEMBERS_VERSION 
 		);
 
-		// Encolar bundle compilado de React (Arc UI)
 		$dist_css = ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.css';
 		$dist_js  = ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.js';
+
+		$css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : ALEZUX_MEMBERS_VERSION;
+		$js_ver  = file_exists( $dist_js ) ? filemtime( $dist_js ) : ALEZUX_MEMBERS_VERSION;
 
 		if ( file_exists( $dist_css ) ) {
 			wp_enqueue_style(
 				'crezca-admin-arc-css',
 				ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.css',
 				[],
-				ALEZUX_MEMBERS_VERSION
+				$css_ver
 			);
 		}
 
@@ -171,7 +173,7 @@ class Admin_Dashboard {
 				'crezca-admin-arc-js',
 				ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.js',
 				[ 'wp-element' ],
-				ALEZUX_MEMBERS_VERSION,
+				$js_ver,
 				true
 			);
 
