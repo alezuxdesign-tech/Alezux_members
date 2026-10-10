@@ -27,12 +27,14 @@ import {
   Tag,
   ArrowUp,
   ArrowDown,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
 import { Input } from "../components/arc/input/input";
 import { Switch } from "../components/arc/switch/switch";
+import { Alert } from "../components/arc/alert/alert";
 import { 
   api, 
   Course, 
@@ -59,16 +61,47 @@ interface EditingModuleCoverState {
   cover: string;
 }
 
+interface ToastState {
+  id: number;
+  tone: "info" | "success" | "warning" | "danger";
+  title: string;
+  description?: string;
+}
+
+interface DeleteConfirmState {
+  title: string;
+  message: string;
+  onConfirm: () => void;
+}
+
 export function CoursesView() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [availablePlans, setAvailablePlans] = useState<FinancePlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Alertas Arc tipo Toast
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  const showToast = (tone: "info" | "success" | "warning" | "danger", title: string, description?: string) => {
+    setToast({ id: Date.now(), tone, title, description });
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  // Modal de confirmación para eliminar (Arc)
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState | null>(null);
+
   // Modo de Vista: "grid" (catálogo de tarjetas) | "builder" (página de edición del curso)
   const [viewMode, setViewMode] = useState<"grid" | "builder">("grid");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
-  // Sub-tab dentro del editor: "curriculum" (módulos y lecciones) | "settings" (configuración general y portadas)
+  // Sub-tab dentro del editor: "curriculum" (módulos y lecciones) | "settings" (configuración general)
   const [builderTab, setBuilderTab] = useState<"curriculum" | "settings">("curriculum");
 
   // Filtros de Catálogo
@@ -88,6 +121,8 @@ export function CoursesView() {
   const [courseThumbnail, setCourseThumbnail] = useState("");
   const [courseBanner, setCourseBanner] = useState("");
   const [coursePrice, setCoursePrice] = useState<number | string>(0);
+  const [isFreeCourse, setIsFreeCourse] = useState(false);
+  const [priceInputValue, setPriceInputValue] = useState<string>("0.00");
   const [courseStatus, setCourseStatus] = useState<"publish" | "draft">("publish");
   const [courseLinkedPlanId, setCourseLinkedPlanId] = useState<number | null>(null);
 
@@ -127,13 +162,101 @@ export function CoursesView() {
     setCourseDescription(course.description || "");
     setCourseThumbnail(course.thumbnail || "");
     setCourseBanner(course.banner || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80");
-    setCoursePrice(course.price ?? 0);
+    const numPrice = Number(course.price) || 0;
+    setCoursePrice(numPrice);
+    setIsFreeCourse(numPrice === 0);
+    setPriceInputValue(
+      numPrice > 0
+        ? numPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : "0.00"
+    );
     setCourseStatus(course.status || "publish");
     setCourseLinkedPlanId(course.linkedPlanId ?? null);
     setSections(course.sections || []);
     setBuilderTab("curriculum");
     setSavedSuccess(false);
     setViewMode("builder");
+  };
+
+  // Manejador del Switch de Curso Gratuito
+  const handleToggleFreeCourse = (checked: boolean) => {
+    setIsFreeCourse(checked);
+    if (checked) {
+      setCoursePrice(0);
+      setPriceInputValue("0.00");
+      showToast("info", "Curso marcado como Gratuito", "El precio del curso se ha fijado en $0.00 USD.");
+    } else {
+      if (Number(coursePrice) === 0) {
+        setCoursePrice(10);
+        setPriceInputValue("10.00");
+      }
+      showToast("info", "Curso marcado de Pago", "Puedes especificar el precio en USD.");
+    }
+  };
+
+  // Manejadores del Input de Precio con formateo
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const clean = raw.replace(/[^0-9.]/g, "");
+    const parts = clean.split(".");
+    const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : clean;
+    setPriceInputValue(sanitized);
+    const num = parseFloat(sanitized);
+    setCoursePrice(isNaN(num) ? 0 : num);
+  };
+
+  const handlePriceBlur = () => {
+    const num = parseFloat(priceInputValue.replace(/,/g, ""));
+    if (isNaN(num) || num <= 0) {
+      if (!isFreeCourse) {
+        setCoursePrice(0);
+        setPriceInputValue("0.00");
+      }
+    } else {
+      setCoursePrice(num);
+      setPriceInputValue(
+        num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      );
+    }
+  };
+
+  const handlePriceFocus = () => {
+    const stripped = priceInputValue.replace(/,/g, "");
+    if (stripped === "0.00") {
+      setPriceInputValue("");
+    } else {
+      setPriceInputValue(stripped);
+    }
+  };
+
+  // Subida de imagen de portada (miniatura 16:9)
+  const handleUploadThumbnail = async (files: File[]) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const localUrl = URL.createObjectURL(file);
+    setCourseThumbnail(localUrl);
+    showToast("info", "Subiendo imagen...", "Procesando la portada del curso.");
+
+    const uploadedUrl = await api.uploadMedia(file);
+    if (uploadedUrl) {
+      setCourseThumbnail(uploadedUrl);
+      showToast("success", "Portada actualizada", "La imagen de portada se subió correctamente.");
+    }
+  };
+
+  // Subida de imagen de banner panorámico (3:1)
+  const handleUploadBanner = async (files: File[]) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const localUrl = URL.createObjectURL(file);
+    setCourseBanner(localUrl);
+    showToast("info", "Subiendo banner...", "Procesando la cabecera panorámica.");
+
+    const uploadedUrl = await api.uploadMedia(file);
+    if (uploadedUrl) {
+      setCourseBanner(uploadedUrl);
+      showToast("success", "Banner actualizado", "La cabecera panorámica se subió correctamente.");
+    }
   };
 
   const handleBackToGrid = () => {
@@ -165,27 +288,34 @@ export function CoursesView() {
     if (!selectedCourse) return;
     setIsSavingCurriculum(true);
 
-    const updatedData: Partial<Course> = {
-      title: courseTitle,
-      description: courseDescription,
-      thumbnail: courseThumbnail,
-      banner: courseBanner,
-      price: Number(coursePrice) || 0,
-      status: courseStatus,
-      linkedPlanId: courseLinkedPlanId,
-      sections,
-    };
+    try {
+      const finalPrice = isFreeCourse ? 0 : Number(coursePrice) || 0;
+      const updatedData: Partial<Course> = {
+        title: courseTitle,
+        description: courseDescription,
+        thumbnail: courseThumbnail,
+        banner: courseBanner,
+        price: finalPrice,
+        status: courseStatus,
+        linkedPlanId: null,
+        sections,
+      };
 
-    await api.saveCourse(selectedCourse.id, updatedData, sections);
+      await api.saveCourse(selectedCourse.id, updatedData, sections);
 
-    setSelectedCourse((prev) => (prev ? { ...prev, ...updatedData } : null));
-    setCourses((prev) =>
-      prev.map((c) => (c.id === selectedCourse.id ? { ...c, ...updatedData } : c))
-    );
+      setSelectedCourse((prev) => (prev ? { ...prev, ...updatedData } : null));
+      setCourses((prev) =>
+        prev.map((c) => (c.id === selectedCourse.id ? { ...c, ...updatedData } : c))
+      );
 
-    setIsSavingCurriculum(false);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3500);
+      setIsSavingCurriculum(false);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+      showToast("success", "Curso guardado exitosamente", "Se han guardado todos los cambios de configuración y módulos.");
+    } catch (err) {
+      setIsSavingCurriculum(false);
+      showToast("danger", "Error al guardar", "Ocurrió un problema guardando los cambios del curso.");
+    }
   };
 
   // Actualizar portada de módulo
@@ -199,6 +329,7 @@ export function CoursesView() {
     if (!editingModuleCover) return;
     handleUpdateSectionCover(editingModuleCover.sectionId, editingModuleCover.cover);
     setEditingModuleCover(null);
+    showToast("success", "Portada actualizada", "La portada del módulo se guardó correctamente.");
   };
 
   // --- CREACIÓN DE NUEVO CURSO ---
@@ -216,6 +347,7 @@ export function CoursesView() {
 
     // Abrir de inmediato el builder del curso recién creado
     handleOpenCourseBuilder(created);
+    showToast("success", "Curso creado", `El curso "${created.title}" fue creado exitosamente.`);
   };
 
   // --- OPERACIONES DEL CONSTRUCTOR DE MÓDULOS ---
@@ -235,12 +367,20 @@ export function CoursesView() {
     } else {
       setSections([...sections, newSection]);
     }
+    showToast("info", "Módulo añadido", "Se ha creado un nuevo módulo en blanco.");
   };
 
   const handleDeleteSection = (sectionId: string) => {
-    if (window.confirm("¿Seguro que deseas eliminar este módulo y todas sus lecciones?")) {
-      setSections(sections.filter((s) => s.id !== sectionId));
-    }
+    const sec = sections.find((s) => s.id === sectionId);
+    setDeleteConfirm({
+      title: "Eliminar Módulo",
+      message: `¿Estás seguro de que deseas eliminar "${sec?.title || "este módulo"}" y todas sus lecciones? Esta acción no se puede deshacer.`,
+      onConfirm: () => {
+        setSections(sections.filter((s) => s.id !== sectionId));
+        setDeleteConfirm(null);
+        showToast("info", "Módulo eliminado", `El módulo "${sec?.title || ""}" ha sido eliminado.`);
+      },
+    });
   };
 
   const handleUpdateSectionTitle = (sectionId: string, title: string) => {
@@ -294,11 +434,21 @@ export function CoursesView() {
   };
 
   const handleDeleteTopic = (sectionId: string, topicId: string) => {
-    setSections(
-      sections.map((s) =>
-        s.id === sectionId ? { ...s, lessons: s.lessons.filter((l) => l.id !== topicId) } : s
-      )
-    );
+    const sec = sections.find((s) => s.id === sectionId);
+    const les = sec?.lessons?.find((l) => l.id === topicId);
+    setDeleteConfirm({
+      title: "Eliminar Lección",
+      message: `¿Estás seguro de que deseas eliminar la lección "${les?.title || "este topic"}"?`,
+      onConfirm: () => {
+        setSections(
+          sections.map((s) =>
+            s.id === sectionId ? { ...s, lessons: s.lessons.filter((l) => l.id !== topicId) } : s
+          )
+        );
+        setDeleteConfirm(null);
+        showToast("info", "Topic eliminado", `La lección "${les?.title || ""}" ha sido eliminada.`);
+      },
+    });
   };
 
   // Guardar cambios dentro del Modal de Topic
@@ -307,7 +457,7 @@ export function CoursesView() {
     const { sectionId, topicIndex, isNew, topic } = editingTopicState;
 
     if (!topic.title.trim()) {
-      alert("El título de la lección no puede estar vacío.");
+      showToast("warning", "Campo requerido", "El título de la lección no puede estar vacío.");
       return;
     }
 
@@ -325,6 +475,7 @@ export function CoursesView() {
     );
 
     setEditingTopicState(null);
+    showToast("success", isNew ? "Topic añadido" : "Topic actualizado", `La lección "${topic.title}" fue guardada.`);
   };
 
   // Añadir archivo complementario a la lección en edición
@@ -522,32 +673,13 @@ export function CoursesView() {
                     {courseStatus === "publish" ? "Habilitado" : "Borrador"}
                   </Badge>
                   <span className={styles.heroPriceTag}>
-                    <DollarSign size={13} /> {coursePrice && Number(coursePrice) > 0 ? `${coursePrice} USD` : "Gratis / Incluido"}
+                    <DollarSign size={13} /> {isFreeCourse || !coursePrice || Number(coursePrice) === 0 ? "Gratis" : `${coursePrice} USD`}
                   </span>
-                  {courseLinkedPlanId ? (
-                    <span className={styles.heroPlanTag}>
-                      <CreditCard size={13} /> Plan: {availablePlans.find((p) => p.id === courseLinkedPlanId)?.name || `#${courseLinkedPlanId}`}
-                    </span>
-                  ) : (
-                    <span className={styles.heroPlanTag} style={{ opacity: 0.8 }}>
-                      <Tag size={12} /> Sin Plan Vinculado
-                    </span>
-                  )}
                   <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
                     {sections.length} Módulos &bull; {totalTopics} Lecciones
                   </span>
                 </div>
               </div>
-            </div>
-
-            <div className={styles.builderHeroActions}>
-              <Button
-                variant={builderTab === "settings" ? "secondary" : "primary"}
-                onClick={() => setBuilderTab(builderTab === "settings" ? "curriculum" : "settings")}
-              >
-                <Settings size={15} />
-                {builderTab === "settings" ? "Ver Módulos" : "Configurar Portada, Banner y Precio"}
-              </Button>
             </div>
           </div>
         </div>
@@ -573,21 +705,21 @@ export function CoursesView() {
               ].join(" ")}
               onClick={() => setBuilderTab("settings")}
             >
-              <Settings size={16} /> Configuración General y Portadas
+              <Settings size={16} /> Configuración General
             </button>
           </div>
         </div>
 
         {/* =========================================================================
-            PESTAÑA 1: CONFIGURACIÓN GENERAL Y PORTADAS DEL CURSO
+            PESTAÑA 1: CONFIGURACIÓN GENERAL DEL CURSO
            ========================================================================= */}
         {builderTab === "settings" && (
           <div className={styles.courseSettingsCard}>
             <div className={styles.settingsSectionHeader}>
               <div>
-                <h3 className={styles.settingsTitle}>Configuración General y Portadas del Curso</h3>
+                <h3 className={styles.settingsTitle}>Configuración General</h3>
                 <p className={styles.settingsDesc}>
-                  Cambia la imagen de portada, la imagen de banner, el nombre, la descripción, el precio, el estado de habilitación y la vinculación a planes.
+                  Gestiona la información principal, imagen de portada, banner panorámico, precio y publicación.
                 </p>
               </div>
               <Button variant="primary" loading={isSavingCurriculum} onClick={handleSaveAllCourse}>
@@ -595,7 +727,7 @@ export function CoursesView() {
               </Button>
             </div>
 
-            {/* 1. SECCIÓN DE IMÁGENES: PORTADA Y BANNER */}
+            {/* 1. SECCIÓN DE IMÁGENES: PORTADA Y BANNER CON FILEDROPZONE */}
             <div className={styles.settingsGroup}>
               <h4 className={styles.settingsGroupTitle}>
                 <ImageIcon size={18} /> Imágenes Principales del Curso
@@ -608,27 +740,42 @@ export function CoursesView() {
                     <label className={styles.label}>Imagen de Portada (Miniatura / Card)</label>
                     <span className={styles.miniLabel}>Recomendado: 16:9 (600x338 px)</span>
                   </div>
-                  <div className={styles.coverPreviewContainer}>
-                    {courseThumbnail ? (
-                      <img
-                        src={courseThumbnail}
-                        alt="Portada del Curso"
-                        className={styles.coverPreviewImgLarge}
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div className={styles.placeholderLarge}>
-                        <ImageIcon size={32} />
-                        <span>Sin imagen de portada</span>
+
+                  {courseThumbnail ? (
+                    <div className={styles.imageCardPreviewWrap}>
+                      <div className={styles.coverPreviewContainer}>
+                        <img
+                          src={courseThumbnail}
+                          alt="Portada del Curso"
+                          className={styles.coverPreviewImgLarge}
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = "none";
+                          }}
+                        />
                       </div>
-                    )}
-                  </div>
-                  <Input
-                    placeholder="https://... (URL de la imagen de portada)"
-                    value={courseThumbnail}
-                    onChange={(e) => setCourseThumbnail(e.target.value)}
+                      <button
+                        type="button"
+                        className={styles.imageCardRemoveBtn}
+                        onClick={() => {
+                          setCourseThumbnail("");
+                          showToast("info", "Portada quitada", "Se ha removido la imagen de portada.");
+                        }}
+                        title="Quitar imagen de portada"
+                      >
+                        <Trash2 size={13} /> Quitar Portada
+                      </button>
+                    </div>
+                  ) : null}
+
+                  <FileDropzone
+                    accept="image/*"
+                    multiple={false}
+                    maxFiles={1}
+                    showList={false}
+                    label={courseThumbnail ? "Arrastra otra imagen para reemplazar la portada" : "Arrastra la imagen de portada aquí"}
+                    description="o haz clic para buscar en tu equipo (PNG, JPG, WEBP)"
+                    note="Recomendado: 1280x720 (16:9)"
+                    onFilesChange={handleUploadThumbnail}
                   />
                 </div>
 
@@ -638,27 +785,42 @@ export function CoursesView() {
                     <label className={styles.label}>Imagen de Banner (Cabecera Panorámica)</label>
                     <span className={styles.miniLabel}>Recomendado: 3:1 (1200x400 px)</span>
                   </div>
-                  <div className={styles.bannerPreviewContainer}>
-                    {courseBanner ? (
-                      <img
-                        src={courseBanner}
-                        alt="Banner del Curso"
-                        className={styles.bannerPreviewImgLarge}
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div className={styles.placeholderLarge}>
-                        <ImageIcon size={32} />
-                        <span>Sin imagen de banner</span>
+
+                  {courseBanner ? (
+                    <div className={styles.imageCardPreviewWrap}>
+                      <div className={styles.bannerPreviewContainer}>
+                        <img
+                          src={courseBanner}
+                          alt="Banner del Curso"
+                          className={styles.bannerPreviewImgLarge}
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = "none";
+                          }}
+                        />
                       </div>
-                    )}
-                  </div>
-                  <Input
-                    placeholder="https://... (URL del banner panorámico)"
-                    value={courseBanner}
-                    onChange={(e) => setCourseBanner(e.target.value)}
+                      <button
+                        type="button"
+                        className={styles.imageCardRemoveBtn}
+                        onClick={() => {
+                          setCourseBanner("");
+                          showToast("info", "Banner quitado", "Se ha removido la cabecera panorámica.");
+                        }}
+                        title="Quitar imagen de banner"
+                      >
+                        <Trash2 size={13} /> Quitar Banner
+                      </button>
+                    </div>
+                  ) : null}
+
+                  <FileDropzone
+                    accept="image/*"
+                    multiple={false}
+                    maxFiles={1}
+                    showList={false}
+                    label={courseBanner ? "Arrastra otra imagen para reemplazar el banner" : "Arrastra el banner panorámico aquí"}
+                    description="o haz clic para buscar en tu equipo (PNG, JPG, WEBP)"
+                    note="Recomendado: 1200x400 (3:1)"
+                    onFilesChange={handleUploadBanner}
                   />
                 </div>
               </div>
@@ -691,38 +853,79 @@ export function CoursesView() {
               </div>
             </div>
 
-            {/* 3. COMERCIALIZACIÓN, PRECIO, PLAN Y ESTADO */}
+            {/* 3. COMERCIALIZACIÓN, PRECIO Y ESTADO */}
             <div className={styles.settingsGroup}>
               <h4 className={styles.settingsGroupTitle}>
                 <DollarSign size={18} /> Comercialización, Precio y Publicación
               </h4>
 
               <div className={styles.pricingAndStatusGrid}>
-                {/* Precio */}
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Precio del Curso ($ USD)</label>
-                  <div className={styles.inputWithIcon}>
-                    <span className={styles.currencyPrefix}>$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="0.00"
-                      value={coursePrice}
-                      onChange={(e) => setCoursePrice(e.target.value === "" ? "" : Number(e.target.value))}
-                      className={styles.currencyInput}
+                {/* Switch de Curso Gratuito */}
+                <div className={styles.statusToggleBox}>
+                  <label className={styles.label}>Modalidad de Acceso</label>
+                  <div className={styles.switchRow}>
+                    <Switch
+                      checked={isFreeCourse}
+                      onCheckedChange={handleToggleFreeCourse}
+                      id="course-free-switch"
                     />
+                    <label htmlFor="course-free-switch" className={styles.switchLabel}>
+                      <span className={isFreeCourse ? styles.statusTextActive : styles.statusTextPay}>
+                        {isFreeCourse ? "Curso Gratuito" : "Curso de Pago"}
+                      </span>
+                      <span className={styles.switchSubtext}>
+                        {isFreeCourse
+                          ? "Cualquier alumno registrado puede ingresar sin coste."
+                          : "Requiere un pago para acceder al curso."}
+                      </span>
+                    </label>
                   </div>
-                  <span className={styles.inputHelper}>Precio de referencia para venta directa o catálogo.</span>
                 </div>
 
-                {/* Switch de Estado */}
+                {/* Input de Precio con formateo de moneda */}
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>
+                    Precio del Curso {isFreeCourse ? "(Gratuito)" : "($ USD)"}
+                  </label>
+                  <div className={styles.inputWithIcon}>
+                    <span className={styles.currencyPrefix} aria-hidden="true">$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      disabled={isFreeCourse}
+                      value={priceInputValue}
+                      onChange={handlePriceChange}
+                      onFocus={handlePriceFocus}
+                      onBlur={handlePriceBlur}
+                      className={[styles.currencyInput, isFreeCourse ? styles.currencyInputDisabled : ""].join(" ")}
+                    />
+                    <span className={styles.currencySuffix}>USD</span>
+                  </div>
+                  <span className={styles.inputHelper}>
+                    {isFreeCourse
+                      ? "El precio está fijado en $0.00 USD por ser curso gratuito."
+                      : "Formato en USD. Especifica el monto para venta directa."}
+                  </span>
+                </div>
+
+                {/* Switch de Publicación en la Plataforma */}
                 <div className={styles.statusToggleBox}>
                   <label className={styles.label}>Estado en la Plataforma</label>
                   <div className={styles.switchRow}>
                     <Switch
                       checked={courseStatus === "publish"}
-                      onCheckedChange={(checked) => setCourseStatus(checked ? "publish" : "draft")}
+                      onCheckedChange={(checked) => {
+                        const nextStatus = checked ? "publish" : "draft";
+                        setCourseStatus(nextStatus);
+                        showToast(
+                          "info",
+                          checked ? "Curso habilitado" : "Curso en borrador",
+                          checked
+                            ? "El curso ahora está activo y visible para los alumnos."
+                            : "El curso se encuentra en modo borrador y oculto."
+                        );
+                      }}
                       id="course-status-switch"
                     />
                     <label htmlFor="course-status-switch" className={styles.switchLabel}>
@@ -736,37 +939,6 @@ export function CoursesView() {
                       </span>
                     </label>
                   </div>
-                </div>
-
-                {/* Vinculación a Plan de Finanzas */}
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Vincular a Plan de Finanzas</label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      value={courseLinkedPlanId ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCourseLinkedPlanId(val === "" ? null : Number(val));
-                      }}
-                      className={styles.styledSelect}
-                    >
-                      <option value="">Sin vincular a ningún plan (Venta directa o gratuita)</option>
-                      {availablePlans.map((plan) => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name} — {plan.totalQuotas} {plan.totalQuotas === 1 ? "pago de" : "cuotas de"} ${plan.quotaAmount} (Total: ${plan.totalAmount})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <span className={styles.inputHelper}>
-                    {courseLinkedPlanId ? (
-                      <span className={styles.linkedPlanNotice}>
-                        <Check size={13} /> Vinculado al Plan #{courseLinkedPlanId}.
-                      </span>
-                    ) : (
-                      "Permite sincronizar este curso con planes de cuotas creados en Finanzas."
-                    )}
-                  </span>
                 </div>
               </div>
             </div>
@@ -1381,6 +1553,61 @@ export function CoursesView() {
             </div>
           </Modal>
         )}
+
+        {/* Contenedor flotante de Alertas Arc */}
+        {toast && (
+          <div className={styles.toastContainer}>
+            <Alert
+              tone={toast.tone}
+              title={toast.title}
+              onDismiss={() => setToast(null)}
+            >
+              {toast.description}
+            </Alert>
+          </div>
+        )}
+
+        {/* Modal de confirmación para eliminar (Arc) */}
+        {deleteConfirm && (
+          <Modal
+            isOpen={true}
+            onClose={() => setDeleteConfirm(null)}
+            title={deleteConfirm.title}
+            maxWidth="460px"
+            footer={
+              <>
+                <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>
+                  Cancelar
+                </Button>
+                <Button variant="danger" onClick={deleteConfirm.onConfirm}>
+                  <Trash2 size={15} /> Confirmar Eliminación
+                </Button>
+              </>
+            }
+          >
+            <div style={{ display: "flex", gap: "14px", alignItems: "flex-start", padding: "12px 0" }}>
+              <div
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "var(--radius-pill)",
+                  background: "rgba(239, 68, 68, 0.12)",
+                  color: "var(--danger)",
+                  display: "grid",
+                  placeItems: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--foreground)", lineHeight: 1.5 }}>
+                  {deleteConfirm.message}
+                </p>
+              </div>
+            </div>
+          </Modal>
+        )}
       </div>
     );
   }
@@ -1568,6 +1795,61 @@ export function CoursesView() {
           />
         </div>
       </Modal>
+
+      {/* Contenedor flotante de Alertas Arc */}
+      {toast && (
+        <div className={styles.toastContainer}>
+          <Alert
+            tone={toast.tone}
+            title={toast.title}
+            onDismiss={() => setToast(null)}
+          >
+            {toast.description}
+          </Alert>
+        </div>
+      )}
+
+      {/* Modal de confirmación para eliminar (Arc) */}
+      {deleteConfirm && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDeleteConfirm(null)}
+          title={deleteConfirm.title}
+          maxWidth="460px"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>
+                Cancelar
+              </Button>
+              <Button variant="danger" onClick={deleteConfirm.onConfirm}>
+                <Trash2 size={15} /> Confirmar Eliminación
+              </Button>
+            </>
+          }
+        >
+          <div style={{ display: "flex", gap: "14px", alignItems: "flex-start", padding: "12px 0" }}>
+            <div
+              style={{
+                width: "42px",
+                height: "42px",
+                borderRadius: "var(--radius-pill)",
+                background: "rgba(239, 68, 68, 0.12)",
+                color: "var(--danger)",
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <AlertTriangle size={22} />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--foreground)", lineHeight: 1.5 }}>
+                {deleteConfirm.message}
+              </p>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

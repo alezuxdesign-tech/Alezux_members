@@ -1386,6 +1386,10 @@ class ApiService {
     return URL.createObjectURL(file);
   }
 
+  async uploadMedia(file: File): Promise<string | null> {
+    return this.uploadLogo(file);
+  }
+
   async getAutomationLogs(typeId: string): Promise<EmailLogItem[]> {
     try {
       if (this.wpData) {
