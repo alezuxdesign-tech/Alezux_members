@@ -937,7 +937,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
               <input
                 type="text"
                 className={styles.modalInput}
-                placeholder="ej: preguntas-respuestas"
+                placeholder="preguntas-respuestas"
                 value={channelForm.name}
                 onChange={(e) =>
                   setChannelForm({
@@ -982,7 +982,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                   <input
                     type="text"
                     className={styles.modalInput}
-                    placeholder="Escribe el nombre del nuevo grupo (ej: Proyectos, Mentorías)..."
+                    placeholder="Nombre del nuevo grupo..."
                     value={customCategoryText}
                     autoFocus
                     onChange={(e) => setCustomCategoryText(e.target.value)}

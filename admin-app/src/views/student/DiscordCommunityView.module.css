@@ -1010,32 +1010,41 @@
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .modalInputPrefix {
   position: absolute;
-  left: 10px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-dim);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
   z-index: 2;
+  width: 16px;
+  height: 16px;
 }
 
 .modalInput {
   width: 100%;
-  padding: 9px 12px 9px 32px;
+  min-height: 40px;
+  padding: 10px 14px 10px 42px;
   background: var(--surface-raised);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-control);
   color: var(--foreground);
-  font-size: 13px;
+  font-size: 13.5px;
   outline: none;
   transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
   box-sizing: border-box;
+}
+
+.modalInput::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
 }
 
 .modalInput:focus {
