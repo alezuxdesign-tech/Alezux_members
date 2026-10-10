@@ -24,6 +24,7 @@ import { FinanceView } from "./views/FinanceView";
 import { MarketingView } from "./views/MarketingView";
 import { SettingsView } from "./views/SettingsView";
 import { api } from "./services/api";
+import { hexToRgb, getContrastForeground } from "./components/arc/color-picker/color-utils";
 import styles from "./App.module.css";
 
 type TabId = "overview" | "courses" | "students" | "finance" | "marketing" | "settings";
@@ -37,31 +38,30 @@ interface NavItemConfig {
 
 function applyAccentColor(accent: string, theme: "dark" | "light") {
   const root = document.documentElement;
-  const presets = ["violet", "blue", "green", "amber", "coral", "neutral"];
+  const presets: Record<string, { hex: string; fg: string }> = {
+    violet: { hex: "#7747ff", fg: "#ffffff" },
+    blue: { hex: "#0562ef", fg: "#ffffff" },
+    green: { hex: "#0db879", fg: "#ffffff" },
+    amber: { hex: "#f3ad20", fg: "#090a0f" },
+    coral: { hex: "#f15f55", fg: "#ffffff" },
+    neutral: { hex: "#71717a", fg: "#ffffff" },
+  };
 
-  if (presets.includes(accent)) {
+  if (presets[accent]) {
     root.dataset.accent = accent;
     root.style.removeProperty("--accent");
     root.style.removeProperty("--accent-strong");
     root.style.removeProperty("--accent-subtle");
     root.style.removeProperty("--control-on");
     root.style.removeProperty("--control-fill");
+    root.style.setProperty("--accent-foreground", presets[accent].fg);
+    root.style.setProperty("--control-glyph", presets[accent].fg);
   } else {
-    // Es un color hexadecimal personalizado (ej: #0db879 o #ff5500)
+    // Es un color hexadecimal personalizado (ej: #C7F804 o #0db879)
     root.dataset.accent = "custom";
     const hex = accent.startsWith("#") ? accent : `#${accent}`;
-
-    let r = 119, g = 71, b = 255;
-    const cleanHex = hex.replace("#", "");
-    if (cleanHex.length === 6) {
-      r = parseInt(cleanHex.substring(0, 2), 16) || 0;
-      g = parseInt(cleanHex.substring(2, 4), 16) || 0;
-      b = parseInt(cleanHex.substring(4, 6), 16) || 0;
-    } else if (cleanHex.length === 3) {
-      r = parseInt(cleanHex[0] + cleanHex[0], 16) || 0;
-      g = parseInt(cleanHex[1] + cleanHex[1], 16) || 0;
-      b = parseInt(cleanHex[2] + cleanHex[2], 16) || 0;
-    }
+    const { r, g, b } = hexToRgb(hex);
+    const fg = getContrastForeground(hex);
 
     const subtleAlpha = theme === "dark" ? 0.22 : 0.13;
     const strongHex = theme === "dark"
@@ -73,6 +73,8 @@ function applyAccentColor(accent: string, theme: "dark" | "light") {
     root.style.setProperty("--control-fill", hex);
     root.style.setProperty("--accent-strong", strongHex);
     root.style.setProperty("--accent-subtle", `rgba(${r}, ${g}, ${b}, ${subtleAlpha})`);
+    root.style.setProperty("--accent-foreground", fg);
+    root.style.setProperty("--control-glyph", fg);
   }
 }
 

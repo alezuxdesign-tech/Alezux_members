@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { GraduationCap, Palette, Check, Trash2, Pipette } from "lucide-react";
+import { GraduationCap, Palette, Check, Trash2 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { SegmentedControl } from "../components/arc/segmented-control/segmented-control";
 import { Input } from "../components/arc/input/input";
 import { FileDropzone } from "../components/arc/file-dropzone/file-dropzone";
 import { Alert } from "../components/arc/alert/alert";
+import { ColorPicker } from "../components/arc/color-picker/color-picker";
+import { getContrastForeground } from "../components/arc/color-picker/color-utils";
 import { api } from "../services/api";
 import styles from "./SettingsView.module.css";
 
@@ -82,27 +84,6 @@ export function SettingsView({
     }
   }, [currentAccent]);
 
-  const handleCustomHexChange = (val: string) => {
-    let formatted = val.trim();
-    if (!formatted.startsWith("#")) {
-      formatted = "#" + formatted;
-    }
-    setCustomHex(formatted);
-    if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(formatted)) {
-      onAccentChange(formatted);
-    }
-  };
-
-  const quickCustomColors = [
-    { hex: "#6366f1", name: "Índigo" },
-    { hex: "#06b6d4", name: "Cian" },
-    { hex: "#10b981", name: "Esmeralda" },
-    { hex: "#84cc16", name: "Lima" },
-    { hex: "#e11d48", name: "Rubí" },
-    { hex: "#ec4899", name: "Rosa" },
-    { hex: "#8b5cf6", name: "Púrpura" },
-    { hex: "#f97316", name: "Naranja" },
-  ];
 
   const themeOptions = [
     { value: "dark", label: "Modo Oscuro" },
@@ -314,74 +295,35 @@ export function SettingsView({
               <span className={styles.accentName}>
                 {!isPreset ? `Personalizado (${customHex.toUpperCase()})` : "Color Personalizado"}
               </span>
-              {!isPreset && <Check size={14} className={styles.checkIcon} />}
+              {!isPreset && (
+                <Check
+                  size={14}
+                  className={styles.checkIcon}
+                  style={{ color: "var(--accent)" }}
+                />
+              )}
             </div>
           </div>
 
-          {/* Panel de Configuración de Color Personalizado */}
+          {/* Panel de Configuración de Color Personalizado con Arc ColorPicker */}
           <div className={styles.customColorBox}>
             <div className={styles.customColorHeader}>
-              <Pipette size={16} className={styles.customColorIcon} />
+              <Palette size={18} className={styles.customColorIcon} />
               <div className={styles.customColorTextWrap}>
-                <span className={styles.customColorTitle}>Paleta de Color Personalizado</span>
+                <span className={styles.customColorTitle}>Selector de Color de Arc UI</span>
                 <span className={styles.customColorSub}>
-                  Elige cualquier color de tu marca mediante el selector visual o ingresa el código HEX.
+                  Ajusta el tono exacto con el lienzo 2D, el slider de espectro o códigos HEX. El sistema calcula automáticamente el contraste óptimo (blanco o negro) en botones y textos para evitar que rechinen.
                 </span>
               </div>
             </div>
 
-            <div className={styles.customColorControls}>
-              <div className={styles.pickerWrapper} title="Haz clic para abrir el selector visual de color">
-                <input
-                  type="color"
-                  className={styles.nativeColorInput}
-                  value={
-                    customHex.startsWith("#") && (customHex.length === 7 || customHex.length === 4)
-                      ? customHex
-                      : "#6366f1"
-                  }
-                  onChange={(e) => handleCustomHexChange(e.target.value)}
-                />
-                <span className={styles.pickerPreviewSwatch} style={{ backgroundColor: customHex }} />
-              </div>
-
-              <div className={styles.hexInputWrap}>
-                <span className={styles.hexPrefix}>HEX</span>
-                <input
-                  type="text"
-                  className={styles.hexInput}
-                  value={customHex.toUpperCase()}
-                  onChange={(e) => handleCustomHexChange(e.target.value)}
-                  maxLength={7}
-                  placeholder="#6366F1"
-                />
-              </div>
-
-              <button
-                type="button"
-                className={styles.applyColorBtn}
-                onClick={() => onAccentChange(customHex)}
-              >
-                Aplicar color
-              </button>
-
-              <div className={styles.quickColorsList}>
-                <span className={styles.quickColorsLabel}>Sugeridos:</span>
-                {quickCustomColors.map((c) => (
-                  <button
-                    key={c.hex}
-                    type="button"
-                    className={[
-                      styles.quickColorDot,
-                      currentAccent.toLowerCase() === c.hex.toLowerCase() ? styles.quickColorActive : "",
-                    ].join(" ")}
-                    style={{ backgroundColor: c.hex }}
-                    onClick={() => handleCustomHexChange(c.hex)}
-                    title={`${c.name} (${c.hex})`}
-                  />
-                ))}
-              </div>
-            </div>
+            <ColorPicker
+              value={customHex}
+              onChange={(newHex) => {
+                setCustomHex(newHex);
+                onAccentChange(newHex);
+              }}
+            />
           </div>
 
           <div className={styles.themeToggleRow}>

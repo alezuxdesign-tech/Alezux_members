@@ -1,0 +1,261 @@
+.colorPickerRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel, 1.25rem);
+  box-shadow: var(--shadow-resting);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+}
+
+/* Área 2D de Saturación y Brillo */
+.saturationArea {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: var(--radius-control, 0.75rem);
+  overflow: hidden;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.saturationWhite {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #ffffff, transparent);
+}
+
+.saturationBlack {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #000000, transparent);
+}
+
+.saturationHandle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6), inset 0 0 2px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: transform var(--duration-fast);
+}
+
+/* Slider de Tono (Hue) */
+.hueSliderWrap {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  border-radius: var(--radius-pill, 9999px);
+  background: linear-gradient(to right, 
+    #ff0000 0%, 
+    #ffff00 17%, 
+    #00ff00 33%, 
+    #00ffff 50%, 
+    #0000ff 67%, 
+    #ff00ff 83%, 
+    #ff0000 100%
+  );
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.hueThumb {
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--surface);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: transform var(--duration-fast);
+}
+
+/* Fila de Controles y Previsualización */
+.controlsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.previewSwatch {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: var(--radius-control, 0.75rem);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hexInputGroup {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 0.75rem);
+  height: 38px;
+  padding: 0 var(--space-3);
+  gap: 6px;
+  flex: 1;
+  min-width: 140px;
+  transition: border-color var(--duration-fast);
+}
+
+.hexInputGroup:focus-within {
+  border-color: var(--accent);
+}
+
+.hexLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.hexInputField {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  text-transform: uppercase;
+}
+
+/* Muestra de Contraste Inteligente (WCAG) */
+.contrastPreviewCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control, 0.75rem);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  gap: var(--space-3);
+}
+
+.contrastDemoButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-control, 0.75rem);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all var(--duration-fast);
+  box-shadow: var(--shadow-resting);
+  cursor: default;
+}
+
+.contrastInfoText {
+  display: flex;
+  flex-direction: column;
+}
+
+.contrastTitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.contrastSubtitle {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.contrastBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill, 9999px);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+/* Muestras Rápidas (Swatches) */
+.swatchesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.swatchesLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.swatchesGrid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.swatchBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--duration-fast), border-color var(--duration-fast);
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.swatchBtn:hover {
+  transform: scale(1.2);
+}
+
+.swatchActive {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.eyedropperBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 0.75rem);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.eyedropperBtn:hover {
+  background: var(--surface-raised);
+  color: var(--foreground);
+  border-color: var(--border-strong);
+}
