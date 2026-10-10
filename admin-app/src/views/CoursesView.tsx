@@ -223,19 +223,9 @@ export function CoursesView() {
     const newSection: CourseSection = {
       id: `sec-${Date.now()}`,
       title: `Nuevo Módulo ${sections.length + 1}`,
-      cover: courseThumbnail || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
+      cover: "",
       description: "",
-      lessons: [
-        {
-          id: `top-${Date.now()}`,
-          title: "Lección 1: Introducción y Objetivos",
-          duration: "10m",
-          cover: "",
-          description: "Descripción de la lección.",
-          video_url: "",
-          files: [],
-        },
-      ],
+      lessons: [],
     };
 
     if (typeof afterIndex === "number") {
@@ -478,33 +468,6 @@ export function CoursesView() {
             <button type="button" className={styles.backBtn} onClick={handleBackToGrid}>
               <ArrowLeft size={16} /> Volver a Cursos
             </button>
-
-            <div className={styles.builderBreadcrumb}>
-              <h2 className={styles.builderCourseName}>{courseTitle || selectedCourse.title}</h2>
-              <div className={styles.builderMetaBadges}>
-                <Badge variant={courseStatus === "publish" ? "success" : "neutral"} size="sm">
-                  {courseStatus === "publish" ? "Habilitado / Publicado" : "Deshabilitado / Borrador"}
-                </Badge>
-                <span>&bull;</span>
-                <span>{sections.length} Módulos</span>
-                <span>&bull;</span>
-                <span>{totalTopics} Topics / Lecciones</span>
-                {coursePrice !== undefined && coursePrice !== "" && Number(coursePrice) > 0 && (
-                  <>
-                    <span>&bull;</span>
-                    <span style={{ color: "#38bdf8", fontWeight: 700 }}>${coursePrice} USD</span>
-                  </>
-                )}
-                {courseLinkedPlanId && (
-                  <>
-                    <span>&bull;</span>
-                    <span style={{ color: "#c084fc", fontWeight: 600 }}>
-                      Plan: {availablePlans.find((p) => p.id === courseLinkedPlanId)?.name || `#${courseLinkedPlanId}`}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
           </div>
 
           <div className={styles.builderNavRight}>
