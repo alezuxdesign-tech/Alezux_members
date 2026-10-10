@@ -5,7 +5,21 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'wrap-iife',
+      renderChunk(code, chunk) {
+        if (chunk.fileName.endsWith('.js')) {
+          return {
+            code: `(() => {\n${code}\n})();`,
+            map: null,
+          };
+        }
+        return null;
+      },
+    },
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

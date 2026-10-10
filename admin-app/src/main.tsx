@@ -1,5 +1,7 @@
 import React from "react";
-import ReactDOM from "react-dom/client";
+import { createRoot } from "react-dom/client";
+import * as ReactDOMClient from "react-dom/client";
+import ReactDOM from "react-dom";
 import "./components/arc/foundation.css";
 import "./index.css";
 import App from "./App";
@@ -104,15 +106,38 @@ function mountApp() {
     console.log("%c🚀 [Crezca Bundle] Crezca root container detected. Initializing React 18...", "color: #a855f7; font-weight: bold; font-size: 14px;");
     container.innerHTML = "";
     try {
-      const root = ReactDOM.createRoot(container);
-      root.render(
-        <React.StrictMode>
-          <ErrorBoundary>
-            <App />
-          </ErrorBoundary>
-        </React.StrictMode>
-      );
-      console.log("%c✅ [Crezca Bundle] React dashboard mounted successfully into DOM!", "color: #22c55e; font-weight: bold; font-size: 15px;");
+      const getMountFn = () => {
+        if (typeof createRoot === "function") return createRoot;
+        if (typeof (ReactDOMClient as any)?.createRoot === "function") return (ReactDOMClient as any).createRoot;
+        if (typeof (ReactDOMClient as any)?.default?.createRoot === "function") return (ReactDOMClient as any).default.createRoot;
+        if (typeof (ReactDOM as any)?.createRoot === "function") return (ReactDOM as any).createRoot;
+        return null;
+      };
+
+      const mountFn = getMountFn();
+      if (mountFn) {
+        const root = mountFn(container);
+        root.render(
+          <React.StrictMode>
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
+          </React.StrictMode>
+        );
+        console.log("%c✅ [Crezca Bundle] React dashboard mounted successfully into DOM via createRoot!", "color: #22c55e; font-weight: bold; font-size: 15px;");
+      } else if (typeof (ReactDOM as any)?.render === "function") {
+        (ReactDOM as any).render(
+          <React.StrictMode>
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
+          </React.StrictMode>,
+          container
+        );
+        console.log("%c✅ [Crezca Bundle] React dashboard mounted with legacy render!", "color: #22c55e; font-weight: bold; font-size: 15px;");
+      } else {
+        throw new Error("No React mounting function (createRoot or render) found!");
+      }
     } catch (err) {
       console.error("❌ [Crezca Bundle] Fatal error during createRoot/render:", err);
     }

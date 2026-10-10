@@ -47,13 +47,7 @@ $css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : time();
   }, 4000);
 </script>
 
-<link 
-  rel="stylesheet" 
-  id="crezca-direct-arc-css" 
-  href="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.css?v=' . $css_ver ); ?>"
-  onload="console.log('✅ [Crezca Diagnostic] CSS alezux-dashboard.css cargado correctamente.');"
-  onerror="console.error('❌ [Crezca Diagnostic] Error al cargar alezux-dashboard.css:', this.href);"
->
+
 
 <script id="crezca-direct-admin-data">
   window.crezca_admin_data = <?php echo json_encode([
@@ -66,12 +60,7 @@ $css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : time();
   window.alezux_admin_data = window.crezca_admin_data;
 </script>
 
-<script 
-  id="crezca-direct-arc-js" 
-  src="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.js?v=' . $js_ver ); ?>"
-  onload="console.log('%c✅ [Crezca Diagnostic] alezux-dashboard.js DESCARGADO y ejecutado por el navegador.', 'color: #22c55e; font-weight: bold;');"
-  onerror="console.error('%c❌ [Crezca Diagnostic] ERROR HTTP AL DESCARGAR alezux-dashboard.js. Verifica la pestaña Network (Código 404, 403 o CORS):', 'color: #ef4444; font-weight: bold;', this.src);"
-></script>
+
 
 <?php if ( ! $has_arc_bundle ) : ?>
 <style>
