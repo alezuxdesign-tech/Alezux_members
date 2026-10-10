@@ -24,7 +24,9 @@ import {
   CreditCard,
   Sliders,
   Settings,
-  Tag
+  Tag,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -97,6 +99,7 @@ export function CoursesView() {
 
   // Drag and Drop state
   const [draggedLesson, setDraggedLesson] = useState<{ sectionId: string; lessonIndex: number } | null>(null);
+  const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
 
   // Modal Detallado de Topic / Lección
   const [editingTopicState, setEditingTopicState] = useState<EditingTopicState | null>(null);
@@ -407,6 +410,35 @@ export function CoursesView() {
 
     setSections(newSections);
     setDraggedLesson(null);
+  };
+
+  // --- REORDENACIÓN DE MÓDULOS ---
+  const handleDropSection = (targetIndex: number) => {
+    if (draggedSectionIndex === null || draggedSectionIndex === targetIndex) {
+      setDraggedSectionIndex(null);
+      return;
+    }
+    const updated = [...sections];
+    const [moved] = updated.splice(draggedSectionIndex, 1);
+    updated.splice(targetIndex, 0, moved);
+    setSections(updated);
+    setDraggedSectionIndex(null);
+  };
+
+  const handleMoveSectionUp = (index: number) => {
+    if (index <= 0) return;
+    const updated = [...sections];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(index - 1, 0, moved);
+    setSections(updated);
+  };
+
+  const handleMoveSectionDown = (index: number) => {
+    if (index >= sections.length - 1) return;
+    const updated = [...sections];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(index + 1, 0, moved);
+    setSections(updated);
   };
 
   // --- GUARDADO DE CURRÍCULUM EN SERVIDOR ---
@@ -798,8 +830,19 @@ export function CoursesView() {
               const topicsCount = section.lessons ? section.lessons.length : 0;
 
               return (
-                <div key={section.id} className={styles.moduleBlockWrapper}>
-                  <div className={styles.moduleCard}>
+                <div
+                  key={section.id}
+                  className={[
+                    styles.moduleCard,
+                    draggedSectionIndex === sIdx ? styles.moduleCardDragging : "",
+                  ].join(" ")}
+                  onDragOver={(e) => {
+                    if (draggedSectionIndex !== null) e.preventDefault();
+                  }}
+                  onDrop={() => {
+                    if (draggedSectionIndex !== null) handleDropSection(sIdx);
+                  }}
+                >
                   {/* Encabezado del Módulo con Portada de Módulo */}
                   <div
                     className={[
@@ -808,6 +851,42 @@ export function CoursesView() {
                     ].join(" ")}
                   >
                     <div className={styles.moduleHeaderLeft}>
+                      {/* Drag Handle para reordenar módulo */}
+                      <div
+                        className={styles.moduleDragHandle}
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation();
+                          setDraggedSectionIndex(sIdx);
+                        }}
+                        onDragEnd={() => setDraggedSectionIndex(null)}
+                        title="Arrastrar para cambiar el orden de este módulo"
+                      >
+                        <GripVertical size={16} />
+                      </div>
+
+                      {/* Botones de subida y bajada rápida de orden */}
+                      <div className={styles.reorderButtons}>
+                        <button
+                          type="button"
+                          className={styles.reorderBtn}
+                          onClick={() => handleMoveSectionUp(sIdx)}
+                          disabled={sIdx === 0}
+                          title="Mover módulo hacia arriba"
+                        >
+                          <ArrowUp size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.reorderBtn}
+                          onClick={() => handleMoveSectionDown(sIdx)}
+                          disabled={sIdx === sections.length - 1}
+                          title="Mover módulo hacia abajo"
+                        >
+                          <ArrowDown size={11} />
+                        </button>
+                      </div>
+
                       <button
                         type="button"
                         className={styles.collapseBtn}
@@ -1003,22 +1082,21 @@ export function CoursesView() {
                   </>
                 )}
               </div>
+            );
+          })}
 
-              {/* Botón "+ Nuevo Módulo" ubicado debajo de cada módulo */}
-              <div className={styles.addModuleBelowWrapper}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleAddSection(sIdx)}
-                  className={styles.addModuleBelowBtn}
-                  title="Añadir un nuevo módulo debajo de este"
-                >
-                  <Plus size={15} /> Nuevo Módulo
-                </Button>
-              </div>
+            {/* Botón único de Nuevo Módulo al final de todos los módulos */}
+            <div className={styles.addModuleBelowWrapper}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleAddSection()}
+                className={styles.addModuleBelowBtn}
+                title="Añadir un nuevo módulo al final del curso"
+              >
+                <Plus size={15} /> Nuevo Módulo
+              </Button>
             </div>
-          );
-        })}
 
           {sections.length === 0 && (
             <div className={styles.emptyGrid}>

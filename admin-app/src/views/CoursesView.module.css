@@ -774,6 +774,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  margin-top: 16px;
+  margin-bottom: 24px;
   padding-left: 2px;
 }
 
@@ -795,7 +797,62 @@
   border-radius: var(--radius-panel);
   overflow: hidden;
   box-shadow: var(--shadow-resting);
-  transition: border-color var(--duration-fast);
+  transition: all var(--duration-fast);
+}
+
+.moduleCardDragging {
+  opacity: 0.45;
+  border: 1px dashed var(--accent) !important;
+  box-shadow: 0 4px 16px rgba(119, 71, 255, 0.2);
+}
+
+.moduleDragHandle {
+  cursor: grab;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all var(--duration-fast);
+}
+
+.moduleDragHandle:hover {
+  color: var(--foreground);
+  background: var(--surface-muted);
+}
+
+.moduleDragHandle:active {
+  cursor: grabbing;
+}
+
+.reorderButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.reorderBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast);
+  line-height: 1;
+}
+
+.reorderBtn:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--surface-muted);
+}
+
+.reorderBtn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
 }
 
 .moduleCard:hover {
