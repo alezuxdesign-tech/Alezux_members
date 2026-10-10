@@ -527,7 +527,7 @@ class Admin_Api {
 				if ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table ) {
 					$token = $wpdb->get_var( $wpdb->prepare( "SELECT token FROM $plans_table WHERE id = %d", $linked_plan_id ) );
 					if ( $token ) {
-						$checkout_url = home_url( '/pago/?plan=' . $token );
+						$checkout_url = home_url( "/?alezux_action=checkout&token={$token}" );
 					}
 				}
 			}

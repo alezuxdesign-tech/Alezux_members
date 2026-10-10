@@ -1261,64 +1261,49 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : 'pagomov
 							<h2 class="block-title">Tus Datos de Acceso</h2>
 						</div>
 
-						<?php if ( $is_logged_in ) : ?>
-							<div class="logged-in-notice">
-								<!-- Lucide User -->
-								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-								<span>Sesión activa como <strong><?php echo esc_html( $current_user_name ); ?></strong> (<?php echo esc_html( $current_user_email ); ?>). Tu acceso se asignará a esta cuenta.</span>
+						<p style="font-size: 0.84rem; color: var(--arc-text-muted); margin-top: -6px;">
+							Ingresa tus datos personales para crear tu cuenta y enviarte tus credenciales de acceso al aula virtual.
+						</p>
+
+						<div class="form-grid">
+							<div class="form-group">
+								<label class="arc-label">Nombre Completo *</label>
+								<input 
+									type="text" 
+									name="student_name" 
+									id="input_student_name"
+									class="arc-input" 
+									placeholder="Ej: Carlos Mendoza" 
+									value="<?php echo esc_attr( $current_user_name ); ?>"
+									required
+								>
 							</div>
-							<input type="hidden" name="student_name" value="<?php echo esc_attr( $current_user_name ); ?>">
-							<input type="hidden" name="student_email" value="<?php echo esc_attr( $current_user_email ); ?>">
-							
+
+							<div class="form-group">
+								<label class="arc-label">Correo Electrónico *</label>
+								<input 
+									type="email" 
+									name="student_email" 
+									id="input_student_email"
+									class="arc-input" 
+									placeholder="carlos@ejemplo.com" 
+									value="<?php echo esc_attr( $current_user_email ); ?>"
+									required
+								>
+							</div>
+
 							<div class="form-group full-width">
-								<label class="arc-label">Teléfono / WhatsApp de Contacto *</label>
+								<label class="arc-label">Teléfono / WhatsApp *</label>
 								<input 
 									type="tel" 
 									name="student_phone" 
+									id="input_student_phone"
 									class="arc-input" 
 									placeholder="+58 412 1234567" 
 									required
 								>
 							</div>
-						<?php else : ?>
-							<div class="form-grid">
-								<div class="form-group">
-									<label class="arc-label">Nombre Completo *</label>
-									<input 
-										type="text" 
-										name="student_name" 
-										id="input_student_name"
-										class="arc-input" 
-										placeholder="Ej: Carlos Mendoza" 
-										required
-									>
-								</div>
-
-								<div class="form-group">
-									<label class="arc-label">Correo Electrónico *</label>
-									<input 
-										type="email" 
-										name="student_email" 
-										id="input_student_email"
-										class="arc-input" 
-										placeholder="carlos@ejemplo.com" 
-										required
-									>
-								</div>
-
-								<div class="form-group full-width">
-									<label class="arc-label">Teléfono / WhatsApp *</label>
-									<input 
-										type="tel" 
-										name="student_phone" 
-										id="input_student_phone"
-										class="arc-input" 
-										placeholder="+58 412 1234567" 
-										required
-									>
-								</div>
-							</div>
-						<?php endif; ?>
+						</div>
 					</div>
 
 					<!-- PASO 2: SELECCIÓN DE MÉTODO DE PAGO -->
@@ -1416,88 +1401,95 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : 'pagomov
 								<?php endforeach; ?>
 
 							</div>
-
-							<!-- SECCIÓN DE REFERENCIA & FILE DROPZONE (Para métodos manuales) -->
-							<div id="manual-payment-fields" style="margin-top: 18px; display: flex; flex-direction: column; gap: 14px;">
-								<div class="form-group">
-									<label class="arc-label">Número de Referencia del Pago *</label>
-									<input 
-										type="text" 
-										name="reference" 
-										id="manual_reference_input" 
-										class="arc-input" 
-										placeholder="Ej: 6 dígitos de la transferencia, Pago Móvil o hash"
-										required
-									>
-								</div>
-
-								<!-- Arc UI File Dropzone -->
-								<div class="dropzone-container">
-									<label class="arc-label">Comprobante de Pago (Captura o Foto)</label>
-									
-									<div 
-										class="arc-dropzone" 
-										id="arc-dropzone-box"
-										onclick="document.getElementById('receipt_file_input').click()"
-										ondragover="handleDragOver(event)"
-										ondragleave="handleDragLeave(event)"
-										ondrop="handleFileDrop(event)"
-									>
-										<!-- Lucide UploadCloud -->
-										<svg class="dropzone-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
-										<span class="dropzone-title">Arrastra tu comprobante aquí o haz clic para subir</span>
-										<span class="dropzone-subtitle">Formatos: PNG, JPG, WEBP o PDF (máx. 10MB)</span>
-										<input 
-											type="file" 
-											id="receipt_file_input" 
-											name="receipt_file" 
-											class="file-hidden-input" 
-											accept="image/png,image/jpeg,image/webp,application/pdf"
-											onchange="handleFileSelected(this.files)"
-										>
-									</div>
-
-									<!-- Tarjeta de Archivo Seleccionado -->
-									<div class="file-preview-card" id="file-preview-card">
-										<div class="file-preview-info">
-											<!-- Lucide FileText -->
-											<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--arc-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
-											<div>
-												<div class="file-name" id="preview-file-name">comprobante.jpg</div>
-												<div class="file-size" id="preview-file-size">240 KB</div>
-											</div>
-										</div>
-										<button type="button" class="file-remove-btn" onclick="removeSelectedFile()" title="Quitar archivo">
-											<!-- Lucide X -->
-											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-										</button>
-									</div>
-								</div>
-							</div>
-
-							<!-- Botón de Envío Principal CTA (Lime Button) -->
-							<div class="arc-cta-container">
-								<button 
-									type="submit" 
-									id="arc-main-cta" 
-									class="arc-btn-primary"
-								>
-									<span id="arc-cta-text">Registrar Pago y Solicitar Acceso</span>
-								</button>
-
-								<div class="secure-footer-badge">
-									<!-- Lucide Lock -->
-									<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-									<span>Transacción Segura y Privada · Activación tras Verificación</span>
-								</div>
-							</div>
-
 						<?php else : ?>
 							<div class="sales-product-card" style="text-align: center; padding: 32px 20px;">
 								<p style="color: var(--arc-text-secondary); margin-bottom: 12px;">Actualmente no hay pasarelas de pago configuradas.</p>
 							</div>
 						<?php endif; ?>
+					</div>
 
+					<!-- PASO 3: REPORTAR PAGO & SUBIR COMPROBANTE -->
+					<div class="form-block" id="manual-payment-fields" style="margin-top: 18px;">
+						<div class="block-title-row">
+							<span class="step-number">3</span>
+							<h2 class="block-title">Adjuntar Comprobante de Pago</h2>
+						</div>
+
+						<p style="font-size: 0.84rem; color: var(--arc-text-muted); margin-top: -6px;">
+							Ingresa el número de referencia y adjunta la captura o comprobante de tu pago para verificar y activar tu acceso.
+						</p>
+
+						<div class="form-group">
+							<label class="arc-label">Número de Referencia del Pago *</label>
+							<input 
+								type="text" 
+								name="reference" 
+								id="manual_reference_input" 
+								class="arc-input" 
+								placeholder="Ej: 6 dígitos de la transferencia, Pago Móvil o hash"
+								required
+							>
+						</div>
+
+						<!-- Arc UI File Dropzone -->
+						<div class="dropzone-container">
+							<label class="arc-label">Comprobante de Pago (Captura o Foto) *</label>
+							
+							<div 
+								class="arc-dropzone" 
+								id="arc-dropzone-box"
+								onclick="document.getElementById('receipt_file_input').click()"
+								ondragover="handleDragOver(event)"
+								ondragleave="handleDragLeave(event)"
+								ondrop="handleFileDrop(event)"
+							>
+								<!-- Lucide UploadCloud -->
+								<svg class="dropzone-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+								<span class="dropzone-title">Arrastra tu comprobante aquí o haz clic para subir</span>
+								<span class="dropzone-subtitle">Formatos: PNG, JPG, WEBP o PDF (máx. 10MB)</span>
+								<input 
+									type="file" 
+									id="receipt_file_input" 
+									name="receipt_file" 
+									class="file-hidden-input" 
+									accept="image/png,image/jpeg,image/webp,application/pdf"
+									onchange="handleFileSelected(this.files)"
+								>
+							</div>
+
+							<!-- Tarjeta de Archivo Seleccionado -->
+							<div class="file-preview-card" id="file-preview-card">
+								<div class="file-preview-info">
+									<!-- Lucide FileText -->
+									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--arc-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+									<div>
+										<div class="file-name" id="preview-file-name">comprobante.jpg</div>
+										<div class="file-size" id="preview-file-size">240 KB</div>
+									</div>
+								</div>
+								<button type="button" class="file-remove-btn" onclick="removeSelectedFile()" title="Quitar archivo">
+									<!-- Lucide X -->
+									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- Botón de Envío Principal CTA (Lime Button) -->
+					<div class="arc-cta-container">
+						<button 
+							type="submit" 
+							id="arc-main-cta" 
+							class="arc-btn-primary"
+						>
+							<span id="arc-cta-text">Registrar Pago y Solicitar Acceso</span>
+						</button>
+
+						<div class="secure-footer-badge">
+							<!-- Lucide Lock -->
+							<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+							<span>Transacción Segura y Privada · Activación tras Verificación</span>
+						</div>
 					</div>
 				</form>
 
