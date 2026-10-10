@@ -92,6 +92,18 @@ body {
   color: var(--text-muted) !important;
 }
 
+#crezca-admin-root input:hover,
+#crezca-admin-root select:hover,
+#crezca-admin-root textarea:hover,
+#crezca-student-root input:hover,
+#crezca-student-root select:hover,
+#crezca-student-root textarea:hover,
+#alezux-admin-root input:hover,
+#alezux-admin-root select:hover,
+#alezux-admin-root textarea:hover {
+  border-color: var(--border-strong) !important;
+}
+
 #crezca-admin-root input:focus,
 #crezca-admin-root select:focus,
 #crezca-admin-root textarea:focus,
@@ -113,37 +125,3 @@ body {
   box-shadow: none;
 }
 
-/* Ensure nested inputs inside styled containers never display internal borders or focus rings */
-#crezca-admin-root [class*="container"] input,
-#crezca-admin-root [class*="container"] input:focus,
-#crezca-admin-root [class*="inputRoot"] input,
-#crezca-admin-root [class*="inputRoot"] input:focus,
-#crezca-admin-root [class*="arcInput"] input,
-#crezca-admin-root [class*="arcInput"] input:focus,
-#crezca-admin-root [class*="inputBox"] input,
-#crezca-admin-root [class*="inputBox"] input:focus,
-#crezca-student-root [class*="container"] input,
-#crezca-student-root [class*="container"] input:focus,
-#crezca-student-root [class*="inputRoot"] input,
-#crezca-student-root [class*="inputRoot"] input:focus,
-#crezca-student-root [class*="arcInput"] input,
-#crezca-student-root [class*="arcInput"] input:focus,
-#crezca-student-root [class*="inputBox"] input,
-#crezca-student-root [class*="inputBox"] input:focus,
-#alezux-admin-root [class*="container"] input,
-#alezux-admin-root [class*="container"] input:focus,
-#alezux-admin-root [class*="inputRoot"] input,
-#alezux-admin-root [class*="inputRoot"] input:focus,
-#alezux-admin-root [class*="arcInput"] input,
-#alezux-admin-root [class*="arcInput"] input:focus,
-#alezux-admin-root [class*="inputBox"] input,
-#alezux-admin-root [class*="inputBox"] input:focus {
-  border: none !important;
-  border-width: 0 !important;
-  border-color: transparent !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  outline: none !important;
-  background: transparent !important;
-  background-color: transparent !important;
-}
