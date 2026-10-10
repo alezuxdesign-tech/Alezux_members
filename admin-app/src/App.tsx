@@ -35,6 +35,65 @@ interface NavItemConfig {
   badge?: string;
 }
 
+function applyAccentColor(accent: string, theme: "dark" | "light") {
+  const root = document.documentElement;
+  const presets = ["violet", "blue", "green", "amber", "coral", "neutral"];
+
+  if (presets.includes(accent)) {
+    root.dataset.accent = accent;
+    root.style.removeProperty("--accent");
+    root.style.removeProperty("--accent-strong");
+    root.style.removeProperty("--accent-subtle");
+    root.style.removeProperty("--control-on");
+    root.style.removeProperty("--control-fill");
+  } else {
+    // Es un color hexadecimal personalizado (ej: #0db879 o #ff5500)
+    root.dataset.accent = "custom";
+    const hex = accent.startsWith("#") ? accent : `#${accent}`;
+
+    let r = 119, g = 71, b = 255;
+    const cleanHex = hex.replace("#", "");
+    if (cleanHex.length === 6) {
+      r = parseInt(cleanHex.substring(0, 2), 16) || 0;
+      g = parseInt(cleanHex.substring(2, 4), 16) || 0;
+      b = parseInt(cleanHex.substring(4, 6), 16) || 0;
+    } else if (cleanHex.length === 3) {
+      r = parseInt(cleanHex[0] + cleanHex[0], 16) || 0;
+      g = parseInt(cleanHex[1] + cleanHex[1], 16) || 0;
+      b = parseInt(cleanHex[2] + cleanHex[2], 16) || 0;
+    }
+
+    const subtleAlpha = theme === "dark" ? 0.22 : 0.13;
+    const strongHex = theme === "dark"
+      ? `color-mix(in srgb, ${hex} 82%, #ffffff)`
+      : `color-mix(in srgb, ${hex} 82%, #000000)`;
+
+    root.style.setProperty("--accent", hex);
+    root.style.setProperty("--control-on", hex);
+    root.style.setProperty("--control-fill", hex);
+    root.style.setProperty("--accent-strong", strongHex);
+    root.style.setProperty("--accent-subtle", `rgba(${r}, ${g}, ${b}, ${subtleAlpha})`);
+  }
+}
+
+function setBrowserFavicon(url: string) {
+  if (!url) return;
+  // Eliminar favicons anteriores de WP para asegurar que el navegador actualice de inmediato
+  const existingLinks = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
+  existingLinks.forEach((el) => el.remove());
+
+  const linkShortcut = document.createElement("link");
+  linkShortcut.rel = "shortcut icon";
+  linkShortcut.href = url;
+
+  const linkIcon = document.createElement("link");
+  linkIcon.rel = "icon";
+  linkIcon.href = url;
+
+  document.head.appendChild(linkShortcut);
+  document.head.appendChild(linkIcon);
+}
+
 export function App() {
   const wpData = (window as any).crezca_admin_data || (window as any).alezux_admin_data || {};
 
@@ -72,7 +131,7 @@ export function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.documentElement.dataset.accent = accent;
+    applyAccentColor(accent, theme);
     localStorage.setItem("crezca_theme", theme);
     localStorage.setItem("crezca_accent", accent);
 
@@ -93,13 +152,7 @@ export function App() {
 
   useEffect(() => {
     if (academyLogo) {
-      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
-      if (!link) {
-        link = document.createElement("link");
-        link.rel = "shortcut icon";
-        document.head.appendChild(link);
-      }
-      link.href = academyLogo;
+      setBrowserFavicon(academyLogo);
     }
   }, [academyLogo]);
 
@@ -113,12 +166,14 @@ export function App() {
       if (s.academy_logo) {
         setAcademyLogo(s.academy_logo);
         localStorage.setItem("crezca_academy_logo", s.academy_logo);
+        setBrowserFavicon(s.academy_logo);
       }
       if (s.theme && !localStorage.getItem("crezca_theme")) {
         setTheme(s.theme);
       }
       if (s.accent && !localStorage.getItem("crezca_accent")) {
         setAccent(s.accent);
+        applyAccentColor(s.accent, theme);
       }
     });
   }, []);
@@ -128,6 +183,7 @@ export function App() {
       const next = prev === "dark" ? "light" : "dark";
       localStorage.setItem("crezca_theme", next);
       document.documentElement.dataset.theme = next;
+      applyAccentColor(accent, next);
       api.savePlatformSettings({ theme: next });
       return next;
     });
@@ -136,7 +192,7 @@ export function App() {
   const handleAccentChange = (newAccent: string) => {
     setAccent(newAccent);
     localStorage.setItem("crezca_accent", newAccent);
-    document.documentElement.dataset.accent = newAccent;
+    applyAccentColor(newAccent, theme);
     api.savePlatformSettings({ accent: newAccent });
   };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GraduationCap, Palette, Check, Trash2, Image as ImageIcon } from "lucide-react";
+import { GraduationCap, Palette, Check, Trash2, Pipette } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { SegmentedControl } from "../components/arc/segmented-control/segmented-control";
 import { Input } from "../components/arc/input/input";
@@ -69,6 +69,39 @@ export function SettingsView({
     { id: "amber", name: "Ámbar Dorado", color: "#f3ad20" },
     { id: "coral", name: "Coral Sunset", color: "#f15f55" },
     { id: "neutral", name: "Neutral Minimal", color: "#71717a" },
+  ];
+
+  const isPreset = accents.some((a) => a.id === currentAccent);
+  const [customHex, setCustomHex] = useState(() => {
+    return isPreset ? "#6366f1" : currentAccent;
+  });
+
+  useEffect(() => {
+    if (!accents.some((a) => a.id === currentAccent) && currentAccent) {
+      setCustomHex(currentAccent);
+    }
+  }, [currentAccent]);
+
+  const handleCustomHexChange = (val: string) => {
+    let formatted = val.trim();
+    if (!formatted.startsWith("#")) {
+      formatted = "#" + formatted;
+    }
+    setCustomHex(formatted);
+    if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(formatted)) {
+      onAccentChange(formatted);
+    }
+  };
+
+  const quickCustomColors = [
+    { hex: "#6366f1", name: "Índigo" },
+    { hex: "#06b6d4", name: "Cian" },
+    { hex: "#10b981", name: "Esmeralda" },
+    { hex: "#84cc16", name: "Lima" },
+    { hex: "#e11d48", name: "Rubí" },
+    { hex: "#ec4899", name: "Rosa" },
+    { hex: "#8b5cf6", name: "Púrpura" },
+    { hex: "#f97316", name: "Naranja" },
   ];
 
   const themeOptions = [
@@ -264,6 +297,91 @@ export function SettingsView({
                 </div>
               );
             })}
+
+            {/* Opción Personalizada */}
+            <div
+              className={[styles.accentItem, !isPreset ? styles.accentActive : ""].join(" ")}
+              onClick={() => onAccentChange(customHex)}
+            >
+              <span
+                className={styles.colorCircle}
+                style={{
+                  background: !isPreset
+                    ? customHex
+                    : "conic-gradient(from 180deg at 50% 50%, #f43f5e 0deg, #ec4899 72deg, #8b5cf6 144deg, #3b82f6 216deg, #10b981 288deg, #f59e0b 360deg)",
+                }}
+              />
+              <span className={styles.accentName}>
+                {!isPreset ? `Personalizado (${customHex.toUpperCase()})` : "Color Personalizado"}
+              </span>
+              {!isPreset && <Check size={14} className={styles.checkIcon} />}
+            </div>
+          </div>
+
+          {/* Panel de Configuración de Color Personalizado */}
+          <div className={styles.customColorBox}>
+            <div className={styles.customColorHeader}>
+              <Pipette size={16} className={styles.customColorIcon} />
+              <div className={styles.customColorTextWrap}>
+                <span className={styles.customColorTitle}>Paleta de Color Personalizado</span>
+                <span className={styles.customColorSub}>
+                  Elige cualquier color de tu marca mediante el selector visual o ingresa el código HEX.
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.customColorControls}>
+              <div className={styles.pickerWrapper} title="Haz clic para abrir el selector visual de color">
+                <input
+                  type="color"
+                  className={styles.nativeColorInput}
+                  value={
+                    customHex.startsWith("#") && (customHex.length === 7 || customHex.length === 4)
+                      ? customHex
+                      : "#6366f1"
+                  }
+                  onChange={(e) => handleCustomHexChange(e.target.value)}
+                />
+                <span className={styles.pickerPreviewSwatch} style={{ backgroundColor: customHex }} />
+              </div>
+
+              <div className={styles.hexInputWrap}>
+                <span className={styles.hexPrefix}>HEX</span>
+                <input
+                  type="text"
+                  className={styles.hexInput}
+                  value={customHex.toUpperCase()}
+                  onChange={(e) => handleCustomHexChange(e.target.value)}
+                  maxLength={7}
+                  placeholder="#6366F1"
+                />
+              </div>
+
+              <button
+                type="button"
+                className={styles.applyColorBtn}
+                onClick={() => onAccentChange(customHex)}
+              >
+                Aplicar color
+              </button>
+
+              <div className={styles.quickColorsList}>
+                <span className={styles.quickColorsLabel}>Sugeridos:</span>
+                {quickCustomColors.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    className={[
+                      styles.quickColorDot,
+                      currentAccent.toLowerCase() === c.hex.toLowerCase() ? styles.quickColorActive : "",
+                    ].join(" ")}
+                    style={{ backgroundColor: c.hex }}
+                    onClick={() => handleCustomHexChange(c.hex)}
+                    title={`${c.name} (${c.hex})`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className={styles.themeToggleRow}>

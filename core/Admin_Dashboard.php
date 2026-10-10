@@ -43,7 +43,13 @@ class Admin_Dashboard {
 				opacity: 1;
 			}
 
-			<?php if ( $is_crezca_page ) : ?>
+			<?php if ( $is_crezca_page ) : 
+				$academy_logo = get_option( 'alezux_academy_logo', '' );
+				if ( ! empty( $academy_logo ) ) : ?>
+					<link rel="icon" href="<?php echo esc_url( $academy_logo ); ?>" />
+					<link rel="shortcut icon" href="<?php echo esc_url( $academy_logo ); ?>" />
+					<link rel="apple-touch-icon" href="<?php echo esc_url( $academy_logo ); ?>" />
+				<?php endif; ?>
 			/* ===================================================
 			   MODO APP INDEPENDIENTE (VENTANA COMPLETA LIMPIA)
 			   Elimina todo el entorno/chrome de WordPress
