@@ -225,6 +225,10 @@ class Admin_Dashboard {
 				'wp_admin_url'    => esc_url_raw( admin_url( 'index.php' ) ),
 				'nonce'           => wp_create_nonce( 'wp_rest' ),
 				'ajax_url'        => admin_url( 'admin-ajax.php' ),
+				'academy_name'    => get_option( 'alezux_academy_name', 'Crezca' ),
+				'academy_logo'    => get_option( 'alezux_academy_logo', '' ),
+				'theme'           => get_option( 'alezux_theme', 'dark' ),
+				'accent'          => get_option( 'alezux_accent', 'violet' ),
 			];
 
 			wp_localize_script( 'crezca-admin-arc-js', 'crezca_admin_data', $admin_data );

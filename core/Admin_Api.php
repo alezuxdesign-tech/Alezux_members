@@ -183,6 +183,20 @@ class Admin_Api {
 				'callback'            => [ $this, 'upload_marketing_logo' ],
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
+
+			// Plataforma & Configuración General (Logo, Nombre, Tema, Acento)
+			register_rest_route( $namespace, '/platform/settings', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_platform_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'save_platform_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
 		}
 	}
 
@@ -1754,6 +1768,47 @@ class Admin_Api {
 		return rest_ensure_response( [
 			'success' => true,
 			'url'     => $url,
+		] );
+	}
+
+	/**
+	 * Obtener configuración general de la plataforma
+	 */
+	public function get_platform_settings() {
+		return rest_ensure_response( [
+			'academy_name' => get_option( 'alezux_academy_name', 'Crezca' ),
+			'academy_logo' => get_option( 'alezux_academy_logo', '' ),
+			'theme'        => get_option( 'alezux_theme', 'dark' ),
+			'accent'       => get_option( 'alezux_accent', 'violet' ),
+		] );
+	}
+
+	/**
+	 * Guardar configuración general de la plataforma
+	 */
+	public function save_platform_settings( $request ) {
+		$params = $request->get_json_params();
+		if ( isset( $params['academy_name'] ) ) {
+			update_option( 'alezux_academy_name', sanitize_text_field( $params['academy_name'] ) );
+		}
+		if ( isset( $params['academy_logo'] ) ) {
+			update_option( 'alezux_academy_logo', esc_url_raw( $params['academy_logo'] ) );
+		}
+		if ( isset( $params['theme'] ) && in_array( $params['theme'], [ 'dark', 'light' ], true ) ) {
+			update_option( 'alezux_theme', sanitize_text_field( $params['theme'] ) );
+		}
+		if ( isset( $params['accent'] ) ) {
+			update_option( 'alezux_accent', sanitize_text_field( $params['accent'] ) );
+		}
+		return rest_ensure_response( [
+			'success'  => true,
+			'message'  => 'Configuración de la plataforma guardada correctamente.',
+			'settings' => [
+				'academy_name' => get_option( 'alezux_academy_name', 'Crezca' ),
+				'academy_logo' => get_option( 'alezux_academy_logo', '' ),
+				'theme'        => get_option( 'alezux_theme', 'dark' ),
+				'accent'       => get_option( 'alezux_accent', 'violet' ),
+			],
 		] );
 	}
 }

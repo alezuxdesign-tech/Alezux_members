@@ -177,6 +177,13 @@ export interface MarketingSettings {
   smtp_skip_ssl: boolean;
 }
 
+export interface PlatformSettings {
+  academy_name: string;
+  academy_logo: string;
+  theme: "dark" | "light";
+  accent: string;
+}
+
 export interface EmailLogItem {
   id: number;
   type?: string;
@@ -1357,6 +1364,49 @@ class ApiService {
       }
     } catch (e) {
       console.warn("API Error saving marketing settings:", e);
+    }
+    return true;
+  }
+
+  // --- PLATFORM GENERAL SETTINGS (Nombre, Logo, Tema, Acento) ---
+  async getPlatformSettings(): Promise<PlatformSettings> {
+    const defaultSettings: PlatformSettings = {
+      academy_name: this.wpData?.academy_name || "Crezca",
+      academy_logo: this.wpData?.academy_logo || "",
+      theme: (this.wpData?.theme === "light" ? "light" : "dark"),
+      accent: this.wpData?.accent || "violet",
+    };
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}platform/settings`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return { ...defaultSettings, ...data };
+        }
+      }
+    } catch (e) {
+      console.warn("API Error fetching platform settings:", e);
+    }
+    return defaultSettings;
+  }
+
+  async savePlatformSettings(settings: Partial<PlatformSettings>): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}platform/settings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(settings),
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error saving platform settings:", e);
     }
     return true;
   }

@@ -23,6 +23,7 @@ import { StudentsView } from "./views/StudentsView";
 import { FinanceView } from "./views/FinanceView";
 import { MarketingView } from "./views/MarketingView";
 import { SettingsView } from "./views/SettingsView";
+import { api } from "./services/api";
 import styles from "./App.module.css";
 
 type TabId = "overview" | "courses" | "students" | "finance" | "marketing" | "settings";
@@ -35,9 +36,24 @@ interface NavItemConfig {
 }
 
 export function App() {
+  const wpData = (window as any).crezca_admin_data || (window as any).alezux_admin_data || {};
+
   const [activeTab, setActiveTab] = useState<TabId>("overview");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [accent, setAccent] = useState<string>("violet");
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    const saved = localStorage.getItem("crezca_theme");
+    if (saved === "light" || saved === "dark") return saved;
+    if (wpData.theme === "light" || wpData.theme === "dark") return wpData.theme;
+    return "dark";
+  });
+  const [accent, setAccent] = useState<string>(() => {
+    return localStorage.getItem("crezca_accent") || wpData.accent || "violet";
+  });
+  const [academyName, setAcademyName] = useState<string>(() => {
+    return localStorage.getItem("crezca_academy_name") || wpData.academy_name || "Crezca";
+  });
+  const [academyLogo, setAcademyLogo] = useState<string>(() => {
+    return localStorage.getItem("crezca_academy_logo") || wpData.academy_logo || "";
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     return localStorage.getItem("crezca_sidebar_collapsed") === "true";
@@ -46,6 +62,8 @@ export function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.accent = accent;
+    localStorage.setItem("crezca_theme", theme);
+    localStorage.setItem("crezca_accent", accent);
 
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -56,8 +74,51 @@ export function App() {
     };
   }, [theme, accent]);
 
+  // Sincronizar ajustes de la plataforma en segundo plano desde el servidor
+  useEffect(() => {
+    api.getPlatformSettings().then((s) => {
+      if (s.academy_name && s.academy_name !== "Crezca") {
+        setAcademyName(s.academy_name);
+        localStorage.setItem("crezca_academy_name", s.academy_name);
+      }
+      if (s.academy_logo) {
+        setAcademyLogo(s.academy_logo);
+        localStorage.setItem("crezca_academy_logo", s.academy_logo);
+      }
+      if (s.theme && !localStorage.getItem("crezca_theme")) {
+        setTheme(s.theme);
+      }
+      if (s.accent && !localStorage.getItem("crezca_accent")) {
+        setAccent(s.accent);
+      }
+    });
+  }, []);
+
   const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      localStorage.setItem("crezca_theme", next);
+      document.documentElement.dataset.theme = next;
+      api.savePlatformSettings({ theme: next });
+      return next;
+    });
+  };
+
+  const handleAccentChange = (newAccent: string) => {
+    setAccent(newAccent);
+    localStorage.setItem("crezca_accent", newAccent);
+    document.documentElement.dataset.accent = newAccent;
+    api.savePlatformSettings({ accent: newAccent });
+  };
+
+  const handleAcademyNameChange = (name: string) => {
+    setAcademyName(name);
+    localStorage.setItem("crezca_academy_name", name);
+  };
+
+  const handleAcademyLogoChange = (logo: string) => {
+    setAcademyLogo(logo);
+    localStorage.setItem("crezca_academy_logo", logo);
   };
 
   const toggleFullscreen = () => {
@@ -101,13 +162,17 @@ export function App() {
         <div className={styles.sidebarHeader}>
           {!isCollapsed ? (
             <>
-              <div className={styles.brandGroup} title="Crezca - Academia & Membresías">
+              <div className={styles.brandGroup} title={`${academyName || "Crezca"} - Academia & Membresías`}>
                 <div className={styles.logoMark}>
-                  <Layers size={19} className={styles.logoIcon} />
+                  {academyLogo ? (
+                    <img src={academyLogo} alt={academyName || "Logo"} className={styles.logoImg} />
+                  ) : (
+                    <Layers size={19} className={styles.logoIcon} />
+                  )}
                 </div>
                 <div className={styles.brandText}>
                   <div className={styles.brandTitleWrap}>
-                    <span className={styles.brandName}>Crezca</span>
+                    <span className={styles.brandName}>{academyName || "Crezca"}</span>
                     <span className={styles.versionBadge}>v2.0 Arc UI</span>
                   </div>
                   <span className={styles.brandSubtitle}>Academia & Membresías</span>
@@ -133,7 +198,11 @@ export function App() {
               aria-label="Expandir barra lateral"
             >
               <div className={styles.logoMark}>
-                <Layers size={19} className={styles.logoIcon} />
+                {academyLogo ? (
+                  <img src={academyLogo} alt={academyName || "Logo"} className={styles.logoImg} />
+                ) : (
+                  <Layers size={19} className={styles.logoIcon} />
+                )}
               </div>
             </button>
           )}
@@ -247,9 +316,13 @@ export function App() {
           {activeTab === "settings" && (
             <SettingsView
               currentAccent={accent}
-              onAccentChange={setAccent}
+              onAccentChange={handleAccentChange}
               currentTheme={theme}
               onThemeToggle={toggleTheme}
+              academyName={academyName}
+              onAcademyNameChange={handleAcademyNameChange}
+              academyLogo={academyLogo}
+              onAcademyLogoChange={handleAcademyLogoChange}
             />
           )}
         </main>
