@@ -2,11 +2,13 @@
 /**
  * Plantilla de Checkout Multipasarela - Alezux Members (Estilo Landing / Sales Checkout)
  *
- * Página independiente de alta conversión para checkout directo desde landing pages:
- * - Muestra el logo y nombre oficial de la academia.
- * - Sin botones de retorno que provoquen fuga de alumnos.
+ * Flujo de Checkout Autónomo con:
+ * - Datos de registro del alumno (Nombre, Correo, Teléfono).
+ * - Selección de métodos de pago (Pago Móvil, Zelle, Transferencia, Binance USDT, PayPal, Stripe).
+ * - File Dropzone con diseño Arc UI para adjuntar comprobante de pago.
+ * - Registro automático con estado "Pendiente de Aprobación" para el administrador.
+ * - Activación y envío de correo de bienvenida al aprobar en el admin.
  * - Portada del curso destacada estilo ficha de ventas (hero mockup).
- * - Radio cards interactivas con tokens de diseño Arc UI.
  * - Iconos oficiales de la librería Lucide.
  *
  * @var object $plan
@@ -100,17 +102,21 @@ if ( $total_quotas === 0 ) {
 	$total_pay_today = '$' . $amount_formatted . ' USD';
 }
 
-// 4. WhatsApp para Comprobantes
-$whatsapp_raw   = ! empty( $plan->whatsapp_number ) ? $plan->whatsapp_number : ( $settings['whatsapp_number'] ?? '' );
-$whatsapp_clean = preg_replace( '/[^0-9]/', '', $whatsapp_raw );
-$whatsapp_msg   = '¡Hola! Acabo de realizar el pago de $' . $amount_formatted . ' USD para el plan "' . $plan->name . '" (' . $course_title . '). Adjunto mi comprobante para que activen mi acceso a la academia. Mi correo es: ';
-$whatsapp_url   = ! empty( $whatsapp_clean ) ? 'https://wa.me/' . $whatsapp_clean . '?text=' . rawurlencode( $whatsapp_msg ) : '#';
+// Datos de usuario logueado (si aplica)
+$current_user_name  = '';
+$current_user_email = '';
+$is_logged_in       = is_user_logged_in();
+if ( $is_logged_in ) {
+	$u = wp_get_current_user();
+	$current_user_name  = $u->display_name;
+	$current_user_email = $u->user_email;
+}
 
 $instructions = ! empty( $settings['manual_payment_instructions'] )
 	? $settings['manual_payment_instructions']
-	: 'Transfiere el monto exacto y luego confirma tu comprobante por WhatsApp para activar tu acceso de inmediato.';
+	: 'Transfiere el monto exacto por el canal de tu preferencia y adjunta el comprobante con tu número de referencia para verificar y activar tu acceso.';
 
-// 5. Pasarelas y Métodos Activos
+// 4. Pasarelas y Métodos Activos
 $methods = [];
 
 // Stripe (Tarjetas)
@@ -122,9 +128,9 @@ if ( ! empty( $settings['stripe_enabled'] ) && ! empty( $stripe_sec ) && ! empty
 		'subtitle'    => 'Visa, Mastercard, American Express',
 		'badge_type'  => 'cards',
 		'is_stripe'   => true,
-		'cta_text'    => 'Pagar $' . $amount_formatted . ' USD con Tarjeta',
+		'cta_text'    => 'Pagar con Tarjeta (Stripe Checkout) 💳',
 		'action_url'  => add_query_arg( [ 'gateway' => 'stripe' ] ),
-		'description' => 'Pago 100% cifrado y seguro a través de Stripe Checkout. Tu acceso a las lecciones y módulos se activará de forma instantánea al procesar la compra.',
+		'description' => 'Pago 100% cifrado y seguro a través de Stripe Checkout. Tu acceso se activará automáticamente al procesar la tarjeta.',
 	];
 }
 
@@ -143,8 +149,6 @@ if ( ! empty( $settings['pagomovil_enabled'] ) ) {
 		'subtitle'   => 'Bolívares (Tasa Oficial BCV)',
 		'badge_type' => 'pm',
 		'is_manual'  => true,
-		'cta_text'   => 'Confirmar Pago por WhatsApp ($' . $amount_formatted . ' USD)',
-		'action_url' => $whatsapp_url,
 		'copy_data'  => $pm_copy,
 		'fields'     => [
 			'Banco'        => $pm_bank,
@@ -153,7 +157,7 @@ if ( ! empty( $settings['pagomovil_enabled'] ) ) {
 			'Titular'      => $pm_holder,
 			'Monto Ref.'   => '$' . $amount_formatted . ' USD (a tasa oficial BCV del día)',
 		],
-		'notice'     => 'Realiza el pago móvil en bolívares a la tasa oficial del BCV del día.',
+		'notice'     => 'Realiza el pago móvil en bolívares a la tasa oficial del BCV del día y adjunta tu comprobante.',
 	];
 }
 
@@ -168,8 +172,6 @@ if ( ! empty( $settings['zelle_enabled'] ) ) {
 		'subtitle'   => 'Transferencia directa en USD',
 		'badge_type' => 'zelle',
 		'is_manual'  => true,
-		'cta_text'   => 'Confirmar Pago por WhatsApp ($' . $amount_formatted . ' USD)',
-		'action_url' => $whatsapp_url,
 		'copy_data'  => $zelle_email,
 		'copy_label' => 'Copiar Correo Zelle',
 		'fields'     => [
@@ -197,8 +199,6 @@ if ( ! empty( $settings['bank_transfer_enabled'] ) ) {
 		'subtitle'   => $bt_bank ? $bt_bank : 'Cuenta Bancaria',
 		'badge_type' => 'bank',
 		'is_manual'  => true,
-		'cta_text'   => 'Confirmar Pago por WhatsApp ($' . $amount_formatted . ' USD)',
-		'action_url' => $whatsapp_url,
 		'copy_data'  => $bt_acc,
 		'copy_label' => 'Copiar N° de Cuenta',
 		'fields'     => [
@@ -226,8 +226,6 @@ if ( ! empty( $settings['binance_enabled'] ) ) {
 		'subtitle'   => 'Criptomonedas estables (USDT)',
 		'badge_type' => 'binance',
 		'is_manual'  => true,
-		'cta_text'   => 'Confirmar Pago por WhatsApp (' . $amount_formatted . ' USDT)',
-		'action_url' => $whatsapp_url,
 		'copy_data'  => $bin_copy,
 		'copy_label' => ! empty( $bin_wallet ) ? 'Copiar Billetera USDT' : 'Copiar Binance Pay ID',
 		'fields'     => array_filter( [
@@ -251,9 +249,8 @@ if ( ! empty( $settings['paypal_enabled'] ) ) {
 		'title'      => 'PayPal',
 		'subtitle'   => 'Saldo o cuenta PayPal',
 		'badge_type' => 'paypal',
-		'is_manual'  => empty( $pp_url ),
-		'cta_text'   => ! empty( $pp_url ) ? 'Pagar con PayPal ($' . $amount_formatted . ' USD)' : 'Confirmar Pago por WhatsApp ($' . $amount_formatted . ' USD)',
-		'action_url' => ! empty( $pp_url ) ? $pp_url : $whatsapp_url,
+		'is_manual'  => true,
+		'pay_url'    => $pp_url,
 		'copy_data'  => $paypal_raw,
 		'copy_label' => 'Copiar Cuenta PayPal',
 		'fields'     => [
@@ -264,7 +261,7 @@ if ( ! empty( $settings['paypal_enabled'] ) ) {
 }
 
 // Método activo inicial
-$active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
+$active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : 'pagomovil';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -404,12 +401,12 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 		}
 
 		/* ========================================================
-		   COLUMNA IZQUIERDA: SELECCIÓN DE MÉTODO DE PAGO
+		   COLUMNA IZQUIERDA: FORMULARIO Y MÉTODOS DE PAGO
 		   ======================================================== */
 		.payment-column {
 			display: flex;
 			flex-direction: column;
-			gap: 22px;
+			gap: 24px;
 		}
 
 		.section-header {
@@ -427,6 +424,111 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 		.section-subtitle {
 			font-size: 0.88rem;
 			color: var(--arc-text-muted);
+		}
+
+		/* Sección Formulario de Registro de Usuario */
+		.form-block {
+			background: var(--arc-surface);
+			border: 1px solid var(--arc-border);
+			border-radius: var(--radius-card);
+			padding: 22px;
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+		}
+
+		.block-title-row {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.step-number {
+			width: 24px;
+			height: 24px;
+			border-radius: 50%;
+			background: var(--arc-accent);
+			color: var(--arc-accent-foreground);
+			font-size: 0.78rem;
+			font-weight: 800;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+		}
+
+		.block-title {
+			font-size: 1rem;
+			font-weight: 700;
+			letter-spacing: -0.01em;
+		}
+
+		.form-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 14px;
+		}
+
+		@media (max-width: 600px) {
+			.form-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		.form-group {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.form-group.full-width {
+			grid-column: 1 / -1;
+		}
+
+		.arc-label {
+			font-size: 0.8rem;
+			font-weight: 600;
+			color: var(--arc-text-secondary);
+		}
+
+		/* Inputs Arc UI: 100% bordes neutros (#27272a), NUNCA acento */
+		.arc-input {
+			width: 100%;
+			height: 44px;
+			padding: 0 14px;
+			background: var(--arc-surface-subtle) !important;
+			border: 1px solid var(--arc-border-input) !important;
+			border-radius: var(--radius-control) !important;
+			color: #fff !important;
+			font-family: inherit;
+			font-size: 0.88rem;
+			outline: none;
+			transition: var(--transition);
+		}
+
+		.arc-input:hover {
+			border-color: var(--arc-border-strong) !important;
+		}
+
+		.arc-input:focus {
+			border-color: rgba(255, 255, 255, 0.3) !important;
+			box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+		}
+
+		.arc-input::placeholder {
+			color: var(--arc-text-muted);
+		}
+
+		.logged-in-notice {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 10px 14px;
+			background: rgba(163, 230, 53, 0.08);
+			border: 1px solid rgba(163, 230, 53, 0.2);
+			border-radius: var(--radius-control);
+			font-size: 0.82rem;
+			color: var(--arc-accent);
 		}
 
 		/* Lista de Tarjetas de Pago */
@@ -567,7 +669,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			to { opacity: 1; transform: translateY(0); }
 		}
 
-		/* Cajas de Datos Arc UI (Bordes 100% Neutros) */
+		/* Cajas de Datos Arc UI */
 		.arc-data-grid {
 			display: flex;
 			flex-direction: column;
@@ -615,7 +717,6 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			flex-shrink: 0;
 		}
 
-		/* Botón de Copiar Secundario */
 		.arc-btn-secondary {
 			display: inline-flex;
 			align-items: center;
@@ -644,6 +745,114 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			color: #4ade80;
 			border-color: rgba(74, 222, 128, 0.35);
 			background: rgba(74, 222, 128, 0.1);
+		}
+
+		/* ========================================================
+		   FILE DROPZONE ARC UI (Carga de Comprobante)
+		   ======================================================== */
+		.dropzone-container {
+			margin-top: 14px;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.arc-dropzone {
+			position: relative;
+			border: 1.5px dashed var(--arc-border-input);
+			border-radius: var(--radius-control);
+			background: var(--arc-surface-subtle);
+			padding: 24px 16px;
+			text-align: center;
+			cursor: pointer;
+			transition: var(--transition);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+		}
+
+		.arc-dropzone:hover,
+		.arc-dropzone.dragover {
+			border-color: rgba(255, 255, 255, 0.35);
+			background: #1c1c22;
+		}
+
+		.dropzone-icon {
+			color: var(--arc-text-muted);
+			transition: var(--transition);
+		}
+
+		.arc-dropzone:hover .dropzone-icon {
+			color: var(--arc-accent);
+			transform: translateY(-2px);
+		}
+
+		.dropzone-title {
+			font-size: 0.86rem;
+			font-weight: 600;
+			color: var(--arc-text-primary);
+		}
+
+		.dropzone-subtitle {
+			font-size: 0.75rem;
+			color: var(--arc-text-muted);
+		}
+
+		.file-hidden-input {
+			display: none;
+		}
+
+		/* Vista Previa del Archivo Seleccionado */
+		.file-preview-card {
+			display: none;
+			align-items: center;
+			justify-content: space-between;
+			padding: 10px 14px;
+			background: var(--arc-surface-raised);
+			border: 1px solid var(--arc-border-strong);
+			border-radius: var(--radius-control);
+			font-size: 0.85rem;
+			animation: arcFadeIn 0.2s ease forwards;
+		}
+
+		.file-preview-info {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			overflow: hidden;
+		}
+
+		.file-name {
+			font-weight: 600;
+			color: #fff;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 200px;
+		}
+
+		.file-size {
+			font-size: 0.75rem;
+			color: var(--arc-text-muted);
+		}
+
+		.file-remove-btn {
+			background: transparent;
+			border: none;
+			color: var(--arc-text-muted);
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			padding: 4px;
+			border-radius: 6px;
+			transition: var(--transition);
+		}
+
+		.file-remove-btn:hover {
+			color: #ef4444;
+			background: rgba(239, 68, 68, 0.1);
 		}
 
 		/* Botón Principal CTA (Lime / Accent de la referencia) */
@@ -676,14 +885,16 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			transition: var(--transition);
 		}
 
-		.arc-btn-primary:hover {
+		.arc-btn-primary:hover:not(:disabled) {
 			filter: brightness(1.08);
 			transform: translateY(-1px);
 			box-shadow: 0 12px 28px rgba(190, 242, 100, 0.35);
 		}
 
-		.arc-btn-primary:active {
-			transform: translateY(0);
+		.arc-btn-primary:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+			filter: none;
 		}
 
 		.secure-footer-badge {
@@ -696,6 +907,64 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 
 		.secure-footer-badge svg {
 			color: var(--arc-text-secondary);
+		}
+
+		/* ========================================================
+		   PANTALLA DE ÉXITO TRAS REPORTAR PAGO
+		   ======================================================== */
+		.success-view-card {
+			display: none;
+			background: var(--arc-surface);
+			border: 1px solid var(--arc-border);
+			border-radius: var(--radius-card);
+			padding: 40px 24px;
+			text-align: center;
+			animation: arcFadeIn 0.3s ease forwards;
+			flex-direction: column;
+			align-items: center;
+			gap: 20px;
+		}
+
+		.success-icon-wrap {
+			width: 64px;
+			height: 64px;
+			border-radius: 50%;
+			background: rgba(163, 230, 53, 0.15);
+			border: 2px solid var(--arc-accent);
+			color: var(--arc-accent);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 0 auto;
+		}
+
+		.success-title {
+			font-size: 1.6rem;
+			font-weight: 800;
+			letter-spacing: -0.02em;
+			color: #fff;
+		}
+
+		.success-desc {
+			font-size: 0.92rem;
+			color: var(--arc-text-secondary);
+			max-width: 440px;
+			margin: 0 auto;
+			line-height: 1.6;
+		}
+
+		.success-data-box {
+			background: var(--arc-surface-subtle);
+			border: 1px solid var(--arc-border);
+			border-radius: var(--radius-control);
+			padding: 16px 20px;
+			width: 100%;
+			max-width: 440px;
+			text-align: left;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			font-size: 0.88rem;
 		}
 
 		/* ========================================================
@@ -734,7 +1003,6 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			color: var(--arc-text-secondary);
 		}
 
-		/* Tarjeta Hero / Portada del Curso */
 		.sales-product-card {
 			display: flex;
 			flex-direction: column;
@@ -748,35 +1016,13 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			border-radius: 14px;
 			overflow: hidden;
 			border: 1px solid var(--arc-border);
-			background: linear-gradient(135deg, #18181c 0%, #27272a 100%);
+			background: #18181c;
 		}
 
 		.course-cover-img {
 			width: 100%;
 			height: 100%;
 			object-fit: cover;
-			transition: transform 0.3s ease;
-		}
-
-		.course-cover-wrap:hover .course-cover-img {
-			transform: scale(1.02);
-		}
-
-		.course-cover-placeholder {
-			width: 100%;
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-			gap: 10px;
-			color: var(--arc-text-muted);
-			padding: 20px;
-			text-align: center;
-		}
-
-		.course-cover-placeholder svg {
-			color: var(--arc-accent);
 		}
 
 		.sales-cover-badge {
@@ -843,7 +1089,6 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			margin-top: 4px;
 		}
 
-		/* Value Stack / Beneficios */
 		.sales-features-list {
 			display: flex;
 			flex-direction: column;
@@ -872,7 +1117,6 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			background: var(--arc-border);
 		}
 
-		/* Tabla de Desglose */
 		.breakdown-table {
 			display: flex;
 			flex-direction: column;
@@ -916,7 +1160,6 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			font-variant-numeric: tabular-nums;
 		}
 
-		/* Instrucciones */
 		.instructions-card {
 			background: var(--arc-surface-subtle);
 			border: 1px solid var(--arc-border);
@@ -977,129 +1220,286 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			<!-- ========================================================
 			     COLUMNA IZQUIERDA: FORMULARIO Y MÉTODOS DE PAGO
 			     ======================================================== -->
-			<div class="payment-column">
+			<div class="payment-column" id="checkout-main-column">
 				
-				<div class="section-header">
-					<h1 class="section-title">Completar Inscripción</h1>
-					<p class="section-subtitle">Selecciona tu método de pago preferido para formalizar tu acceso.</p>
+				<!-- TARJETA DE ÉXITO TRAS ENVIAR PAGO (Oculta inicialmente) -->
+				<div class="success-view-card" id="checkout-success-view">
+					<div class="success-icon-wrap">
+						<!-- Lucide Check -->
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+					</div>
+					<div>
+						<h2 class="success-title">¡Comprobante Enviado!</h2>
+						<p class="success-desc" style="margin-top: 8px;">
+							Hemos recibido tu reporte de pago para <strong><?php echo esc_html( $course_title ); ?></strong>. Nuestro equipo verificará la transacción y activará tu cuenta de inmediato.
+						</p>
+					</div>
+
+					<div class="success-data-box">
+						<div><strong>Alumno:</strong> <span id="success-student-name"></span></div>
+						<div><strong>Correo de acceso:</strong> <span id="success-student-email"></span></div>
+						<div><strong>N° de Referencia:</strong> <span id="success-student-ref"></span></div>
+						<div><strong>Monto:</strong> $<?php echo esc_html( $amount_formatted ); ?> USD</div>
+					</div>
+
+					<p style="font-size: 0.82rem; color: var(--arc-text-muted); max-width: 440px;">
+						Al ser aprobado, recibirás automáticamente un correo de bienvenida con tu contraseña y los accesos para ingresar al aula virtual.
+					</p>
 				</div>
 
-				<!-- Lista de Radio Cards de Pago -->
-				<?php if ( ! empty( $methods ) ) : ?>
-					<div class="methods-list" role="radiogroup">
-						
-						<?php foreach ( $methods as $key => $m ) : 
-							$is_active = ( $key === $active_method_id );
-						?>
-							<div 
-								class="method-card <?php echo $is_active ? 'is-active' : ''; ?>" 
-								id="card-<?php echo esc_attr( $key ); ?>"
-								onclick="selectMethod('<?php echo esc_attr( $key ); ?>')"
-							>
-								<!-- Fila Principal Radio + Título + Badges -->
-								<div class="card-header-row">
-									<div class="radio-label-group">
-										<div class="arc-radio">
-											<div class="arc-radio-dot"></div>
-										</div>
-										<div class="method-title-wrap">
-											<span class="method-main-title"><?php echo esc_html( $m['title'] ); ?></span>
-											<span class="method-sub-title"><?php echo esc_html( $m['subtitle'] ); ?></span>
-										</div>
-									</div>
+				<!-- FORMULARIO DE CHECKOUT -->
+				<form id="checkout-form" onsubmit="handleCheckoutSubmit(event)">
+					<input type="hidden" name="alezux_action" value="submit_manual_payment">
+					<input type="hidden" name="plan_token" value="<?php echo esc_attr( $plan->token ); ?>">
+					<input type="hidden" name="plan_id" value="<?php echo esc_attr( $plan->id ); ?>">
+					<input type="hidden" name="payment_method" id="selected-payment-method" value="<?php echo esc_attr( $active_method_id ); ?>">
 
-									<div class="brand-badges">
-										<?php if ( $m['badge_type'] === 'cards' ) : ?>
-											<span class="brand-pill amex">AMEX</span>
-											<span class="brand-pill mc">MC</span>
-											<span class="brand-pill visa">VISA</span>
-										<?php elseif ( $m['badge_type'] === 'pm' ) : ?>
-											<span class="brand-pill">BCV Bs</span>
-										<?php elseif ( $m['badge_type'] === 'zelle' ) : ?>
-											<span class="brand-pill" style="color: #7b2cbf;">Zelle</span>
-										<?php elseif ( $m['badge_type'] === 'binance' ) : ?>
-											<span class="brand-pill crypto">USDT</span>
-										<?php elseif ( $m['badge_type'] === 'paypal' ) : ?>
-											<span class="brand-pill pp">PayPal</span>
-										<?php elseif ( $m['badge_type'] === 'bank' ) : ?>
-											<span class="brand-pill">Banco</span>
-										<?php endif; ?>
-									</div>
+					<!-- PASO 1: DATOS DEL ESTUDIANTE -->
+					<div class="form-block">
+						<div class="block-title-row">
+							<span class="step-number">1</span>
+							<h2 class="block-title">Tus Datos de Acceso</h2>
+						</div>
+
+						<?php if ( $is_logged_in ) : ?>
+							<div class="logged-in-notice">
+								<!-- Lucide User -->
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+								<span>Sesión activa como <strong><?php echo esc_html( $current_user_name ); ?></strong> (<?php echo esc_html( $current_user_email ); ?>). Tu acceso se asignará a esta cuenta.</span>
+							</div>
+							<input type="hidden" name="student_name" value="<?php echo esc_attr( $current_user_name ); ?>">
+							<input type="hidden" name="student_email" value="<?php echo esc_attr( $current_user_email ); ?>">
+							
+							<div class="form-group full-width">
+								<label class="arc-label">Teléfono / WhatsApp de Contacto *</label>
+								<input 
+									type="tel" 
+									name="student_phone" 
+									class="arc-input" 
+									placeholder="+58 412 1234567" 
+									required
+								>
+							</div>
+						<?php else : ?>
+							<div class="form-grid">
+								<div class="form-group">
+									<label class="arc-label">Nombre Completo *</label>
+									<input 
+										type="text" 
+										name="student_name" 
+										id="input_student_name"
+										class="arc-input" 
+										placeholder="Ej: Carlos Mendoza" 
+										required
+									>
 								</div>
 
-								<!-- Contenido Desplegable al Seleccionar -->
-								<div class="card-expanded-body">
-									
-									<?php if ( ! empty( $m['notice'] ) ) : ?>
-										<div class="arc-notice-box">
-											<!-- Lucide Info -->
-											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-											<span><?php echo esc_html( $m['notice'] ); ?></span>
-										</div>
-									<?php endif; ?>
+								<div class="form-group">
+									<label class="arc-label">Correo Electrónico *</label>
+									<input 
+										type="email" 
+										name="student_email" 
+										id="input_student_email"
+										class="arc-input" 
+										placeholder="carlos@ejemplo.com" 
+										required
+									>
+								</div>
 
-									<?php if ( ! empty( $m['description'] ) ) : ?>
-										<p style="font-size: 0.85rem; color: var(--arc-text-secondary); margin-bottom: 14px; line-height: 1.5;">
-											<?php echo esc_html( $m['description'] ); ?>
-										</p>
-									<?php endif; ?>
-
-									<?php if ( ! empty( $m['fields'] ) ) : ?>
-										<div class="arc-data-grid">
-											<?php foreach ( $m['fields'] as $label => $val ) : ?>
-												<div class="arc-data-item">
-													<span class="arc-data-key"><?php echo esc_html( $label ); ?>:</span>
-													<span class="arc-data-val"><?php echo esc_html( $val ); ?></span>
-												</div>
-											<?php endforeach; ?>
-										</div>
-									<?php endif; ?>
-
-									<?php if ( ! empty( $m['copy_data'] ) ) : ?>
-										<button 
-											type="button" 
-											class="arc-btn-secondary"
-											data-copy="<?php echo esc_attr( $m['copy_data'] ); ?>"
-											onclick="event.stopPropagation(); copyArcData(this)"
-										>
-											<!-- Lucide Copy -->
-											<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-											<span><?php echo esc_html( $m['copy_label'] ?? 'Copiar Datos de Pago' ); ?></span>
-										</button>
-									<?php endif; ?>
-
+								<div class="form-group full-width">
+									<label class="arc-label">Teléfono / WhatsApp *</label>
+									<input 
+										type="tel" 
+										name="student_phone" 
+										id="input_student_phone"
+										class="arc-input" 
+										placeholder="+58 412 1234567" 
+										required
+									>
 								</div>
 							</div>
-						<?php endforeach; ?>
-
+						<?php endif; ?>
 					</div>
 
-					<!-- Botón de Acción Principal Dinámico (Lime Button) -->
-					<div class="arc-cta-container">
-						<a 
-							href="<?php echo esc_url( $methods[$active_method_id]['action_url'] ?? '#' ); ?>" 
-							id="arc-main-cta" 
-							class="arc-btn-primary"
-							<?php echo ( ! empty( $methods[$active_method_id]['is_manual'] ) ) ? 'target="_blank" rel="noopener noreferrer"' : ''; ?>
-						>
-							<span id="arc-cta-text"><?php echo esc_html( $methods[$active_method_id]['cta_text'] ?? 'Completar Pago' ); ?></span>
-						</a>
-
-						<div class="secure-footer-badge">
-							<!-- Lucide Lock -->
-							<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-							<span>Transacción Segura y Privada · Activación Inmediata</span>
+					<!-- PASO 2: SELECCIÓN DE MÉTODO DE PAGO -->
+					<div class="form-block" style="margin-top: 18px;">
+						<div class="block-title-row">
+							<span class="step-number">2</span>
+							<h2 class="block-title">Método de Pago</h2>
 						</div>
-					</div>
 
-				<?php else : ?>
-					<div class="sales-product-card" style="text-align: center; padding: 32px 20px;">
-						<p style="color: var(--arc-text-secondary); margin-bottom: 12px;">Actualmente no hay pasarelas de pago configuradas.</p>
-						<a href="<?php echo esc_url( $whatsapp_url ); ?>" class="arc-btn-primary" target="_blank" rel="noopener noreferrer">
-							<span>Contactar vía WhatsApp</span>
-						</a>
+						<?php if ( ! empty( $methods ) ) : ?>
+							<div class="methods-list" role="radiogroup">
+								
+								<?php foreach ( $methods as $key => $m ) : 
+									$is_active = ( $key === $active_method_id );
+								?>
+									<div 
+										class="method-card <?php echo $is_active ? 'is-active' : ''; ?>" 
+										id="card-<?php echo esc_attr( $key ); ?>"
+										onclick="selectMethod('<?php echo esc_attr( $key ); ?>')"
+									>
+										<!-- Fila Principal Radio + Título + Badges -->
+										<div class="card-header-row">
+											<div class="radio-label-group">
+												<div class="arc-radio">
+													<div class="arc-radio-dot"></div>
+												</div>
+												<div class="method-title-wrap">
+													<span class="method-main-title"><?php echo esc_html( $m['title'] ); ?></span>
+													<span class="method-sub-title"><?php echo esc_html( $m['subtitle'] ); ?></span>
+												</div>
+											</div>
+
+											<div class="brand-badges">
+												<?php if ( $m['badge_type'] === 'cards' ) : ?>
+													<span class="brand-pill amex">AMEX</span>
+													<span class="brand-pill mc">MC</span>
+													<span class="brand-pill visa">VISA</span>
+												<?php elseif ( $m['badge_type'] === 'pm' ) : ?>
+													<span class="brand-pill">BCV Bs</span>
+												<?php elseif ( $m['badge_type'] === 'zelle' ) : ?>
+													<span class="brand-pill" style="color: #7b2cbf;">Zelle</span>
+												<?php elseif ( $m['badge_type'] === 'binance' ) : ?>
+													<span class="brand-pill crypto">USDT</span>
+												<?php elseif ( $m['badge_type'] === 'paypal' ) : ?>
+													<span class="brand-pill pp">PayPal</span>
+												<?php elseif ( $m['badge_type'] === 'bank' ) : ?>
+													<span class="brand-pill">Banco</span>
+												<?php endif; ?>
+											</div>
+										</div>
+
+										<!-- Contenido Desplegable al Seleccionar -->
+										<div class="card-expanded-body">
+											
+											<?php if ( ! empty( $m['notice'] ) ) : ?>
+												<div class="arc-notice-box">
+													<!-- Lucide Info -->
+													<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+													<span><?php echo esc_html( $m['notice'] ); ?></span>
+												</div>
+											<?php endif; ?>
+
+											<?php if ( ! empty( $m['description'] ) ) : ?>
+												<p style="font-size: 0.85rem; color: var(--arc-text-secondary); margin-bottom: 14px; line-height: 1.5;">
+													<?php echo esc_html( $m['description'] ); ?>
+												</p>
+											<?php endif; ?>
+
+											<?php if ( ! empty( $m['fields'] ) ) : ?>
+												<div class="arc-data-grid">
+													<?php foreach ( $m['fields'] as $label => $val ) : ?>
+														<div class="arc-data-item">
+															<span class="arc-data-key"><?php echo esc_html( $label ); ?>:</span>
+															<span class="arc-data-val"><?php echo esc_html( $val ); ?></span>
+														</div>
+													<?php endforeach; ?>
+												</div>
+											<?php endif; ?>
+
+											<?php if ( ! empty( $m['copy_data'] ) ) : ?>
+												<button 
+													type="button" 
+													class="arc-btn-secondary"
+													data-copy="<?php echo esc_attr( $m['copy_data'] ); ?>"
+													onclick="event.stopPropagation(); copyArcData(this)"
+												>
+													<!-- Lucide Copy -->
+													<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+													<span><?php echo esc_html( $m['copy_label'] ?? 'Copiar Datos de Pago' ); ?></span>
+												</button>
+											<?php endif; ?>
+
+										</div>
+									</div>
+								<?php endforeach; ?>
+
+							</div>
+
+							<!-- SECCIÓN DE REFERENCIA & FILE DROPZONE (Para métodos manuales) -->
+							<div id="manual-payment-fields" style="margin-top: 18px; display: flex; flex-direction: column; gap: 14px;">
+								<div class="form-group">
+									<label class="arc-label">Número de Referencia del Pago *</label>
+									<input 
+										type="text" 
+										name="reference" 
+										id="manual_reference_input" 
+										class="arc-input" 
+										placeholder="Ej: 6 dígitos de la transferencia, Pago Móvil o hash"
+										required
+									>
+								</div>
+
+								<!-- Arc UI File Dropzone -->
+								<div class="dropzone-container">
+									<label class="arc-label">Comprobante de Pago (Captura o Foto)</label>
+									
+									<div 
+										class="arc-dropzone" 
+										id="arc-dropzone-box"
+										onclick="document.getElementById('receipt_file_input').click()"
+										ondragover="handleDragOver(event)"
+										ondragleave="handleDragLeave(event)"
+										ondrop="handleFileDrop(event)"
+									>
+										<!-- Lucide UploadCloud -->
+										<svg class="dropzone-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+										<span class="dropzone-title">Arrastra tu comprobante aquí o haz clic para subir</span>
+										<span class="dropzone-subtitle">Formatos: PNG, JPG, WEBP o PDF (máx. 10MB)</span>
+										<input 
+											type="file" 
+											id="receipt_file_input" 
+											name="receipt_file" 
+											class="file-hidden-input" 
+											accept="image/png,image/jpeg,image/webp,application/pdf"
+											onchange="handleFileSelected(this.files)"
+										>
+									</div>
+
+									<!-- Tarjeta de Archivo Seleccionado -->
+									<div class="file-preview-card" id="file-preview-card">
+										<div class="file-preview-info">
+											<!-- Lucide FileText -->
+											<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--arc-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+											<div>
+												<div class="file-name" id="preview-file-name">comprobante.jpg</div>
+												<div class="file-size" id="preview-file-size">240 KB</div>
+											</div>
+										</div>
+										<button type="button" class="file-remove-btn" onclick="removeSelectedFile()" title="Quitar archivo">
+											<!-- Lucide X -->
+											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+										</button>
+									</div>
+								</div>
+							</div>
+
+							<!-- Botón de Envío Principal CTA (Lime Button) -->
+							<div class="arc-cta-container">
+								<button 
+									type="submit" 
+									id="arc-main-cta" 
+									class="arc-btn-primary"
+								>
+									<span id="arc-cta-text">Registrar Pago y Solicitar Acceso</span>
+								</button>
+
+								<div class="secure-footer-badge">
+									<!-- Lucide Lock -->
+									<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+									<span>Transacción Segura y Privada · Activación tras Verificación</span>
+								</div>
+							</div>
+
+						<?php else : ?>
+							<div class="sales-product-card" style="text-align: center; padding: 32px 20px;">
+								<p style="color: var(--arc-text-secondary); margin-bottom: 12px;">Actualmente no hay pasarelas de pago configuradas.</p>
+							</div>
+						<?php endif; ?>
+
 					</div>
-				<?php endif; ?>
+				</form>
 
 			</div>
 
@@ -1118,12 +1518,6 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 					<div class="course-hero-cover">
 						<?php if ( ! empty( $course_image ) ) : ?>
 							<img src="<?php echo esc_url( $course_image ); ?>" alt="<?php echo esc_attr( $course_title ); ?>" class="course-cover-img">
-						<?php else : ?>
-							<div class="course-cover-placeholder">
-								<!-- Lucide GraduationCap -->
-								<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
-								<span style="font-weight: 600; font-size: 0.9rem; color: #fff;"><?php echo esc_html( $course_title ); ?></span>
-							</div>
 						<?php endif; ?>
 						<span class="sales-cover-badge">Formación Certificada</span>
 					</div>
@@ -1147,7 +1541,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 						<div class="sales-feature-item">
 							<!-- Lucide GraduationCap -->
 							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
-							<span>Acceso inmediato a la plataforma educativa</span>
+							<span>Acceso completo e inmediato al aula virtual</span>
 						</div>
 
 						<div class="sales-feature-item">
@@ -1206,7 +1600,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 
 		</div>
 
-		<!-- Footer sin fugas de enlace -->
+		<!-- Footer sin enlaces de fuga -->
 		<footer class="checkout-page-footer">
 			<span>&copy; <?php echo date( 'Y' ); ?> <?php echo esc_html( $academy_name ); ?>. Todos los derechos reservados.</span>
 			<span style="opacity: 0.6;">Plataforma de pagos segura y encriptada para estudiantes.</span>
@@ -1214,11 +1608,17 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 
 	</div>
 
-	<!-- Script Interactivo de Selección y Copiado -->
+	<!-- ========================================================
+	     SCRIPT INTERACTIVO CON DROPZONE & ENVÍO AJAX
+	     ======================================================== -->
 	<script>
 		var methodsData = <?php echo json_encode( $methods ); ?>;
+		var activeMethod = '<?php echo esc_js( $active_method_id ); ?>';
 
 		function selectMethod(methodKey) {
+			activeMethod = methodKey;
+			document.getElementById('selected-payment-method').value = methodKey;
+
 			document.querySelectorAll('.method-card').forEach(function(card) {
 				card.classList.remove('is-active');
 			});
@@ -1228,22 +1628,62 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 				activeCard.classList.add('is-active');
 			}
 
+			var manualFields = document.getElementById('manual-payment-fields');
+			var refInput = document.getElementById('manual_reference_input');
+			var ctaText = document.getElementById('arc-cta-text');
+
 			var data = methodsData[methodKey];
-			if (data) {
-				var btn = document.getElementById('arc-main-cta');
-				var text = document.getElementById('arc-cta-text');
-				if (btn && text) {
-					btn.href = data.action_url;
-					text.textContent = data.cta_text;
-					if (data.is_manual || data.id === 'paypal') {
-						btn.setAttribute('target', '_blank');
-						btn.setAttribute('rel', 'noopener noreferrer');
-					} else {
-						btn.removeAttribute('target');
-						btn.removeAttribute('rel');
-					}
-				}
+			if (data && data.is_stripe) {
+				// Si es Stripe, ocultar dropzone y cambiar texto del botón
+				if (manualFields) manualFields.style.display = 'none';
+				if (refInput) refInput.removeAttribute('required');
+				if (ctaText) ctaText.textContent = 'Pagar con Tarjeta (Stripe Checkout) 💳';
+			} else {
+				// Si es método manual, mostrar campos de comprobante y dropzone
+				if (manualFields) manualFields.style.display = 'flex';
+				if (refInput) refInput.setAttribute('required', 'required');
+				if (ctaText) ctaText.textContent = 'Registrar Pago y Solicitar Acceso';
 			}
+		}
+
+		// Drag & Drop handlers
+		function handleDragOver(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			document.getElementById('arc-dropzone-box').classList.add('dragover');
+		}
+
+		function handleDragLeave(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			document.getElementById('arc-dropzone-box').classList.remove('dragover');
+		}
+
+		function handleFileDrop(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			document.getElementById('arc-dropzone-box').classList.remove('dragover');
+			
+			if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+				document.getElementById('receipt_file_input').files = e.dataTransfer.files;
+				handleFileSelected(e.dataTransfer.files);
+			}
+		}
+
+		function handleFileSelected(files) {
+			if (!files || files.length === 0) return;
+			var file = files[0];
+
+			document.getElementById('preview-file-name').textContent = file.name;
+			document.getElementById('preview-file-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+			document.getElementById('file-preview-card').style.display = 'flex';
+			document.getElementById('arc-dropzone-box').style.display = 'none';
+		}
+
+		function removeSelectedFile() {
+			document.getElementById('receipt_file_input').value = '';
+			document.getElementById('file-preview-card').style.display = 'none';
+			document.getElementById('arc-dropzone-box').style.display = 'flex';
 		}
 
 		function copyArcData(btn) {
@@ -1286,6 +1726,69 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 				btn.innerHTML = originalHTML;
 			}, 2500);
 		}
+
+		// Envío del Formulario
+		function handleCheckoutSubmit(e) {
+			e.preventDefault();
+
+			var data = methodsData[activeMethod];
+			if (data && data.is_stripe) {
+				// Si es Stripe, redirigir a la sesión
+				window.location.href = data.action_url;
+				return;
+			}
+
+			var form = document.getElementById('checkout-form');
+			var btn = document.getElementById('arc-main-cta');
+			var btnText = document.getElementById('arc-cta-text');
+
+			btn.disabled = true;
+			var prevText = btnText.textContent;
+			btnText.textContent = 'Enviando comprobante...';
+
+			var formData = new FormData(form);
+
+			fetch(window.location.href, {
+				method: 'POST',
+				body: formData
+			})
+			.then(function(res) {
+				return res.json();
+			})
+			.then(function(result) {
+				btn.disabled = false;
+				btnText.textContent = prevText;
+
+				if (result.success) {
+					// Mostrar pantalla de éxito
+					document.getElementById('checkout-form').style.display = 'none';
+					
+					var sName = formData.get('student_name') || 'Estudiante';
+					var sEmail = formData.get('student_email') || '';
+					var sRef = formData.get('reference') || '';
+
+					document.getElementById('success-student-name').textContent = sName;
+					document.getElementById('success-student-email').textContent = sEmail;
+					document.getElementById('success-student-ref').textContent = sRef;
+
+					document.getElementById('checkout-success-view').style.display = 'flex';
+					window.scrollTo({ top: 0, behavior: 'smooth' });
+				} else {
+					alert(result.data && result.data.message ? result.data.message : 'Error al registrar el pago. Por favor revisa los datos.');
+				}
+			})
+			.catch(function(err) {
+				btn.disabled = false;
+				btnText.textContent = prevText;
+				console.error(err);
+				alert('Ocurrió un error de conexión al enviar el comprobante. Intenta nuevamente.');
+			});
+		}
+
+		// Inicializar estado del método activo
+		document.addEventListener('DOMContentLoaded', function() {
+			selectMethod(activeMethod);
+		});
 	</script>
 </body>
 </html>

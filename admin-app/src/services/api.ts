@@ -189,12 +189,14 @@ export interface SaleTransaction {
   id: number;
   student: string;
   studentEmail: string;
+  studentPhone?: string;
+  receiptUrl?: string;
   method: string;
   amount: number;
   currency: string;
   course: string;
   quotasDesc: string;
-  status: "succeeded" | "pending" | "failed" | "refunded" | string;
+  status: "succeeded" | "pending" | "pending_approval" | "failed" | "refunded" | string;
   date: string;
   ref: string;
 }
@@ -1297,6 +1299,53 @@ class ApiService {
       total: MOCK_SALES.length,
       pages: 1,
     };
+  }
+
+  async approveSale(id: number): Promise<{ success: boolean; message?: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}finance/sales/${id}/approve`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+        const err = await res.json().catch(() => ({}));
+        return { success: false, message: err.message || "Error al aprobar la venta." };
+      }
+    } catch (e: any) {
+      console.warn("API Error approving sale:", e);
+      return { success: false, message: e.message || "Error de conexión." };
+    }
+    return { success: true, message: "Venta aprobada (Modo simulación)." };
+  }
+
+  async rejectSale(id: number, reason?: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}finance/sales/${id}/reject`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ reason }),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+        const err = await res.json().catch(() => ({}));
+        return { success: false, message: err.message || "Error al rechazar la venta." };
+      }
+    } catch (e: any) {
+      console.warn("API Error rejecting sale:", e);
+      return { success: false, message: e.message || "Error de conexión." };
+    }
+    return { success: true, message: "Venta rechazada (Modo simulación)." };
   }
 
   async getSubscriptions(params?: { search?: string; page?: number; limit?: number }): Promise<{ rows: SubscriptionItem[]; total: number; pages: number }> {

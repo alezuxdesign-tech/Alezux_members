@@ -74,6 +74,12 @@ class Finanzas extends Module_Base {
      * Maneja la visualización y redirección del Checkout Multipasarela cuando se detecta ?alezux_action=checkout
      */
     public function handle_checkout_redirect() {
+        // Procesar reporte de pago manual con dropzone desde el checkout
+        if ( isset( $_REQUEST['alezux_action'] ) && $_REQUEST['alezux_action'] === 'submit_manual_payment' ) {
+            $this->process_manual_payment_submission();
+            exit;
+        }
+
         if ( isset( $_GET['alezux_action'] ) && $_GET['alezux_action'] === 'checkout' ) {
             $plan_id = 0;
             
@@ -218,6 +224,117 @@ class Finanzas extends Module_Base {
             wp_die( 'Error interno: La plantilla de checkout multipasarela no fue encontrada.', 'Error de Checkout' );
         }
         exit;
+    }
+
+    /**
+     * Procesa el reporte de pago manual con comprobante adjunto desde el checkout
+     */
+    public function process_manual_payment_submission() {
+        if ( $_SERVER['REQUEST_METHOD'] !== 'POST' ) {
+            wp_send_json_error( [ 'message' => 'Método no permitido.' ], 405 );
+        }
+
+        $plan_token = isset( $_POST['plan_token'] ) ? sanitize_text_field( $_POST['plan_token'] ) : '';
+        $plan_id    = isset( $_POST['plan_id'] ) ? intval( $_POST['plan_id'] ) : 0;
+
+        global $wpdb;
+        $t_plans = $wpdb->prefix . 'alezux_finanzas_plans';
+        $t_trans = $wpdb->prefix . 'alezux_finanzas_transactions';
+
+        if ( ! empty( $plan_token ) ) {
+            $plan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t_plans WHERE token = %s", $plan_token ) );
+        } elseif ( $plan_id > 0 ) {
+            $plan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t_plans WHERE id = %d", $plan_id ) );
+        } else {
+            $plan = null;
+        }
+
+        if ( ! $plan ) {
+            wp_send_json_error( [ 'message' => 'Plan de pago inválido o no encontrado.' ], 400 );
+        }
+
+        $student_name  = sanitize_text_field( $_POST['student_name'] ?? '' );
+        $student_email = sanitize_email( $_POST['student_email'] ?? '' );
+        $student_phone = sanitize_text_field( $_POST['student_phone'] ?? '' );
+        $method        = sanitize_text_field( $_POST['payment_method'] ?? 'pagomovil' );
+        $reference     = sanitize_text_field( $_POST['reference'] ?? '' );
+
+        if ( empty( $student_name ) || empty( $student_email ) ) {
+            wp_send_json_error( [ 'message' => 'Por favor indica tu nombre y correo electrónico.' ], 400 );
+        }
+
+        if ( ! is_email( $student_email ) ) {
+            wp_send_json_error( [ 'message' => 'Por favor ingresa un correo electrónico válido.' ], 400 );
+        }
+
+        if ( empty( $reference ) ) {
+            wp_send_json_error( [ 'message' => 'Por favor ingresa el número de referencia del comprobante.' ], 400 );
+        }
+
+        // Subida segura del archivo de comprobante (File Dropzone)
+        $receipt_url = '';
+        if ( ! empty( $_FILES['receipt_file']['name'] ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            add_filter( 'upload_mimes', function( $mimes ) {
+                $mimes['jpg|jpeg|jpe'] = 'image/jpeg';
+                $mimes['png']          = 'image/png';
+                $mimes['webp']         = 'image/webp';
+                $mimes['pdf']          = 'application/pdf';
+                return $mimes;
+            } );
+
+            $uploaded = wp_handle_upload( $_FILES['receipt_file'], [ 'test_form' => false ] );
+            if ( isset( $uploaded['url'] ) && empty( $uploaded['error'] ) ) {
+                $receipt_url = $uploaded['url'];
+            }
+        }
+
+        $existing_user = get_user_by( 'email', $student_email );
+        $user_id = $existing_user ? $existing_user->ID : 0;
+
+        $t_data = [
+            'student_name'  => $student_name,
+            'student_email' => $student_email,
+            'student_phone' => $student_phone,
+            'reference'     => $reference,
+            'receipt_url'   => $receipt_url,
+            'payment_method'=> $method,
+            'plan_name'     => $plan->name,
+            'plan_id'       => (int) $plan->id,
+            'submitted_at'  => current_time( 'mysql' ),
+        ];
+
+        $inserted = $wpdb->insert(
+            $t_trans,
+            [
+                'user_id'         => $user_id,
+                'subscription_id' => 0,
+                'plan_id'         => $plan->id,
+                'amount'          => (float) $plan->quota_amount,
+                'currency'        => 'USD',
+                'method'          => $method,
+                'transaction_ref' => $reference,
+                'status'          => 'pending_approval',
+                'data'            => json_encode( $t_data ),
+                'created_at'      => current_time( 'mysql' ),
+            ]
+        );
+
+        if ( $inserted ) {
+            wp_send_json_success( [
+                'message'       => '¡Tu comprobante ha sido registrado con éxito! Tu acceso será activado en cuanto el equipo confirme la transacción.',
+                'transaction_id'=> $wpdb->insert_id,
+                'student_name'  => $student_name,
+                'student_email' => $student_email,
+                'reference'     => $reference,
+                'receipt_url'   => $receipt_url,
+            ] );
+        } else {
+            wp_send_json_error( [ 'message' => 'No se pudo guardar el registro del pago. Intenta nuevamente.' ], 500 );
+        }
     }
     /**
      * Maneja el retorno exitoso desde Stripe para matriculación inmediata.

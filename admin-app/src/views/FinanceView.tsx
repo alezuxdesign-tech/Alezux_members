@@ -26,6 +26,10 @@ import {
   Building2,
   QrCode,
   Wallet,
+  FileText,
+  X,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -123,6 +127,8 @@ export function FinanceView() {
   const [salesSearch, setSalesSearch] = useState("");
   const [salesStatus, setSalesStatus] = useState("");
   const [loadingSales, setLoadingSales] = useState(false);
+  const [processingSaleId, setProcessingSaleId] = useState<number | null>(null);
+  const [previewReceipt, setPreviewReceipt] = useState<{ url: string; student: string; ref: string } | null>(null);
 
   // Suscripciones
   const [subscriptions, setSubscriptions] = useState<SubscriptionItem[]>([]);
@@ -260,7 +266,7 @@ export function FinanceView() {
 
   const loadSales = () => {
     setLoadingSales(true);
-    api.getSales({ search: salesSearch, status: salesStatus }).then((res) => {
+    return api.getSales({ search: salesSearch, status: salesStatus }).then((res) => {
       setSales(res.rows);
       setSalesTotal(res.total);
       setLoadingSales(false);
@@ -269,7 +275,7 @@ export function FinanceView() {
 
   const loadSubscriptions = () => {
     setLoadingSubs(true);
-    api.getSubscriptions({ search: subsSearch }).then((res) => {
+    return api.getSubscriptions({ search: subsSearch }).then((res) => {
       setSubscriptions(res.rows);
       setSubsTotal(res.total);
       setLoadingSubs(false);
@@ -525,6 +531,50 @@ export function FinanceView() {
       }, 1200);
     }
     setIsRegisteringPayment(false);
+  };
+
+  // Handlers para Aprobación y Rechazo de Ventas Manuales
+  const handleApproveSale = async (sale: SaleTransaction) => {
+    if (processingSaleId) return;
+    setProcessingSaleId(sale.id);
+    try {
+      const res = await api.approveSale(sale.id);
+      if (res.success) {
+        showToast(
+          "success",
+          "¡Pago Aprobado y Alumno Matriculado!",
+          res.message || `Acceso habilitado para ${sale.student}. Se ha enviado el correo de bienvenida.`
+        );
+        await Promise.all([loadSales(), loadSubscriptions()]);
+      } else {
+        showToast("danger", "Error al aprobar", res.message || "No se pudo procesar la matrícula.");
+      }
+    } catch (e: any) {
+      showToast("danger", "Error", e.message || "Ocurrió un error inesperado.");
+    } finally {
+      setProcessingSaleId(null);
+    }
+  };
+
+  const handleRejectSale = async (sale: SaleTransaction) => {
+    if (processingSaleId) return;
+    if (!window.confirm(`¿Estás seguro de que deseas rechazar el pago de ${sale.student} (Ref: ${sale.ref})?`)) {
+      return;
+    }
+    setProcessingSaleId(sale.id);
+    try {
+      const res = await api.rejectSale(sale.id);
+      if (res.success) {
+        showToast("warning", "Pago Rechazado", `La transacción ${sale.ref} ha sido marcada como rechazada.`);
+        await loadSales();
+      } else {
+        showToast("danger", "Error", res.message || "No se pudo rechazar la transacción.");
+      }
+    } catch (e: any) {
+      showToast("danger", "Error", e.message || "Ocurrió un error inesperado.");
+    } finally {
+      setProcessingSaleId(null);
+    }
   };
 
   // Handlers para Configuración
@@ -821,9 +871,10 @@ export function FinanceView() {
                   className={styles.select}
                 >
                   <option value="">Todos los Estados</option>
+                  <option value="pending_approval">Por Aprobar</option>
                   <option value="succeeded">Completado</option>
                   <option value="pending">Pendiente</option>
-                  <option value="failed">Fallido</option>
+                  <option value="failed">Fallido / Rechazado</option>
                   <option value="refunded">Reembolsado</option>
                 </select>
               </div>
@@ -847,14 +898,35 @@ export function FinanceView() {
                   <th>Estado</th>
                   <th>Fecha</th>
                   <th>Referencia</th>
+                  <th>Comprobante</th>
+                  <th style={{ textAlign: "right" }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSales.map((sale) => {
                   let badgeVariant: "success" | "warning" | "danger" | "neutral" = "neutral";
-                  if (sale.status === "succeeded") badgeVariant = "success";
-                  else if (sale.status === "pending") badgeVariant = "warning";
-                  else if (sale.status === "failed") badgeVariant = "danger";
+                  let statusLabel = sale.status;
+
+                  if (sale.status === "succeeded") {
+                    badgeVariant = "success";
+                    statusLabel = "Completado";
+                  } else if (sale.status === "pending_approval") {
+                    badgeVariant = "warning";
+                    statusLabel = "Por Aprobar";
+                  } else if (sale.status === "pending") {
+                    badgeVariant = "warning";
+                    statusLabel = "Pendiente";
+                  } else if (sale.status === "failed") {
+                    badgeVariant = "danger";
+                    statusLabel = "Rechazado";
+                  } else if (sale.status === "refunded") {
+                    badgeVariant = "neutral";
+                    statusLabel = "Reembolsado";
+                  }
+
+                  const isPendingApproval =
+                    sale.status === "pending_approval" ||
+                    (sale.status === "pending" && sale.method.toLowerCase() !== "stripe");
 
                   return (
                     <tr key={sale.id}>
@@ -862,6 +934,9 @@ export function FinanceView() {
                         <div className={styles.studentInfo}>
                           <span className={styles.studentName}>{sale.student}</span>
                           <span className={styles.studentEmail}>{sale.studentEmail}</span>
+                          {sale.studentPhone && (
+                            <span className={styles.studentPhone}>📞 {sale.studentPhone}</span>
+                          )}
                         </div>
                       </td>
                       <td>{sale.course}</td>
@@ -878,18 +953,73 @@ export function FinanceView() {
                       <td>{sale.method}</td>
                       <td>
                         <Badge variant={badgeVariant} size="sm">
-                          {sale.status === "succeeded"
-                            ? "Completado"
-                            : sale.status === "pending"
-                            ? "Pendiente"
-                            : sale.status === "failed"
-                            ? "Fallido"
-                            : sale.status}
+                          {statusLabel}
                         </Badge>
                       </td>
                       <td style={{ whiteSpace: "nowrap" }}>{sale.date}</td>
                       <td>
                         <span className={styles.refCode}>{sale.ref}</span>
+                      </td>
+                      <td>
+                        {sale.receiptUrl ? (
+                          <button
+                            type="button"
+                            className={styles.viewReceiptBtn}
+                            onClick={() =>
+                              setPreviewReceipt({
+                                url: sale.receiptUrl!,
+                                student: sale.student,
+                                ref: sale.ref,
+                              })
+                            }
+                            title="Ver comprobante adjunto"
+                          >
+                            <FileText size={13} />
+                            <span>Comprobante</span>
+                          </button>
+                        ) : (
+                          <span className={styles.noReceiptText}>—</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        {isPendingApproval ? (
+                          <div className={styles.saleActions} style={{ justifyContent: "flex-end" }}>
+                            <button
+                              type="button"
+                              className={styles.approveBtn}
+                              onClick={() => handleApproveSale(sale)}
+                              disabled={processingSaleId === sale.id}
+                              title="Aprobar pago y matricular automáticamente al alumno"
+                            >
+                              {processingSaleId === sale.id ? (
+                                <Loader2 size={13} className={styles.spin} />
+                              ) : (
+                                <Check size={13} />
+                              )}
+                              <span>Aprobar y Matricular</span>
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.rejectBtn}
+                              onClick={() => handleRejectSale(sale)}
+                              disabled={processingSaleId === sale.id}
+                              title="Rechazar comprobante"
+                            >
+                              <X size={13} />
+                              <span>Rechazar</span>
+                            </button>
+                          </div>
+                        ) : sale.status === "succeeded" ? (
+                          <span className={styles.statusSuccessLabel}>
+                            <Check size={13} /> Matriculado
+                          </span>
+                        ) : sale.status === "failed" ? (
+                          <span className={styles.statusFailedLabel}>
+                            <X size={13} /> Rechazado
+                          </span>
+                        ) : (
+                          <span className={styles.noReceiptText}>—</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -2162,6 +2292,53 @@ export function FinanceView() {
               <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--text-muted)" }}>
                 Esta acción no se puede deshacer. Los enlaces de pago existentes dejarán de funcionar.
               </p>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Arc para Inspeccionar Comprobante de Pago */}
+      {previewReceipt && (
+        <Modal
+          isOpen={true}
+          onClose={() => setPreviewReceipt(null)}
+          title={`Comprobante de Pago — ${previewReceipt.student}`}
+          maxWidth="640px"
+          footer={
+            <Button variant="secondary" onClick={() => setPreviewReceipt(null)}>
+              Cerrar
+            </Button>
+          }
+        >
+          <div className={styles.receiptPreviewContainer}>
+            <div className={styles.receiptInfoBar}>
+              <span>
+                <strong>Referencia declarada:</strong> {previewReceipt.ref}
+              </span>
+              <a
+                href={previewReceipt.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.openExternalLink}
+              >
+                <ExternalLink size={13} /> Abrir archivo original
+              </a>
+            </div>
+
+            <div className={styles.receiptMediaBox}>
+              {previewReceipt.url.toLowerCase().endsWith(".pdf") ? (
+                <iframe
+                  src={previewReceipt.url}
+                  className={styles.receiptPdfFrame}
+                  title="Comprobante PDF"
+                />
+              ) : (
+                <img
+                  src={previewReceipt.url}
+                  alt={`Comprobante de ${previewReceipt.student}`}
+                  className={styles.receiptImg}
+                />
+              )}
             </div>
           </div>
         </Modal>

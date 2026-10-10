@@ -1000,3 +1000,189 @@
 .textarea:focus {
   border-color: var(--border-strong);
 }
+
+/* Sales approval & receipt styles */
+.studentPhone {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.viewReceiptBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-control, 6px);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.viewReceiptBtn:hover {
+  background: var(--surface-raised, #27272a);
+  border-color: var(--border-strong);
+}
+
+.noReceiptText {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.saleActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.approveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(163, 230, 53, 0.12);
+  border: 1px solid rgba(163, 230, 53, 0.3);
+  color: #bef264;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-control, 6px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-fast);
+}
+
+.approveBtn:hover:not(:disabled) {
+  background: rgba(163, 230, 53, 0.22);
+  border-color: rgba(163, 230, 53, 0.5);
+}
+
+.approveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rejectBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-control, 6px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-fast);
+}
+
+.rejectBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.rejectBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.statusSuccessLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #a3e635;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.statusFailedLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #f87171;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.spin {
+  animation: spinAction 1s linear infinite;
+}
+
+@keyframes spinAction {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.receiptPreviewContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.receiptInfoBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.openExternalLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.openExternalLink:hover {
+  text-decoration: underline;
+}
+
+.receiptMediaBox {
+  width: 100%;
+  max-height: 520px;
+  overflow: auto;
+  background: #09090b;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+}
+
+.receiptImg {
+  max-width: 100%;
+  height: auto;
+  max-height: 500px;
+  border-radius: var(--radius-control);
+  object-fit: contain;
+}
+
+.receiptPdfFrame {
+  width: 100%;
+  height: 480px;
+  border: none;
+  border-radius: var(--radius-control);
+}
+
+.receiptModalFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+}
+

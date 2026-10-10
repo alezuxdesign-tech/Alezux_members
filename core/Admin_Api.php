@@ -110,6 +110,18 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
+			register_rest_route( $namespace, '/finance/sales/(?P<id>\d+)/approve', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'approve_finance_sale' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/finance/sales/(?P<id>\d+)/reject', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'reject_finance_sale' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
 			register_rest_route( $namespace, '/finance/subscriptions', [
 				'methods'             => 'GET',
 				'callback'            => [ $this, 'get_finance_subscriptions' ],
@@ -1327,6 +1339,12 @@ class Admin_Api {
 
 		$data = [];
 		foreach ( $results as $row ) {
+			$t_data = ! empty( $row->data ) ? json_decode( $row->data, true ) : [];
+			$student_name  = ! empty( $row->user_name ) ? $row->user_name : ( $t_data['student_name'] ?? ( $row->user_email ?: 'Estudiante' ) );
+			$student_email = ! empty( $row->user_email ) ? $row->user_email : ( $t_data['student_email'] ?? '' );
+			$student_phone = $t_data['student_phone'] ?? '';
+			$receipt_url   = $t_data['receipt_url'] ?? '';
+
 			$payment_desc = 'Pago Único';
 			if ( (int) $row->total_quotas === 0 ) {
 				$payment_desc = 'Membresía Recurrente';
@@ -1339,8 +1357,9 @@ class Admin_Api {
 
 			$data[] = [
 				'id'           => (int) $row->id,
-				'student'      => $row->user_name ? $row->user_name : ( $row->user_email ?: 'Usuario #' . $row->user_id ),
-				'studentEmail' => $row->user_email ?: '',
+				'student'      => $student_name,
+				'studentEmail' => $student_email,
+				'studentPhone' => $student_phone,
 				'method'       => $row->method ? ucfirst( $row->method ) : 'Stripe',
 				'amount'       => (float) $row->amount,
 				'currency'     => $row->currency ?: 'USD',
@@ -1349,6 +1368,7 @@ class Admin_Api {
 				'status'       => $row->status ?: 'succeeded',
 				'date'         => date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $row->created_at ) ),
 				'ref'          => $row->transaction_ref ?: 'tx_' . substr( md5( $row->id ), 0, 10 ),
+				'receiptUrl'   => $receipt_url,
 			];
 		}
 
@@ -1356,6 +1376,95 @@ class Admin_Api {
 			'rows'  => $data,
 			'total' => $total_rows,
 			'pages' => ceil( $total_rows / $limit ) ?: 1,
+		] );
+	}
+
+	/**
+	 * Aprobar un Pago Manual y Matricular Automáticamente al Estudiante
+	 */
+	public function approve_finance_sale( $request ) {
+		global $wpdb;
+		$sale_id = (int) $request->get_param( 'id' );
+		$t_trans = $wpdb->prefix . 'alezux_finanzas_transactions';
+
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t_trans WHERE id = %d", $sale_id ) );
+		if ( ! $row ) {
+			return new \WP_Error( 'not_found', 'Transacción no encontrada.', [ 'status' => 404 ] );
+		}
+
+		$data = ! empty( $row->data ) ? json_decode( $row->data, true ) : [];
+		$email = ! empty( $data['student_email'] ) ? sanitize_email( $data['student_email'] ) : '';
+		$name  = ! empty( $data['student_name'] ) ? sanitize_text_field( $data['student_name'] ) : '';
+		$plan_id = (int) ( $row->plan_id ?: ( $data['plan_id'] ?? 0 ) );
+		$amount = (float) $row->amount;
+		$ref = $row->transaction_ref ?: ( $data['reference'] ?? '' );
+		$method = $row->method ?: 'manual';
+
+		if ( empty( $email ) && $row->user_id > 0 ) {
+			$user = get_user_by( 'id', $row->user_id );
+			if ( $user ) {
+				$email = $user->user_email;
+				$name  = $user->display_name;
+			}
+		}
+
+		if ( empty( $email ) ) {
+			return new \WP_Error( 'invalid_data', 'No se encontró el correo del estudiante en el registro.', [ 'status' => 400 ] );
+		}
+
+		// Matricular al usuario usando Enrollment_Manager (Crea cuenta y envía correo de bienvenida automáticamente)
+		if ( ! class_exists( '\Alezux_Members\Modules\Finanzas\Includes\Enrollment_Manager' ) && file_exists( ALEZUX_MEMBERS_PATH . 'modules/finanzas/includes/Enrollment_Manager.php' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/finanzas/includes/Enrollment_Manager.php';
+		}
+
+		if ( class_exists( '\Alezux_Members\Modules\Finanzas\Includes\Enrollment_Manager' ) ) {
+			$user_id = \Alezux_Members\Modules\Finanzas\Includes\Enrollment_Manager::enroll_user(
+				$email,
+				$plan_id,
+				null,
+				$amount,
+				$ref,
+				'USD',
+				$name,
+				$method
+			);
+
+			if ( $user_id ) {
+				$wpdb->update(
+					$t_trans,
+					[
+						'status'  => 'succeeded',
+						'user_id' => $user_id,
+					],
+					[ 'id' => $sale_id ]
+				);
+
+				return rest_ensure_response( [
+					'success' => true,
+					'message' => '¡Pago aprobado con éxito! El alumno fue matriculado y se le ha enviado su correo de bienvenida con sus accesos.',
+					'status'  => 'succeeded',
+					'userId'  => $user_id,
+				] );
+			}
+		}
+
+		return new \WP_Error( 'enrollment_failed', 'Ocurrió un error al matricular al estudiante.', [ 'status' => 500 ] );
+	}
+
+	/**
+	 * Rechazar un Pago Manual
+	 */
+	public function reject_finance_sale( $request ) {
+		global $wpdb;
+		$sale_id = (int) $request->get_param( 'id' );
+		$t_trans = $wpdb->prefix . 'alezux_finanzas_transactions';
+
+		$wpdb->update( $t_trans, [ 'status' => 'failed' ], [ 'id' => $sale_id ] );
+
+		return rest_ensure_response( [
+			'success' => true,
+			'message' => 'El pago fue marcado como rechazado / no válido.',
+			'status'  => 'failed',
 		] );
 	}
 
