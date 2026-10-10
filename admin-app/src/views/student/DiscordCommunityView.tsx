@@ -17,7 +17,11 @@ import {
   Info,
   CheckCircle2,
   Video,
-  AlertCircle
+  AlertCircle,
+  Globe,
+  Folder,
+  FolderPlus,
+  X
 } from "lucide-react";
 import {
   api,
@@ -27,6 +31,7 @@ import {
   CreateCommunityChannelPayload,
 } from "../../services/api";
 import { Modal } from "../../components/arc/modal";
+import { Select, SelectOption } from "../../components/arc/select";
 import styles from "./DiscordCommunityView.module.css";
 
 interface DiscordCommunityViewProps {
@@ -75,6 +80,12 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     course_id: 0,
     is_announcement: false,
   });
+
+  // Estado para selección de categoría y restricción con Arc Select
+  const NEW_CATEGORY_OPTION = "__NEW_CATEGORY__";
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string>("General");
+  const [isCustomCategory, setIsCustomCategory] = useState<boolean>(false);
+  const [customCategoryText, setCustomCategoryText] = useState<string>("");
 
   const [channelToDelete, setChannelToDelete] = useState<CommunityChannel | null>(null);
   const [isDeletingChannel, setIsDeletingChannel] = useState(false);
@@ -188,6 +199,65 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     return groups;
   }, [channels]);
 
+  // Lista de categorías existentes únicas
+  const existingCategories = useMemo(() => {
+    const set = new Set<string>();
+    channels.forEach((ch) => {
+      if (ch.category && ch.category.trim()) {
+        set.add(ch.category.trim());
+      }
+    });
+    if (set.size === 0) {
+      set.add("General");
+    }
+    return Array.from(set);
+  }, [channels]);
+
+  // Opciones para el Select de Categorías (con Lucide Folder y FolderPlus)
+  const categorySelectOptions: SelectOption<string>[] = useMemo(() => {
+    const list: SelectOption<string>[] = existingCategories.map((cat) => {
+      const count = channels.filter((c) => c.category === cat).length;
+      return {
+        value: cat,
+        label: cat,
+        sublabel: `${count} ${count === 1 ? "canal" : "canales"}`,
+        icon: <Folder size={15} color="var(--accent)" />,
+      };
+    });
+
+    list.push({
+      value: NEW_CATEGORY_OPTION,
+      label: "+ Crear nueva categoría...",
+      sublabel: "Escribir un nuevo grupo",
+      icon: <FolderPlus size={15} color="#10b981" />,
+    });
+
+    return list;
+  }, [existingCategories, channels]);
+
+  // Opciones para el Select de Restricciones (con Lucide Globe y Lock)
+  const restrictionOptions: SelectOption<number>[] = useMemo(() => {
+    const list: SelectOption<number>[] = [
+      {
+        value: 0,
+        label: "Público para todos los estudiantes",
+        sublabel: "Sin restricción de curso (Canal abierto)",
+        icon: <Globe size={15} color="var(--accent)" />,
+      },
+    ];
+
+    availableCourses.forEach((crs) => {
+      list.push({
+        value: crs.id,
+        label: crs.title,
+        sublabel: "Exclusivo para alumnos con este curso activo",
+        icon: <Lock size={14} color="#f59e0b" />,
+      });
+    });
+
+    return list;
+  }, [availableCourses]);
+
   // Alternar categoría colapsada
   const toggleCategory = (cat: string) => {
     setCollapsedCategories((prev) => ({
@@ -199,10 +269,14 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   // Abrir modal para crear canal
   const handleOpenCreateModal = (defaultCategory = "General") => {
     setEditingChannel(null);
+    const cat = defaultCategory || existingCategories[0] || "General";
+    setSelectedCategoryKey(cat);
+    setIsCustomCategory(false);
+    setCustomCategoryText("");
     setChannelForm({
       name: "",
       description: "",
-      category: defaultCategory,
+      category: cat,
       course_id: 0,
       is_announcement: false,
     });
@@ -213,10 +287,20 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   const handleOpenEditModal = (ch: CommunityChannel, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingChannel(ch);
+    const cat = ch.category || "General";
+    if (existingCategories.includes(cat)) {
+      setSelectedCategoryKey(cat);
+      setIsCustomCategory(false);
+      setCustomCategoryText("");
+    } else {
+      setSelectedCategoryKey(NEW_CATEGORY_OPTION);
+      setIsCustomCategory(true);
+      setCustomCategoryText(cat);
+    }
     setChannelForm({
       name: ch.name,
       description: ch.description || "",
-      category: ch.category || "General",
+      category: cat,
       course_id: ch.course_id || 0,
       is_announcement: !!ch.is_announcement,
     });
@@ -226,6 +310,10 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   // Guardar canal (crear o editar)
   const handleSaveChannel = async () => {
     if (!channelForm.name.trim()) return;
+    const finalCategory = isCustomCategory
+      ? (customCategoryText.trim() || "General")
+      : (selectedCategoryKey || "General");
+
     try {
       const cleanSlug = channelForm.name
         .toLowerCase()
@@ -236,12 +324,14 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
       if (editingChannel) {
         const updated = await api.updateCommunityChannel(editingChannel.id, {
           ...channelForm,
+          category: finalCategory,
           name: cleanSlug,
         });
         setChannels(updated);
       } else {
         const updated = await api.createCommunityChannel({
           ...channelForm,
+          category: finalCategory,
           name: cleanSlug,
         });
         setChannels(updated);
@@ -611,7 +701,8 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                   </span>
                 ) : (
                   <span className={styles.chatHeaderBadge}>
-                    <span>🌐 Comunidad Global</span>
+                    <Globe size={12} />
+                    <span>Comunidad Global</span>
                   </span>
                 )}
 
@@ -833,14 +924,16 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
         maxWidth="540px"
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "10px" }}>
-          {/* Nombre del canal */}
+          {/* Nombre del canal con icono Hash de Lucide */}
           <div className={styles.modalFormGroup}>
             <label className={styles.modalLabel}>
               <span>Nombre del canal</span>
-              <span className={styles.modalLabelHint}>Se convertirá a formato minúscula sin espacios</span>
+              <span className={styles.modalLabelHint}>Formato minúscula sin espacios</span>
             </label>
             <div className={styles.modalInputWrapper}>
-              <span className={styles.modalInputPrefix}>#</span>
+              <span className={styles.modalInputPrefix}>
+                <Hash size={14} />
+              </span>
               <input
                 type="text"
                 className={styles.modalInput}
@@ -856,16 +949,61 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
             </div>
           </div>
 
-          {/* Categoría */}
+          {/* Categoría o Grupo con Arc Select */}
           <div className={styles.modalFormGroup}>
-            <label className={styles.modalLabel}>Categoría o Grupo</label>
-            <input
-              type="text"
-              className={styles.modalInputNormal}
-              placeholder="ej: General, Cursos, Networking, Soporte..."
-              value={channelForm.category}
-              onChange={(e) => setChannelForm({ ...channelForm, category: e.target.value })}
+            <label className={styles.modalLabel}>
+              <span>Categoría o Grupo</span>
+              <span className={styles.modalLabelHint}>Elige una categoría existente o crea una nueva</span>
+            </label>
+            <Select<string>
+              options={categorySelectOptions}
+              value={selectedCategoryKey}
+              onChange={(val) => {
+                if (val === NEW_CATEGORY_OPTION) {
+                  setIsCustomCategory(true);
+                  setSelectedCategoryKey(NEW_CATEGORY_OPTION);
+                } else {
+                  setIsCustomCategory(false);
+                  setSelectedCategoryKey(val);
+                  setChannelForm((prev) => ({ ...prev, category: val }));
+                }
+              }}
+              placeholder="Seleccionar categoría..."
+              size="md"
             />
+
+            {/* Input para nueva categoría si el usuario selecciona "+ Crear nueva categoría..." */}
+            {isCustomCategory && (
+              <div className={styles.newCategoryRow}>
+                <div className={styles.modalInputWrapper} style={{ flex: 1 }}>
+                  <span className={styles.modalInputPrefix}>
+                    <FolderPlus size={14} color="#10b981" />
+                  </span>
+                  <input
+                    type="text"
+                    className={styles.modalInput}
+                    placeholder="Escribe el nombre del nuevo grupo (ej: Proyectos, Mentorías)..."
+                    value={customCategoryText}
+                    autoFocus
+                    onChange={(e) => setCustomCategoryText(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className={styles.cancelNewCategoryBtn}
+                  onClick={() => {
+                    setIsCustomCategory(false);
+                    const fallback = existingCategories[0] || "General";
+                    setSelectedCategoryKey(fallback);
+                    setChannelForm((prev) => ({ ...prev, category: fallback }));
+                  }}
+                  title="Volver a seleccionar una categoría existente"
+                >
+                  <X size={13} />
+                  <span>Cancelar</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Descripción */}
@@ -879,26 +1017,19 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
             />
           </div>
 
-          {/* Restricción de Curso */}
+          {/* Restricción de Curso con Arc Select y Lucide Globe / Lock */}
           <div className={styles.modalFormGroup}>
             <label className={styles.modalLabel}>
               <span>Restricción de Acceso por Curso</span>
               <span className={styles.modalLabelHint}>Control exclusivo para matriculados</span>
             </label>
-            <select
-              className={styles.modalSelect}
+            <Select<number>
+              options={restrictionOptions}
               value={channelForm.course_id || 0}
-              onChange={(e) =>
-                setChannelForm({ ...channelForm, course_id: parseInt(e.target.value, 10) })
-              }
-            >
-              <option value="0">🌐 Público para todos los estudiantes (Sin restricción)</option>
-              {availableCourses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  🔒 Exclusivo para alumnos de: {c.title}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setChannelForm({ ...channelForm, course_id: val })}
+              placeholder="Seleccionar restricción de curso..."
+              size="md"
+            />
           </div>
 
           {/* Canal de Anuncios */}
