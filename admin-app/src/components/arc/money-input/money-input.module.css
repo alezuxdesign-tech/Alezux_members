@@ -1,0 +1,136 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  width: 100%;
+}
+
+.label {
+  font-size: var(--text-xs, 12px);
+  font-weight: 500;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  user-select: none;
+}
+
+.container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: var(--control-height-md, 44px);
+  background: var(--surface, #1e2029);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-control, 18px);
+  padding: 0 16px;
+  gap: 10px;
+  transition: border-color var(--duration-fast, 160ms) var(--ease-standard, ease),
+              box-shadow var(--duration-fast, 160ms) var(--ease-standard, ease),
+              background-color var(--duration-fast, 160ms) var(--ease-standard, ease);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.container:hover:not(.disabled) {
+  border-color: var(--border-strong, rgba(255, 255, 255, 0.22));
+}
+
+.container:focus-within:not(.disabled) {
+  border-color: var(--accent, #a78bff) !important;
+  box-shadow: 0 0 0 1px var(--accent, #a78bff) !important;
+}
+
+.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--surface-muted, #181920) !important;
+}
+
+.symbol {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--accent, #a78bff);
+  user-select: none;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.disabled .symbol {
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+}
+
+:global(#crezca-admin-root) .input,
+:global(#alezux-admin-root) .input,
+.input {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-family: inherit !important;
+  font-size: var(--text-sm, 14px) !important;
+  font-weight: 600 !important;
+  color: var(--foreground, #ffffff) !important;
+  font-variant-numeric: tabular-nums !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+:global(#crezca-admin-root) .input:disabled,
+:global(#alezux-admin-root) .input:disabled,
+.input:disabled {
+  cursor: not-allowed !important;
+  color: var(--text-muted, rgba(255, 255, 255, 0.45)) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+:global(#crezca-admin-root) .input::placeholder,
+:global(#alezux-admin-root) .input::placeholder,
+.input::placeholder {
+  color: var(--text-muted, rgba(255, 255, 255, 0.35)) !important;
+}
+
+.currencyBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+  user-select: none;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.disabled .currencyBadge {
+  opacity: 0.5;
+}
+
+.hint {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  line-height: 1.35;
+}
+
+.error {
+  font-size: var(--text-xs, 12px);
+  color: var(--danger, #ef4444);
+  line-height: 1.35;
+}

@@ -33,6 +33,7 @@ import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
 import { Input } from "../components/arc/input/input";
+import { MoneyInput } from "../components/arc/money-input/money-input";
 import { Switch } from "../components/arc/switch/switch";
 import { Alert } from "../components/arc/alert/alert";
 import { 
@@ -191,41 +192,6 @@ export function CoursesView() {
         setPriceInputValue("10.00");
       }
       showToast("info", "Curso marcado de Pago", "Puedes especificar el precio en USD.");
-    }
-  };
-
-  // Manejadores del Input de Precio con formateo
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    const clean = raw.replace(/[^0-9.]/g, "");
-    const parts = clean.split(".");
-    const sanitized = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join("")}` : clean;
-    setPriceInputValue(sanitized);
-    const num = parseFloat(sanitized);
-    setCoursePrice(isNaN(num) ? 0 : num);
-  };
-
-  const handlePriceBlur = () => {
-    const num = parseFloat(priceInputValue.replace(/,/g, ""));
-    if (isNaN(num) || num <= 0) {
-      if (!isFreeCourse) {
-        setCoursePrice(0);
-        setPriceInputValue("0.00");
-      }
-    } else {
-      setCoursePrice(num);
-      setPriceInputValue(
-        num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      );
-    }
-  };
-
-  const handlePriceFocus = () => {
-    const stripped = priceInputValue.replace(/,/g, "");
-    if (stripped === "0.00") {
-      setPriceInputValue("");
-    } else {
-      setPriceInputValue(stripped);
     }
   };
 
@@ -882,36 +848,25 @@ export function CoursesView() {
                   </div>
                 </div>
 
-                {/* Input de Precio con formateo de moneda */}
+                {/* Money Input para Precio del Curso */}
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>
-                    Precio del Curso {isFreeCourse ? "(Gratuito)" : "($ USD)"}
-                  </label>
-                  <div
-                    className={[
-                      styles.currencyContainer,
-                      isFreeCourse ? styles.currencyContainerDisabled : "",
-                    ].join(" ")}
-                  >
-                    <span className={styles.currencyPrefix} aria-hidden="true">$</span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      disabled={isFreeCourse}
-                      value={priceInputValue}
-                      onChange={handlePriceChange}
-                      onFocus={handlePriceFocus}
-                      onBlur={handlePriceBlur}
-                      className={styles.currencyInput}
-                    />
-                    <span className={styles.currencySuffix}>USD</span>
-                  </div>
-                  <span className={styles.inputHelper}>
-                    {isFreeCourse
-                      ? "El precio está fijado en $0.00 USD por ser curso gratuito."
-                      : "Formato en USD. Especifica el monto para venta directa."}
-                  </span>
+                  <MoneyInput
+                    label={`Precio del Curso ${isFreeCourse ? "(Gratuito)" : "($ USD)"}`}
+                    value={Number(coursePrice) || 0}
+                    onChange={(val) => {
+                      setCoursePrice(val);
+                      setPriceInputValue(val.toFixed(2));
+                    }}
+                    disabled={isFreeCourse}
+                    currency="USD"
+                    symbol="$"
+                    placeholder="0.00"
+                    hint={
+                      isFreeCourse
+                        ? "El precio está fijado en $0.00 USD por ser curso gratuito."
+                        : "Formato en USD. Especifica el monto para venta directa."
+                    }
+                  />
                 </div>
 
                 {/* Switch de Publicación en la Plataforma */}
