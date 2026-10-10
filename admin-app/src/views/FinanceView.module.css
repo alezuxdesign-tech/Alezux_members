@@ -98,11 +98,22 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition: border-color var(--duration-fast);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast), background-color var(--duration-fast);
 }
 
 .planCard:hover {
   border-color: rgba(255, 255, 255, 0.16);
+}
+
+:global([data-theme="light"]) .planCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-resting);
+}
+
+:global([data-theme="light"]) .planCard:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-raised);
 }
 
 .planTop {
@@ -121,6 +132,10 @@
   line-height: 1.2;
 }
 
+:global([data-theme="light"]) .planName {
+  color: var(--foreground);
+}
+
 .quotaBadge {
   background: rgba(138, 102, 255, 0.18);
   color: #c7b7ff;
@@ -130,6 +145,11 @@
   font-weight: 500;
   white-space: nowrap;
   letter-spacing: -0.01em;
+}
+
+:global([data-theme="light"]) .quotaBadge {
+  background: rgba(119, 71, 255, 0.12);
+  color: #6332ea;
 }
 
 .planPriceRow {
@@ -146,6 +166,10 @@
   line-height: 1;
 }
 
+:global([data-theme="light"]) .currency {
+  color: var(--accent);
+}
+
 .priceAmount {
   font-family: var(--font-display);
   font-size: 34px;
@@ -155,11 +179,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+:global([data-theme="light"]) .priceAmount {
+  color: var(--foreground);
+}
+
 .pricePeriod {
   font-size: 14px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.45);
   margin-left: 2px;
+}
+
+:global([data-theme="light"]) .pricePeriod {
+  color: var(--text-muted);
 }
 
 .courseTag {
@@ -180,6 +212,16 @@
   flex-shrink: 0;
 }
 
+:global([data-theme="light"]) .courseTag {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+:global([data-theme="light"]) .courseTag svg {
+  color: var(--text-muted);
+}
+
 .whatsappTag {
   display: inline-flex;
   align-items: center;
@@ -190,6 +232,11 @@
   padding: 6px 14px;
   border-radius: 9999px;
   align-self: flex-start;
+}
+
+:global([data-theme="light"]) .whatsappTag {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
 }
 
 .planDetails {
@@ -213,11 +260,23 @@
   font-weight: 500;
 }
 
+:global([data-theme="light"]) .detailRow {
+  color: var(--text-muted);
+}
+
+:global([data-theme="light"]) .detailRow span:last-child {
+  color: var(--foreground);
+}
+
 .totalAmount {
   color: #ffffff !important;
   font-weight: 700 !important;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
+}
+
+:global([data-theme="light"]) .totalAmount {
+  color: var(--foreground) !important;
 }
 
 .cardDivider {
@@ -226,6 +285,10 @@
   border: none;
   border-top: 1px dashed rgba(255, 255, 255, 0.12);
   margin: 4px 0;
+}
+
+:global([data-theme="light"]) .cardDivider {
+  border-top: 1px dashed var(--border);
 }
 
 .shareLinkBox {
@@ -246,6 +309,15 @@
   border-color: rgba(255, 255, 255, 0.14);
 }
 
+:global([data-theme="light"]) .shareLinkBox {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+:global([data-theme="light"]) .shareLinkBox:hover {
+  border-color: var(--border-strong);
+}
+
 .shareLinkUrl {
   font-family: inherit;
   font-size: 12px;
@@ -256,6 +328,10 @@
   flex: 1;
   min-width: 0;
   user-select: all;
+}
+
+:global([data-theme="light"]) .shareLinkUrl {
+  color: var(--text-muted);
 }
 
 .shareCopyBtn {
@@ -283,6 +359,18 @@
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+:global([data-theme="light"]) .shareCopyBtn {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--foreground);
+  box-shadow: var(--shadow-resting);
+}
+
+:global([data-theme="light"]) .shareCopyBtn:hover {
+  background: var(--surface-muted);
+  border-color: var(--accent);
+}
+
 .shareCopyBtn:active {
   transform: scale(0.97);
 }
@@ -293,8 +381,18 @@
   color: #c7b7ff !important;
 }
 
+:global([data-theme="light"]) .shareCopied {
+  background: rgba(119, 71, 255, 0.15) !important;
+  border-color: #7747ff !important;
+  color: #5528ce !important;
+}
+
 .shareCheckIcon {
   color: #a78bff;
+}
+
+:global([data-theme="light"]) .shareCheckIcon {
+  color: #7747ff;
 }
 
 .cardBottomDivider {
@@ -303,6 +401,10 @@
   border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   margin: 4px 0 2px 0;
+}
+
+:global([data-theme="light"]) .cardBottomDivider {
+  border-top: 1px solid var(--border);
 }
 
 .cardFooterActions {
@@ -337,6 +439,18 @@
   transform: translateY(-1px);
 }
 
+:global([data-theme="light"]) .configBtn {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--foreground);
+  box-shadow: var(--shadow-resting);
+}
+
+:global([data-theme="light"]) .configBtn:hover {
+  background: var(--surface-muted);
+  border-color: var(--foreground);
+}
+
 .configBtn:active {
   transform: translateY(0);
 }
@@ -357,8 +471,16 @@
   outline: none;
 }
 
+:global([data-theme="light"]) .deletePlanBtn {
+  color: var(--text-secondary);
+}
+
 .deletePlanBtn:hover {
   color: #f87171;
+}
+
+:global([data-theme="light"]) .deletePlanBtn:hover {
+  color: var(--danger);
 }
 
 /* Data Tables (Sales & Subscriptions) */
