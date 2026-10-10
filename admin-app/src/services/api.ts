@@ -218,9 +218,45 @@ export interface SubscriptionItem {
 }
 
 export interface FinanceSettings {
+  // Stripe
+  stripe_enabled?: boolean;
   stripe_public_key: string;
   stripe_secret_key: string;
   webhook_url?: string;
+
+  // Pago Móvil (Venezuela)
+  pagomovil_enabled?: boolean;
+  pagomovil_bank?: string;
+  pagomovil_id?: string;
+  pagomovil_phone?: string;
+  pagomovil_holder?: string;
+
+  // Zelle
+  zelle_enabled?: boolean;
+  zelle_email?: string;
+  zelle_holder?: string;
+
+  // Transferencia Bancaria Local
+  bank_transfer_enabled?: boolean;
+  bank_name?: string;
+  bank_account_number?: string;
+  bank_account_type?: string;
+  bank_holder_name?: string;
+  bank_holder_id?: string;
+
+  // Binance Pay / Cripto
+  binance_enabled?: boolean;
+  binance_pay_id?: string;
+  binance_usdt_wallet?: string;
+  binance_network?: string;
+
+  // PayPal
+  paypal_enabled?: boolean;
+  paypal_email?: string;
+
+  // Contacto & Comprobantes
+  whatsapp_number?: string;
+  manual_payment_instructions?: string;
 }
 
 export interface MarketingAutomation {
@@ -1314,9 +1350,33 @@ class ApiService {
 
   async getFinanceSettings(): Promise<FinanceSettings> {
     const defaultSettings: FinanceSettings = {
+      stripe_enabled: false,
       stripe_public_key: "",
       stripe_secret_key: "",
       webhook_url: `${window.location.origin}/?alezux_webhook=stripe`,
+      pagomovil_enabled: false,
+      pagomovil_bank: "",
+      pagomovil_id: "",
+      pagomovil_phone: "",
+      pagomovil_holder: "",
+      zelle_enabled: false,
+      zelle_email: "",
+      zelle_holder: "",
+      bank_transfer_enabled: false,
+      bank_name: "",
+      bank_account_number: "",
+      bank_account_type: "Corriente",
+      bank_holder_name: "",
+      bank_holder_id: "",
+      binance_enabled: false,
+      binance_pay_id: "",
+      binance_usdt_wallet: "",
+      binance_network: "TRC20",
+      paypal_enabled: false,
+      paypal_email: "",
+      whatsapp_number: "",
+      manual_payment_instructions:
+        "Envía tu comprobante con el número de referencia para verificar y activar tu acceso de inmediato.",
     };
     try {
       if (this.wpData) {

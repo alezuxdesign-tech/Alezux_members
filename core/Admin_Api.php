@@ -1548,30 +1548,121 @@ class Admin_Api {
 	}
 
 	/**
-	 * Obtener credenciales de Stripe para el Dashboard
+	 * Obtener credenciales y pasarelas de pago configuradas
 	 */
 	public function get_finance_settings() {
+		$saved = get_option( 'alezux_finance_settings', [] );
+		if ( ! is_array( $saved ) ) {
+			$saved = [];
+		}
+
+		$stripe_pk = ! empty( $saved['stripe_public_key'] ) ? $saved['stripe_public_key'] : get_option( 'alezux_stripe_public_key', '' );
+		$stripe_sk = ! empty( $saved['stripe_secret_key'] ) ? $saved['stripe_secret_key'] : get_option( 'alezux_stripe_secret_key', '' );
+
 		return rest_ensure_response( [
-			'stripe_public_key' => get_option( 'alezux_stripe_public_key', '' ),
-			'stripe_secret_key' => get_option( 'alezux_stripe_secret_key', '' ),
-			'webhook_url'       => home_url( '/?alezux_webhook=stripe' ),
+			// Stripe
+			'stripe_enabled'              => isset( $saved['stripe_enabled'] ) ? (bool) $saved['stripe_enabled'] : ! empty( $stripe_pk ),
+			'stripe_public_key'           => $stripe_pk,
+			'stripe_secret_key'           => $stripe_sk,
+			'webhook_url'                 => home_url( '/?alezux_webhook=stripe' ),
+
+			// Pago Móvil (Venezuela)
+			'pagomovil_enabled'           => isset( $saved['pagomovil_enabled'] ) ? (bool) $saved['pagomovil_enabled'] : false,
+			'pagomovil_bank'              => $saved['pagomovil_bank'] ?? '',
+			'pagomovil_id'                => $saved['pagomovil_id'] ?? '',
+			'pagomovil_phone'             => $saved['pagomovil_phone'] ?? '',
+			'pagomovil_holder'            => $saved['pagomovil_holder'] ?? '',
+
+			// Zelle
+			'zelle_enabled'               => isset( $saved['zelle_enabled'] ) ? (bool) $saved['zelle_enabled'] : false,
+			'zelle_email'                 => $saved['zelle_email'] ?? '',
+			'zelle_holder'                => $saved['zelle_holder'] ?? '',
+
+			// Transferencia Bancaria Local
+			'bank_transfer_enabled'       => isset( $saved['bank_transfer_enabled'] ) ? (bool) $saved['bank_transfer_enabled'] : false,
+			'bank_name'                   => $saved['bank_name'] ?? '',
+			'bank_account_number'         => $saved['bank_account_number'] ?? '',
+			'bank_account_type'           => $saved['bank_account_type'] ?? 'Corriente',
+			'bank_holder_name'            => $saved['bank_holder_name'] ?? '',
+			'bank_holder_id'              => $saved['bank_holder_id'] ?? '',
+
+			// Binance Pay / Cripto
+			'binance_enabled'             => isset( $saved['binance_enabled'] ) ? (bool) $saved['binance_enabled'] : false,
+			'binance_pay_id'              => $saved['binance_pay_id'] ?? '',
+			'binance_usdt_wallet'         => $saved['binance_usdt_wallet'] ?? '',
+			'binance_network'             => $saved['binance_network'] ?? 'TRC20',
+
+			// PayPal
+			'paypal_enabled'              => isset( $saved['paypal_enabled'] ) ? (bool) $saved['paypal_enabled'] : false,
+			'paypal_email'                => $saved['paypal_email'] ?? '',
+
+			// WhatsApp & Instrucciones
+			'whatsapp_number'             => $saved['whatsapp_number'] ?? '',
+			'manual_payment_instructions' => $saved['manual_payment_instructions'] ?? 'Envía tu comprobante con el número de referencia para verificar y activar tu acceso de inmediato.',
 		] );
 	}
 
 	/**
-	 * Guardar credenciales de Stripe
+	 * Guardar configuración de pasarelas y métodos de pago
 	 */
 	public function save_finance_settings( $request ) {
 		$params = $request->get_json_params();
+		$current = get_option( 'alezux_finance_settings', [] );
+		if ( ! is_array( $current ) ) {
+			$current = [];
+		}
+
+		$fields = [
+			'stripe_enabled',
+			'stripe_public_key',
+			'stripe_secret_key',
+			'pagomovil_enabled',
+			'pagomovil_bank',
+			'pagomovil_id',
+			'pagomovil_phone',
+			'pagomovil_holder',
+			'zelle_enabled',
+			'zelle_email',
+			'zelle_holder',
+			'bank_transfer_enabled',
+			'bank_name',
+			'bank_account_number',
+			'bank_account_type',
+			'bank_holder_name',
+			'bank_holder_id',
+			'binance_enabled',
+			'binance_pay_id',
+			'binance_usdt_wallet',
+			'binance_network',
+			'paypal_enabled',
+			'paypal_email',
+			'whatsapp_number',
+			'manual_payment_instructions',
+		];
+
+		foreach ( $fields as $f ) {
+			if ( isset( $params[ $f ] ) ) {
+				if ( substr( $f, -8 ) === '_enabled' ) {
+					$current[ $f ] = (bool) $params[ $f ];
+				} else {
+					$current[ $f ] = sanitize_text_field( $params[ $f ] );
+				}
+			}
+		}
+
+		update_option( 'alezux_finance_settings', $current );
+
+		// Sincronizar compatibilidad directa con opciones de Stripe
 		if ( isset( $params['stripe_public_key'] ) ) {
 			update_option( 'alezux_stripe_public_key', sanitize_text_field( $params['stripe_public_key'] ) );
 		}
 		if ( isset( $params['stripe_secret_key'] ) ) {
 			update_option( 'alezux_stripe_secret_key', sanitize_text_field( $params['stripe_secret_key'] ) );
 		}
+
 		return rest_ensure_response( [
 			'success' => true,
-			'message' => 'Configuración de pasarela guardada correctamente.',
+			'message' => 'Configuración de métodos de pago guardada correctamente.',
 		] );
 	}
 

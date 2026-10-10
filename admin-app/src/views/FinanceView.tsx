@@ -22,6 +22,10 @@ import {
   Layers,
   Sparkles,
   AlertTriangle,
+  Smartphone,
+  Building2,
+  QrCode,
+  Wallet,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -30,6 +34,7 @@ import { MetricCard } from "../components/arc/metric-card/metric-card";
 import { Input } from "../components/arc/input/input";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
 import { Select, SelectOption } from "../components/arc/select/select";
+import { Switch } from "../components/arc/switch/switch";
 import { Alert } from "../components/arc/alert/alert";
 import {
   api,
@@ -45,6 +50,7 @@ import styles from "./FinanceView.module.css";
 
 type FinanceTab = "planes" | "ventas" | "suscripciones";
 type PlanModalTab = "general" | "reglas";
+type SettingsTab = "locales" | "stripe" | "binance" | "paypal" | "instrucciones";
 
 const TABS: SegmentOption<FinanceTab>[] = [
   { value: "planes", label: "Planes de Pago" },
@@ -61,6 +67,14 @@ const PLAN_TYPE_OPTIONS: SegmentOption<PlanType>[] = [
   { value: "one_time", label: "Pago Único" },
   { value: "installments", label: "En Cuotas" },
   { value: "subscription", label: "Membresía Recurrente" },
+];
+
+const SETTINGS_TABS: SegmentOption<SettingsTab>[] = [
+  { value: "locales", label: "Pago Móvil & Zelle" },
+  { value: "stripe", label: "Stripe" },
+  { value: "binance", label: "Binance Pay" },
+  { value: "paypal", label: "PayPal" },
+  { value: "instrucciones", label: "WhatsApp & Ayuda" },
 ];
 
 const formatCurrency = (amount: number, decimals: number = 2): string => {
@@ -117,11 +131,35 @@ export function FinanceView() {
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Configuración Pasarela
+  // Configuración Pasarelas & Métodos de Pago
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("locales");
   const [settings, setSettings] = useState<FinanceSettings>({
+    stripe_enabled: false,
     stripe_public_key: "",
     stripe_secret_key: "",
     webhook_url: "",
+    pagomovil_enabled: false,
+    pagomovil_bank: "",
+    pagomovil_id: "",
+    pagomovil_phone: "",
+    pagomovil_holder: "",
+    zelle_enabled: false,
+    zelle_email: "",
+    zelle_holder: "",
+    bank_transfer_enabled: false,
+    bank_name: "",
+    bank_account_number: "",
+    bank_account_type: "Corriente",
+    bank_holder_name: "",
+    bank_holder_id: "",
+    binance_enabled: false,
+    binance_pay_id: "",
+    binance_usdt_wallet: "",
+    binance_network: "TRC20",
+    paypal_enabled: false,
+    paypal_email: "",
+    whatsapp_number: "",
+    manual_payment_instructions: "",
   });
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
@@ -557,7 +595,7 @@ export function FinanceView() {
         </div>
         <div className={styles.headerActions}>
           <Button variant="secondary" onClick={() => setIsSettingsModalOpen(true)}>
-            <Settings size={16} /> Configuración
+            <Settings size={16} /> Métodos de Pago
           </Button>
           <Button variant="primary" onClick={handleOpenCreateModal}>
             <Plus size={16} /> Crear Nuevo Plan
@@ -1060,9 +1098,9 @@ export function FinanceView() {
       <Modal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-        title="Configuración de Pasarela Stripe"
-        description="Conecta tu cuenta de Stripe para procesar cobros automáticos con tarjeta, suscripciones en cuotas y pagos únicos."
-        maxWidth="620px"
+        title="Configuración de Métodos de Pago"
+        description="Activa y configura las pasarelas automáticas (Stripe, PayPal, Binance Pay) y métodos locales o manuales (Pago Móvil, Zelle, Transferencias) para tu academia."
+        maxWidth="720px"
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsSettingsModalOpen(false)}>
@@ -1085,50 +1123,337 @@ export function FinanceView() {
           </div>
         )}
 
-        <div className={styles.formGroup}>
-          <Input
-            label="Stripe Publishable Key (Clave Pública)"
-            placeholder="pk_test_... o pk_live_..."
-            value={settings.stripe_public_key}
-            onChange={(e) => setSettings({ ...settings, stripe_public_key: e.target.value })}
+        <div className={styles.modalTabs}>
+          <SegmentedControl<SettingsTab>
+            options={SETTINGS_TABS}
+            value={settingsTab}
+            onChange={setSettingsTab}
           />
         </div>
 
-        <div className={styles.formGroup}>
-          <div className={styles.passwordField}>
-            <Input
-              label="Stripe Secret Key (Clave Secreta)"
-              type={showSecretKey ? "text" : "password"}
-              placeholder="sk_test_... o sk_live_..."
-              value={settings.stripe_secret_key}
-              onChange={(e) => setSettings({ ...settings, stripe_secret_key: e.target.value })}
-            />
-            <button
-              type="button"
-              className={styles.eyeToggleBtn}
-              onClick={() => setShowSecretKey(!showSecretKey)}
-              aria-label="Mostrar u ocultar clave secreta"
-            >
-              {showSecretKey ? <EyeOff size={15} /> : <Eye size={15} />}
-            </button>
-          </div>
-        </div>
+        {/* PESTAÑA 1: COBROS LOCALES (PAGO MÓVIL, ZELLE, TRANSFERENCIAS) */}
+        {settingsTab === "locales" && (
+          <div className={styles.modalTabContent}>
+            {/* Pago Móvil */}
+            <div className={styles.gatewaySection}>
+              <div className={styles.gatewayHeader}>
+                <div className={styles.gatewayTitleWrap}>
+                  <Smartphone size={16} style={{ color: "var(--accent)" }} />
+                  <h4 className={styles.gatewayTitle}>Pago Móvil (Venezuela)</h4>
+                </div>
+                <Switch
+                  size="sm"
+                  checked={settings.pagomovil_enabled ?? false}
+                  onCheckedChange={(val) => setSettings({ ...settings, pagomovil_enabled: val })}
+                />
+              </div>
+              <div className={styles.formRow}>
+                <Input
+                  label="Banco"
+                  placeholder="Ej: Banesco (0134), BDV, Mercantil"
+                  value={settings.pagomovil_bank || ""}
+                  onChange={(e) => setSettings({ ...settings, pagomovil_bank: e.target.value })}
+                />
+                <Input
+                  label="Cédula o RIF"
+                  placeholder="Ej: V-19283741 o J-12345678-0"
+                  value={settings.pagomovil_id || ""}
+                  onChange={(e) => setSettings({ ...settings, pagomovil_id: e.target.value })}
+                />
+              </div>
+              <div className={styles.formRow}>
+                <Input
+                  label="Número de Teléfono"
+                  placeholder="Ej: 0414-1234567"
+                  value={settings.pagomovil_phone || ""}
+                  onChange={(e) => setSettings({ ...settings, pagomovil_phone: e.target.value })}
+                />
+                <Input
+                  label="Nombre del Titular"
+                  placeholder="Ej: Alejandro Suárez"
+                  value={settings.pagomovil_holder || ""}
+                  onChange={(e) => setSettings({ ...settings, pagomovil_holder: e.target.value })}
+                />
+              </div>
+            </div>
 
-        <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-          <label className={styles.label}>URL del Webhook de Stripe (Para tu Dashboard de Stripe)</label>
-          <div className={styles.webhookBox}>
-            <span className={styles.webhookText}>
-              {settings.webhook_url || `${window.location.origin}/?alezux_webhook=stripe`}
-            </span>
-            <Button variant="secondary" size="sm" onClick={handleCopyWebhook}>
-              {copiedWebhook ? <Check size={14} /> : <Copy size={14} />}
-              {copiedWebhook ? "Copiado" : "Copiar"}
-            </Button>
+            {/* Zelle */}
+            <div className={styles.gatewaySection}>
+              <div className={styles.gatewayHeader}>
+                <div className={styles.gatewayTitleWrap}>
+                  <DollarSign size={16} style={{ color: "var(--accent)" }} />
+                  <h4 className={styles.gatewayTitle}>Zelle (USD)</h4>
+                </div>
+                <Switch
+                  size="sm"
+                  checked={settings.zelle_enabled ?? false}
+                  onCheckedChange={(val) => setSettings({ ...settings, zelle_enabled: val })}
+                />
+              </div>
+              <div className={styles.formRow}>
+                <Input
+                  label="Correo Electrónico de Zelle"
+                  placeholder="pagos@tuacademia.com"
+                  value={settings.zelle_email || ""}
+                  onChange={(e) => setSettings({ ...settings, zelle_email: e.target.value })}
+                />
+                <Input
+                  label="Nombre del Titular en Zelle"
+                  placeholder="Ej: Alejandro Suárez"
+                  value={settings.zelle_holder || ""}
+                  onChange={(e) => setSettings({ ...settings, zelle_holder: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Transferencia Bancaria Local */}
+            <div className={styles.gatewaySection}>
+              <div className={styles.gatewayHeader}>
+                <div className={styles.gatewayTitleWrap}>
+                  <Building2 size={16} style={{ color: "var(--accent)" }} />
+                  <h4 className={styles.gatewayTitle}>Transferencia Bancaria Local</h4>
+                </div>
+                <Switch
+                  size="sm"
+                  checked={settings.bank_transfer_enabled ?? false}
+                  onCheckedChange={(val) => setSettings({ ...settings, bank_transfer_enabled: val })}
+                />
+              </div>
+              <div className={styles.formRow}>
+                <Input
+                  label="Nombre del Banco"
+                  placeholder="Ej: Bancolombia, Banesco, BBVA"
+                  value={settings.bank_name || ""}
+                  onChange={(e) => setSettings({ ...settings, bank_name: e.target.value })}
+                />
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Tipo de Cuenta</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      className={styles.select}
+                      value={settings.bank_account_type || "Corriente"}
+                      onChange={(e) => setSettings({ ...settings, bank_account_type: e.target.value })}
+                    >
+                      <option value="Corriente">Cuenta Corriente</option>
+                      <option value="Ahorros">Cuenta de Ahorros</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.formRow}>
+                <Input
+                  label="Número de Cuenta (20 dígitos o IBAN)"
+                  placeholder="0134-XXXX-XXXX-XXXX-XXXX"
+                  value={settings.bank_account_number || ""}
+                  onChange={(e) => setSettings({ ...settings, bank_account_number: e.target.value })}
+                />
+                <Input
+                  label="Titular y Cédula / Documento"
+                  placeholder="Ej: Academia Crezca C.A. · J-50192831"
+                  value={settings.bank_holder_name || ""}
+                  onChange={(e) => setSettings({ ...settings, bank_holder_name: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
-          <p className={styles.settingsDesc} style={{ marginTop: "6px" }}>
-            Añade esta URL en tu Stripe Dashboard en <em>Desarrolladores → Webhooks</em> para que las suscripciones y accesos se activen de forma instantánea al pagar.
-          </p>
-        </div>
+        )}
+
+        {/* PESTAÑA 2: STRIPE */}
+        {settingsTab === "stripe" && (
+          <div className={styles.modalTabContent}>
+            <div className={styles.gatewaySection}>
+              <div className={styles.gatewayHeader}>
+                <div className={styles.gatewayTitleWrap}>
+                  <CreditCard size={16} style={{ color: "var(--accent)" }} />
+                  <h4 className={styles.gatewayTitle}>Stripe (Tarjetas de Crédito / Débito)</h4>
+                </div>
+                <Switch
+                  size="sm"
+                  checked={settings.stripe_enabled ?? false}
+                  onCheckedChange={(val) => setSettings({ ...settings, stripe_enabled: val })}
+                />
+              </div>
+              <p className={styles.settingsDesc} style={{ margin: 0 }}>
+                Procesa pagos automáticos con tarjeta, Apple Pay, Google Pay y suscripciones recurrentes sincronizadas con Stripe.
+              </p>
+            </div>
+
+            <div className={styles.formGroup}>
+              <Input
+                label="Stripe Publishable Key (Clave Pública)"
+                placeholder="pk_test_... o pk_live_..."
+                value={settings.stripe_public_key}
+                onChange={(e) => setSettings({ ...settings, stripe_public_key: e.target.value })}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <div className={styles.passwordField}>
+                <Input
+                  label="Stripe Secret Key (Clave Secreta)"
+                  type={showSecretKey ? "text" : "password"}
+                  placeholder="sk_test_... o sk_live_..."
+                  value={settings.stripe_secret_key}
+                  onChange={(e) => setSettings({ ...settings, stripe_secret_key: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className={styles.eyeToggleBtn}
+                  onClick={() => setShowSecretKey(!showSecretKey)}
+                  aria-label="Mostrar u ocultar clave secreta"
+                >
+                  {showSecretKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+              <label className={styles.label}>URL del Webhook de Stripe (Para tu Dashboard de Stripe)</label>
+              <div className={styles.webhookBox}>
+                <span className={styles.webhookText}>
+                  {settings.webhook_url || `${window.location.origin}/?alezux_webhook=stripe`}
+                </span>
+                <Button variant="secondary" size="sm" onClick={handleCopyWebhook}>
+                  {copiedWebhook ? <Check size={14} /> : <Copy size={14} />}
+                  {copiedWebhook ? "Copiado" : "Copiar"}
+                </Button>
+              </div>
+              <p className={styles.settingsDesc} style={{ marginTop: "6px" }}>
+                Añade esta URL en tu Stripe Dashboard en <em>Desarrolladores → Webhooks</em> para que las suscripciones y accesos se activen de forma instantánea al pagar.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* PESTAÑA 3: BINANCE PAY / CRIPTO */}
+        {settingsTab === "binance" && (
+          <div className={styles.modalTabContent}>
+            <div className={styles.gatewaySection}>
+              <div className={styles.gatewayHeader}>
+                <div className={styles.gatewayTitleWrap}>
+                  <QrCode size={16} style={{ color: "#f59e0b" }} />
+                  <h4 className={styles.gatewayTitle}>Binance Pay & Billetera USDT</h4>
+                </div>
+                <Switch
+                  size="sm"
+                  checked={settings.binance_enabled ?? false}
+                  onCheckedChange={(val) => setSettings({ ...settings, binance_enabled: val })}
+                />
+              </div>
+              <p className={styles.settingsDesc} style={{ margin: 0 }}>
+                Ideal para recibir pagos en dólares digitales (USDT) desde cualquier país, sin comisiones bancarias ni intermediarios.
+              </p>
+            </div>
+
+            <div className={styles.formRow}>
+              <Input
+                label="Binance Pay ID o Correo Registrado"
+                placeholder="Ej: 192838192 o usuario@binance.com"
+                value={settings.binance_pay_id || ""}
+                onChange={(e) => setSettings({ ...settings, binance_pay_id: e.target.value })}
+                hint="Tu ID numérico de Binance Pay para transferencias internas gratis"
+              />
+              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                <label className={styles.label}>Red de Transferencia Cripto</label>
+                <div className={styles.selectWrap}>
+                  <select
+                    className={styles.select}
+                    value={settings.binance_network || "TRC20"}
+                    onChange={(e) => setSettings({ ...settings, binance_network: e.target.value })}
+                  >
+                    <option value="TRC20">Tron (TRC20) — Rápida y de baja comisión</option>
+                    <option value="BEP20">BNB Smart Chain (BEP20)</option>
+                    <option value="POLYGON">Polygon (MATIC)</option>
+                    <option value="ERC20">Ethereum (ERC20)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.formGroup}>
+              <Input
+                label="Dirección de Billetera USDT"
+                placeholder="Ej: TXYZ1234567890abcdef..."
+                value={settings.binance_usdt_wallet || ""}
+                onChange={(e) => setSettings({ ...settings, binance_usdt_wallet: e.target.value })}
+                hint="Los alumnos podrán escanear o copiar tu dirección para transferir USDT directamente."
+              />
+            </div>
+          </div>
+        )}
+
+        {/* PESTAÑA 4: PAYPAL */}
+        {settingsTab === "paypal" && (
+          <div className={styles.modalTabContent}>
+            <div className={styles.gatewaySection}>
+              <div className={styles.gatewayHeader}>
+                <div className={styles.gatewayTitleWrap}>
+                  <Wallet size={16} style={{ color: "#0284c7" }} />
+                  <h4 className={styles.gatewayTitle}>PayPal</h4>
+                </div>
+                <Switch
+                  size="sm"
+                  checked={settings.paypal_enabled ?? false}
+                  onCheckedChange={(val) => setSettings({ ...settings, paypal_enabled: val })}
+                />
+              </div>
+              <p className={styles.settingsDesc} style={{ margin: 0 }}>
+                Permite a tus estudiantes pagar con su saldo de PayPal o tarjetas internacionales.
+              </p>
+            </div>
+
+            <div className={styles.formGroup}>
+              <Input
+                label="Correo de PayPal o Enlace PayPal.me"
+                placeholder="Ej: pagos@tuacademia.com o paypal.me/tuacademia"
+                value={settings.paypal_email || ""}
+                onChange={(e) => setSettings({ ...settings, paypal_email: e.target.value })}
+                hint="Los estudiantes podrán enviar el pago directamente a esta cuenta o link."
+              />
+            </div>
+          </div>
+        )}
+
+        {/* PESTAÑA 5: WHATSAPP & COMPROBANTES */}
+        {settingsTab === "instrucciones" && (
+          <div className={styles.modalTabContent}>
+            <div className={styles.gatewaySection}>
+              <div className={styles.gatewayHeader}>
+                <div className={styles.gatewayTitleWrap}>
+                  <MessageSquare size={16} style={{ color: "#22c55e" }} />
+                  <h4 className={styles.gatewayTitle}>Recepción de Comprobantes</h4>
+                </div>
+              </div>
+              <p className={styles.settingsDesc} style={{ margin: 0 }}>
+                Define el número de WhatsApp oficial donde los estudiantes remitirán sus comprobantes de Pago Móvil, Zelle o Binance.
+              </p>
+            </div>
+
+            <div className={styles.formGroup}>
+              <Input
+                label="WhatsApp para Recepción de Comprobantes"
+                placeholder="+58 412 1234567 o +57 300 1234567"
+                value={settings.whatsapp_number || ""}
+                onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
+                hint="Incluye el código de país. Se generará un botón directo de WhatsApp para el alumno."
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Instrucciones de Pago para el Alumno</label>
+              <textarea
+                className={styles.textarea}
+                rows={4}
+                placeholder="Ej: Realiza el pago por el monto exacto y envía la captura de pantalla o número de referencia por WhatsApp para activar tu curso de inmediato."
+                value={settings.manual_payment_instructions || ""}
+                onChange={(e) => setSettings({ ...settings, manual_payment_instructions: e.target.value })}
+              />
+              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                Este texto aparecerá en la pantalla de checkout cuando el estudiante seleccione métodos de pago manuales.
+              </span>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* ============================================================== */}

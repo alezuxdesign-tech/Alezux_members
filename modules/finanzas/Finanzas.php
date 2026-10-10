@@ -66,19 +66,18 @@ class Finanzas extends Module_Base {
         \add_action( 'elementor/widgets/register', [ $this, 'register_widgets' ] );
         \add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_widget_styles' ] );
         \add_action( 'template_redirect', [ $this, 'handle_checkout_redirect' ] );
-        \add_action( 'template_redirect', [ $this, 'handle_payment_return' ] ); // Nuevo hook
-        \add_action( 'template_redirect', [ $this, 'handle_payment_return' ] ); // Nuevo hook
+        \add_action( 'template_redirect', [ $this, 'handle_payment_return' ] );
         // \add_action( 'wp_ajax_alezux_get_sales_stats', [ $this, 'get_sales_stats' ] ); // MOVED TO Ajax_Handler.php
 	}
 
     /**
-     * Maneja la redirección al Checkout de Stripe cuando se detecta ?alezux_action=checkout
+     * Maneja la visualización y redirección del Checkout Multipasarela cuando se detecta ?alezux_action=checkout
      */
     public function handle_checkout_redirect() {
         if ( isset( $_GET['alezux_action'] ) && $_GET['alezux_action'] === 'checkout' ) {
             $plan_id = 0;
             
-            // 1. Buscar Plan ID
+            // 1. Buscar Plan ID por Token o ID
             if ( ! empty( $_GET['token'] ) ) {
                 global $wpdb;
                 $table_plans = $wpdb->prefix . 'alezux_finanzas_plans';
@@ -97,69 +96,61 @@ class Finanzas extends Module_Base {
             $table_plans = $wpdb->prefix . 'alezux_finanzas_plans';
             $plan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_plans WHERE id = %d", $plan_id ) );
 
-            if ( ! $plan || empty( $plan->stripe_price_id ) ) {
-                wp_die( 'Error: Plan no encontrado o configuración inválida.', 'Error de Checkout' );
+            if ( ! $plan ) {
+                wp_die( 'Error: El plan especificado no existe o fue eliminado.', 'Error de Checkout' );
             }
 
-            // 2. Crear sesión de Stripe
-            $users_access = \Alezux_Members\Modules\Finanzas\Includes\Stripe_API::get_instance();
-            
-            // URLs de retorno
-            $current_url = home_url( add_query_arg( [], $GLOBALS['wp']->request ) ); // URL actual base (aproximada) o home
-            // Mejor redirigir a una página de "Gracias" o al dashboard. Por defecto al home + status
-            $success_url = home_url( '/?alezux_payment_success=true&session_id={CHECKOUT_SESSION_ID}' );
-            $cancel_url  = home_url( '/?alezux_payment_canceled=true' );
-
-            // Si el usuario está logueado, pasamos su email para autocompletar en Stripe
-            $customer_email = null;
-            if ( is_user_logged_in() ) {
-                $current_user = wp_get_current_user();
-                $customer_email = $current_user->user_email;
+            // 3. Obtener configuración general de pasarelas de pago
+            $settings = get_option( 'alezux_finance_settings', [] );
+            if ( ! is_array( $settings ) ) {
+                $settings = [];
             }
 
-            // Determinar modo (payment vs subscription) basado en frecuencia o cuotas
-            $mode = ( ( isset( $plan->frequency ) && $plan->frequency === 'contado' ) || $plan->total_quotas == 1 ) ? 'payment' : 'subscription';
+            $stripe_sec = $settings['stripe_secret_key'] ?? get_option( 'alezux_stripe_secret_key', '' );
+            $stripe_active = ! empty( $settings['stripe_enabled'] ) && ! empty( $stripe_sec ) && ! empty( $plan->stripe_price_id );
 
-            // Generar metadata
-            $metadata = [ 'plan_id' => $plan_id ];
-
-            $session = $users_access->create_checkout_session( 
-                $plan->stripe_price_id, 
-                $success_url, 
-                $cancel_url, 
-                $customer_email,
-                $mode,
-                $metadata
+            $has_manual_methods = (
+                ! empty( $settings['pagomovil_enabled'] ) ||
+                ! empty( $settings['zelle_enabled'] ) ||
+                ! empty( $settings['bank_transfer_enabled'] ) ||
+                ! empty( $settings['binance_enabled'] ) ||
+                ! empty( $settings['paypal_enabled'] )
             );
 
-            if ( is_wp_error( $session ) ) {
-                wp_die( 'Error de Stripe: ' . $session->get_error_message() );
+            // Si el alumno solicita pagar con tarjeta de Stripe específicamente
+            if ( isset( $_GET['gateway'] ) && $_GET['gateway'] === 'stripe' ) {
+                if ( $stripe_active ) {
+                    $this->redirect_to_stripe_checkout( $plan );
+                    return;
+                } else {
+                    wp_die( 'La pasarela de Stripe no está configurada o disponible para este plan.', 'Error de Checkout' );
+                }
             }
 
-            // 3. Redirigir a Stripe
-            if ( isset( $session->url ) ) {
-                wp_redirect( $session->url );
-                exit;
+            // Si Stripe es el ÚNICO método configurado y NO hay métodos manuales activos
+            if ( $stripe_active && ! $has_manual_methods ) {
+                $this->redirect_to_stripe_checkout( $plan );
+                return;
             }
+
+            // Renderizar interfaz de Checkout Multipasarela de Alezux
+            $this->render_multipayment_checkout( $plan, $settings );
+            exit;
         }
 
         // Manejar Link de Pago Directo por Token (?alezux_buy_token=xyz)
         if ( isset( $_GET['alezux_buy_token'] ) ) {
             $token = sanitize_text_field( $_GET['alezux_buy_token'] );
-            global $wpdb;
-            $table_plans = $wpdb->prefix . 'alezux_finanzas_plans';
-            $plan_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table_plans WHERE token = %s", $token ) );
-            
-            if ( $plan_id ) {
-                $this->process_direct_buy_link( $plan_id );
-            }
+            wp_redirect( home_url( '/?alezux_action=checkout&token=' . urlencode( $token ) ) );
+            exit;
         }
 
         // Manejar Link de Pago Directo Legacy (?alezux_buy_plan=123)
         if ( isset( $_GET['alezux_buy_plan'] ) ) {
             $plan_id = intval( $_GET['alezux_buy_plan'] );
             if ( $plan_id > 0 ) {
-                $this->process_direct_buy_link( $plan_id );
+                wp_redirect( home_url( '/?alezux_action=checkout&plan_id=' . $plan_id ) );
+                exit;
             }
         }
 
@@ -169,53 +160,64 @@ class Finanzas extends Module_Base {
         }
     }
 
-    private function process_direct_buy_link( $plan_id ) {
-        // Obtener datos del plan de la DB
-        global $wpdb;
-        $table_plans = $wpdb->prefix . 'alezux_finanzas_plans';
-        $plan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_plans WHERE id = %d", $plan_id ) );
-
-        if ( ! $plan ) {
-            wp_die( 'El plan especificado no existe.' );
+    /**
+     * Redirige al alumno a la sesión de pago seguro de Stripe
+     */
+    private function redirect_to_stripe_checkout( $plan ) {
+        if ( empty( $plan->stripe_price_id ) ) {
+            wp_die( 'Error: El plan no tiene un identificador de precio de Stripe asociado.', 'Error de Stripe' );
         }
 
-        // Crear Sesión de Stripe
         $stripe = \Alezux_Members\Modules\Finanzas\Includes\Stripe_API::get_instance();
-        
-        // URLs de éxito y cancelación
+
         $success_url = home_url( '/?alezux_payment_success=true&session_id={CHECKOUT_SESSION_ID}' );
-        $cancel_url  = home_url( '/' ); // O alguna página específica
+        $cancel_token = ! empty( $plan->token ) ? '&token=' . urlencode( $plan->token ) : '&plan_id=' . $plan->id;
+        $cancel_url  = home_url( '/?alezux_action=checkout' . $cancel_token . '&canceled=1' );
 
-        // Metadata necesaria
-        $metadata = [
-            'plan_id' => $plan_id,
-            'source'  => 'direct_link'
-        ];
+        $customer_email = null;
+        if ( is_user_logged_in() ) {
+            $customer_email = wp_get_current_user()->user_email;
+        }
 
-        // Determinar modo (payment vs subscription) basado en frecuencia o cuotas
         $mode = ( ( isset( $plan->frequency ) && $plan->frequency === 'contado' ) || $plan->total_quotas == 1 ) ? 'payment' : 'subscription';
 
-        // Crear sesión
+        $metadata = [
+            'plan_id' => $plan->id,
+            'source'  => 'checkout'
+        ];
+
         $session = $stripe->create_checkout_session(
             $plan->stripe_price_id,
             $success_url,
             $cancel_url,
-            null, // No customer email for direct link unless user is logged in
+            $customer_email,
             $mode,
             $metadata
         );
 
         if ( is_wp_error( $session ) ) {
-            wp_die( 'Error conectando con Stripe: ' . $session->get_error_message() );
+            wp_die( 'Error conectando con Stripe: ' . $session->get_error_message(), 'Error de Stripe' );
         }
 
-        // Redirigir a Stripe
         if ( isset( $session->url ) ) {
             wp_redirect( $session->url );
             exit;
         } else {
-            wp_die( 'No se pudo generar la URL de pago.' );
+            wp_die( 'No se pudo generar la URL de pago de Stripe.', 'Error de Checkout' );
         }
+    }
+
+    /**
+     * Renderiza la página visual de checkout multipasarela para el estudiante
+     */
+    private function render_multipayment_checkout( $plan, $settings ) {
+        $template = ALEZUX_FINANZAS_PATH . 'templates/checkout-multipayment.php';
+        if ( file_exists( $template ) ) {
+            include $template;
+        } else {
+            wp_die( 'Error interno: La plantilla de checkout multipasarela no fue encontrada.', 'Error de Checkout' );
+        }
+        exit;
     }
     /**
      * Maneja el retorno exitoso desde Stripe para matriculación inmediata.
