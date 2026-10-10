@@ -102,7 +102,8 @@
 }
 
 .planCard:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: color-mix(in srgb, var(--accent) 35%, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--accent-subtle);
 }
 
 :global([data-theme="light"]) .planCard {
@@ -112,8 +113,8 @@
 }
 
 :global([data-theme="light"]) .planCard:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-raised);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-raised), 0 0 0 1px var(--accent-subtle);
 }
 
 .planTop {
@@ -137,19 +138,19 @@
 }
 
 .quotaBadge {
-  background: rgba(138, 102, 255, 0.18);
-  color: #c7b7ff;
+  background: var(--accent-subtle, rgba(138, 102, 255, 0.18));
+  color: var(--accent, #a78bff);
   border-radius: 9999px;
   padding: 4px 14px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   letter-spacing: -0.01em;
 }
 
 :global([data-theme="light"]) .quotaBadge {
-  background: rgba(119, 71, 255, 0.12);
-  color: #6332ea;
+  background: var(--accent-subtle, rgba(119, 71, 255, 0.12));
+  color: var(--accent, #6332ea);
 }
 
 .planPriceRow {
@@ -162,7 +163,7 @@
 .currency {
   font-size: 28px;
   font-weight: 700;
-  color: #a78bff;
+  color: var(--accent, #a78bff);
   line-height: 1;
 }
 
@@ -376,23 +377,23 @@
 }
 
 .shareCopied {
-  background: rgba(138, 102, 255, 0.25) !important;
-  border-color: #a78bff !important;
-  color: #c7b7ff !important;
+  background: var(--accent-subtle) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
 }
 
 :global([data-theme="light"]) .shareCopied {
-  background: rgba(119, 71, 255, 0.15) !important;
-  border-color: #7747ff !important;
-  color: #5528ce !important;
+  background: var(--accent-subtle) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
 }
 
 .shareCheckIcon {
-  color: #a78bff;
+  color: var(--accent);
 }
 
 :global([data-theme="light"]) .shareCheckIcon {
-  color: #7747ff;
+  color: var(--accent);
 }
 
 .cardBottomDivider {
@@ -435,7 +436,8 @@
 
 .configBtn:hover {
   background: #2a2a30;
-  border-color: rgba(255, 255, 255, 0.28);
+  border-color: var(--accent);
+  color: var(--accent);
   transform: translateY(-1px);
 }
 
@@ -448,7 +450,8 @@
 
 :global([data-theme="light"]) .configBtn:hover {
   background: var(--surface-muted);
-  border-color: var(--foreground);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .configBtn:active {
