@@ -22,6 +22,7 @@ import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
 import { Switch } from "../components/arc/switch/switch";
 import { Input } from "../components/arc/input/input";
+import { Select } from "../components/arc/select";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
 import { api, Student, Course } from "../services/api";
 import { ModuleSkeleton } from "../components/arc/skeleton";
@@ -312,18 +313,18 @@ export function StudentsView() {
             />
           </div>
 
-          <div className={styles.filterDropdown}>
-            <Filter size={14} />
-            <select
+          <div className={styles.filterWrap}>
+            <Select<string>
+              size="sm"
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className={styles.select}
-            >
-              <option value="all">Todos los estados</option>
-              <option value="active">Activos</option>
-              <option value="inactive">Inactivos</option>
-              <option value="blocked">Bloqueados</option>
-            </select>
+              onChange={(val) => setFilterStatus(val)}
+              options={[
+                { value: "all", label: "Todos los estados", icon: <Filter size={14} /> },
+                { value: "active", label: "Activos", icon: <CheckCircle2 size={14} /> },
+                { value: "inactive", label: "Inactivos", icon: <Clock size={14} /> },
+                { value: "blocked", label: "Bloqueados", icon: <Ban size={14} /> },
+              ]}
+            />
           </div>
 
           <Button variant="primary" size="sm" onClick={openCreateModal}>

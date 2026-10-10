@@ -24,9 +24,9 @@
 }
 
 .trigger.sm {
-  min-height: 32px;
-  height: 32px;
-  padding: 0 10px;
+  min-height: var(--control-height-sm);
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
   font-size: var(--text-xs);
   border-radius: var(--radius-control);
 }

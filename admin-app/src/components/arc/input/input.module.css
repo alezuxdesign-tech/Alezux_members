@@ -60,19 +60,24 @@
 
 .sm .input {
   min-height: var(--control-height-sm);
+  height: var(--control-height-sm);
   padding: 0 var(--space-3);
   font-size: var(--text-xs);
 }
 
-.hasLeftIcon .input {
-  padding-left: calc(var(--space-8) + var(--space-1));
+.hasLeftIcon .input,
+.sm .hasLeftIcon .input {
+  padding-left: calc(var(--space-8) + var(--space-1)) !important;
 }
 
 .leftIcon {
   position: absolute;
   left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
+  justify-content: center;
   color: var(--text-muted);
   pointer-events: none;
 }
