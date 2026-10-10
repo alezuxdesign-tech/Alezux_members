@@ -930,13 +930,13 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
               <span>Nombre del canal</span>
               <span className={styles.modalLabelHint}>Formato minúscula sin espacios</span>
             </label>
-            <div className={styles.modalInputWrapper}>
-              <span className={styles.modalInputPrefix}>
-                <Hash size={14} />
+            <div className={styles.arcInputBox}>
+              <span className={styles.arcInputBoxIcon}>
+                <Hash size={16} />
               </span>
               <input
                 type="text"
-                className={styles.modalInput}
+                className={styles.arcInputField}
                 placeholder="preguntas-respuestas"
                 value={channelForm.name}
                 onChange={(e) =>
@@ -975,13 +975,13 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
             {/* Input para nueva categoría si el usuario selecciona "+ Crear nueva categoría..." */}
             {isCustomCategory && (
               <div className={styles.newCategoryRow}>
-                <div className={styles.modalInputWrapper} style={{ flex: 1 }}>
-                  <span className={styles.modalInputPrefix}>
-                    <FolderPlus size={14} color="#10b981" />
+                <div className={styles.arcInputBox} style={{ flex: 1 }}>
+                  <span className={styles.arcInputBoxIcon}>
+                    <FolderPlus size={16} color="#10b981" />
                   </span>
                   <input
                     type="text"
-                    className={styles.modalInput}
+                    className={styles.arcInputField}
                     placeholder="Nombre del nuevo grupo..."
                     value={customCategoryText}
                     autoFocus
