@@ -216,7 +216,7 @@ export function CoursesView() {
   };
 
   // --- OPERACIONES DEL CONSTRUCTOR DE MÓDULOS ---
-  const handleAddSection = () => {
+  const handleAddSection = (afterIndex?: number) => {
     const newSection: CourseSection = {
       id: `sec-${Date.now()}`,
       title: `Nuevo Módulo ${sections.length + 1}`,
@@ -234,7 +234,14 @@ export function CoursesView() {
         },
       ],
     };
-    setSections([...sections, newSection]);
+
+    if (typeof afterIndex === "number") {
+      const updated = [...sections];
+      updated.splice(afterIndex + 1, 0, newSection);
+      setSections(updated);
+    } else {
+      setSections([...sections, newSection]);
+    }
   };
 
   const handleDeleteSection = (sectionId: string) => {
@@ -474,11 +481,6 @@ export function CoursesView() {
                 <Check size={16} /> Cambios guardados correctamente
               </span>
             )}
-            {builderTab === "curriculum" && (
-              <Button variant="secondary" onClick={handleAddSection}>
-                <FolderPlus size={16} /> + Módulo
-              </Button>
-            )}
             <Button variant="primary" loading={isSavingCurriculum} onClick={handleSaveAllCourse}>
               <Save size={16} /> Guardar Curso
             </Button>
@@ -578,14 +580,6 @@ export function CoursesView() {
             >
               <Settings size={16} /> Configuración General y Portadas
             </button>
-          </div>
-
-          <div style={{ display: "flex", gap: "8px" }}>
-            {builderTab === "curriculum" && (
-              <Button variant="secondary" size="sm" onClick={handleAddSection}>
-                <Plus size={14} /> Nuevo Módulo
-              </Button>
-            )}
           </div>
         </div>
 
@@ -804,7 +798,8 @@ export function CoursesView() {
               const topicsCount = section.lessons ? section.lessons.length : 0;
 
               return (
-                <div key={section.id} className={styles.moduleCard}>
+                <div key={section.id} className={styles.moduleBlockWrapper}>
+                  <div className={styles.moduleCard}>
                   {/* Encabezado del Módulo con Portada de Módulo */}
                   <div
                     className={[
@@ -1008,15 +1003,29 @@ export function CoursesView() {
                   </>
                 )}
               </div>
-            );
-          })}
+
+              {/* Botón "+ Nuevo Módulo" ubicado debajo de cada módulo */}
+              <div className={styles.addModuleBelowWrapper}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleAddSection(sIdx)}
+                  className={styles.addModuleBelowBtn}
+                  title="Añadir un nuevo módulo debajo de este"
+                >
+                  <Plus size={15} /> Nuevo Módulo
+                </Button>
+              </div>
+            </div>
+          );
+        })}
 
           {sections.length === 0 && (
             <div className={styles.emptyGrid}>
               <Layers size={36} />
               <h3>Este curso aún no tiene módulos configurados</h3>
               <p>Comienza creando el primer módulo para organizar tus clases y contenidos.</p>
-              <Button variant="primary" onClick={handleAddSection}>
+              <Button variant="primary" onClick={() => handleAddSection()}>
                 <Plus size={16} /> Crear Primer Módulo
               </Button>
             </div>

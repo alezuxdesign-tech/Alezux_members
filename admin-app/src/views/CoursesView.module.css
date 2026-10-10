@@ -764,6 +764,31 @@
   gap: var(--space-4);
 }
 
+.moduleBlockWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.addModuleBelowWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 2px;
+}
+
+.addModuleBelowBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  transition: all var(--duration-fast);
+}
+
+.addModuleBelowBtn:hover {
+  transform: translateY(-1px);
+}
+
 .moduleCard {
   background: var(--surface);
   border: 1px solid var(--border);
