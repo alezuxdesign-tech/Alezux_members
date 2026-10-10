@@ -32,6 +32,7 @@ import {
 } from "../../services/api";
 import { Modal } from "../../components/arc/modal";
 import { Select, SelectOption } from "../../components/arc/select";
+import moneyStyles from "../../components/arc/money-input/money-input.module.css";
 import styles from "./DiscordCommunityView.module.css";
 
 interface DiscordCommunityViewProps {
@@ -930,13 +931,13 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
               <span>Nombre del canal</span>
               <span className={styles.modalLabelHint}>Formato minúscula sin espacios</span>
             </label>
-            <div className={styles.arcInputBox}>
-              <span className={styles.arcInputBoxIcon}>
+            <div className={moneyStyles.container}>
+              <span className={moneyStyles.symbol} aria-hidden="true">
                 <Hash size={16} />
               </span>
               <input
                 type="text"
-                className={styles.arcInputField}
+                className={moneyStyles.input}
                 placeholder="preguntas-respuestas"
                 value={channelForm.name}
                 onChange={(e) =>
@@ -945,6 +946,8 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                     name: e.target.value.toLowerCase().replace(/#/g, "").replace(/\s+/g, "-"),
                   })
                 }
+                autoComplete="off"
+                spellCheck={false}
               />
             </div>
           </div>
@@ -975,17 +978,19 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
             {/* Input para nueva categoría si el usuario selecciona "+ Crear nueva categoría..." */}
             {isCustomCategory && (
               <div className={styles.newCategoryRow}>
-                <div className={styles.arcInputBox} style={{ flex: 1 }}>
-                  <span className={styles.arcInputBoxIcon}>
-                    <FolderPlus size={16} color="#10b981" />
+                <div className={moneyStyles.container} style={{ flex: 1 }}>
+                  <span className={moneyStyles.symbol} aria-hidden="true" style={{ color: "#10b981" }}>
+                    <FolderPlus size={16} />
                   </span>
                   <input
                     type="text"
-                    className={styles.arcInputField}
+                    className={moneyStyles.input}
                     placeholder="Nombre del nuevo grupo..."
                     value={customCategoryText}
                     autoFocus
                     onChange={(e) => setCustomCategoryText(e.target.value)}
+                    autoComplete="off"
+                    spellCheck={false}
                   />
                 </div>
                 <button
