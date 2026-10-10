@@ -21,6 +21,7 @@ import {
   Settings,
   Layers,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -29,6 +30,7 @@ import { MetricCard } from "../components/arc/metric-card/metric-card";
 import { Input } from "../components/arc/input/input";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
 import { Select, SelectOption } from "../components/arc/select/select";
+import { Alert } from "../components/arc/alert/alert";
 import {
   api,
   FinancePlan,
@@ -61,8 +63,33 @@ const formatCurrency = (amount: number, decimals: number = 2): string => {
   }).format(amount || 0);
 };
 
+interface ToastState {
+  id: number;
+  tone: "info" | "success" | "warning" | "danger";
+  title: string;
+  description?: string;
+}
+
 export function FinanceView() {
   const [activeTab, setActiveTab] = useState<FinanceTab>("planes");
+
+  // Alertas Arc tipo Toast
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  const showToast = (tone: "info" | "success" | "warning" | "danger", title: string, description?: string) => {
+    setToast({ id: Date.now(), tone, title, description });
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  // Modal confirmación de eliminación (Arc)
+  const [planToDelete, setPlanToDelete] = useState<{ id: number; name: string } | null>(null);
 
   // Planes
   const [plans, setPlans] = useState<FinancePlan[]>([]);
@@ -263,6 +290,7 @@ export function FinanceView() {
   const handleCopyLink = (plan: FinancePlan) => {
     navigator.clipboard.writeText(plan.checkoutUrl);
     setCopiedToken(plan.token);
+    showToast("success", "Enlace copiado", `Checkout URL de "${plan.name}" copiado al portapapeles.`);
     setTimeout(() => setCopiedToken(null), 2000);
   };
 
@@ -293,6 +321,7 @@ export function FinanceView() {
     setPlans([created, ...plans]);
     setIsCreating(false);
     setIsCreateModalOpen(false);
+    showToast("success", "Plan creado", `El plan "${created.name}" ha sido creado exitosamente.`);
 
     // Reset
     setCreateName("");
@@ -352,12 +381,24 @@ export function FinanceView() {
 
     setIsSavingEdit(false);
     setIsEditModalOpen(false);
+    showToast("success", "Plan actualizado", `Los cambios en "${editName}" se guardaron exitosamente.`);
   };
 
-  const handleDeletePlan = async (id: number) => {
-    if (!window.confirm("¿Seguro que deseas eliminar este plan de pago?")) return;
-    await api.deletePlan(id);
-    setPlans((prev) => prev.filter((p) => p.id !== id));
+  const handleDeletePlan = (id: number, name: string) => {
+    setPlanToDelete({ id, name });
+  };
+
+  const confirmDeletePlan = async () => {
+    if (!planToDelete) return;
+    try {
+      await api.deletePlan(planToDelete.id);
+      setPlans((prev) => prev.filter((p) => p.id !== planToDelete.id));
+      showToast("info", "Plan eliminado", `El plan "${planToDelete.name}" fue eliminado.`);
+    } catch {
+      showToast("danger", "Error", "No se pudo eliminar el plan.");
+    } finally {
+      setPlanToDelete(null);
+    }
   };
 
   // Funciones de conveniencia para reglas de acceso
@@ -544,26 +585,25 @@ export function FinanceView() {
             return (
               <div key={plan.id} className={styles.planCard}>
                 <div className={styles.planTop}>
-                  <div>
-                    <Badge variant={plan.totalQuotas > 1 ? "accent" : "success"} size="sm">
-                      {plan.totalQuotas > 1
-                        ? `${plan.totalQuotas} Cuotas Recurrentes`
-                        : "Pago Único"}
-                    </Badge>
-                    <h3 className={styles.planName}>{plan.name}</h3>
-                  </div>
-                  <div className={styles.planPriceBox}>
-                    <span className={styles.currency}>$</span>
-                    <span className={styles.priceAmount}>{formatCurrency(plan.quotaAmount)}</span>
-                    <span className={styles.pricePeriod}>
-                      {plan.totalQuotas > 1 ? "/cuota" : " total"}
-                    </span>
-                  </div>
+                  <h3 className={styles.planName}>{plan.name}</h3>
+                  <span className={styles.quotaBadge}>
+                    {plan.totalQuotas > 1
+                      ? `${plan.totalQuotas} Cuotas Recurrentes`
+                      : "Pago Único"}
+                  </span>
+                </div>
+
+                <div className={styles.planPriceRow}>
+                  <span className={styles.currency}>$</span>
+                  <span className={styles.priceAmount}>{formatCurrency(plan.quotaAmount)}</span>
+                  <span className={styles.pricePeriod}>
+                    {plan.totalQuotas > 1 ? "/cuota" : " total"}
+                  </span>
                 </div>
 
                 <div className={styles.courseTag}>
-                  <CreditCard size={14} />
-                  <span>{plan.courseTitle}</span>
+                  <CreditCard size={15} />
+                  <span>{plan.courseTitle || "Todos los Cursos"}</span>
                 </div>
 
                 {plan.whatsapp_number && (
@@ -576,7 +616,7 @@ export function FinanceView() {
                 <div className={styles.planDetails}>
                   <div className={styles.detailRow}>
                     <span>Total a pagar:</span>
-                    <strong className={styles.tabularNums}>${formatCurrency(plan.totalAmount)} USD</strong>
+                    <strong className={styles.totalAmount}>${formatCurrency(plan.totalAmount)} USD</strong>
                   </div>
                   <div className={styles.detailRow}>
                     <span>Frecuencia:</span>
@@ -584,59 +624,62 @@ export function FinanceView() {
                   </div>
                   <div className={styles.detailRow}>
                     <span>Alumnos suscritos:</span>
-                    <span className={styles.tabularNums}>{plan.subscribersCount} alumnos</span>
+                    <span>{plan.subscribersCount} alumnos</span>
                   </div>
                 </div>
 
-                {/* Caja de Link de Pago con Copy Button integrado */}
-                <div className={styles.linkGeneratorBox}>
-                  <div className={styles.shareLinkBox}>
-                    <span className={styles.shareLinkUrl} title={plan.checkoutUrl}>
-                      {plan.checkoutUrl}
-                    </span>
-                    <button
-                      type="button"
-                      className={[
-                        styles.shareCopyBtn,
-                        isCopied ? styles.shareCopied : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      onClick={() => handleCopyLink(plan)}
-                      title="Copiar enlace de pago"
-                    >
-                      {isCopied ? (
-                        <>
-                          <Check size={13} className={styles.shareCheckIcon} />
-                          <span>Copiado</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={13} />
-                          <span>Copy link</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                <div className={styles.cardDivider} />
 
-                  <div className={styles.cardFooterActions}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleOpenEditPlan(plan)}
-                      title="Editar plan y configurar reglas de liberación"
-                    >
-                      <Pencil size={13} /> Configurar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeletePlan(plan.id)}
-                      title="Eliminar este plan"
-                    >
-                      <Trash2 size={13} /> Eliminar
-                    </Button>
-                  </div>
+                <div className={styles.shareLinkBox}>
+                  <span className={styles.shareLinkUrl} title={plan.checkoutUrl}>
+                    {plan.checkoutUrl}
+                  </span>
+                  <button
+                    type="button"
+                    className={[
+                      styles.shareCopyBtn,
+                      isCopied ? styles.shareCopied : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={() => handleCopyLink(plan)}
+                    title="Copiar enlace de pago"
+                  >
+                    {isCopied ? (
+                      <>
+                        <Check size={13} className={styles.shareCheckIcon} />
+                        <span>Copiado</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={13} />
+                        <span>Copy link</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className={styles.cardBottomDivider} />
+
+                <div className={styles.cardFooterActions}>
+                  <button
+                    type="button"
+                    className={styles.configBtn}
+                    onClick={() => handleOpenEditPlan(plan)}
+                    title="Configurar plan"
+                  >
+                    <Pencil size={14} />
+                    <span>Configurar</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.deletePlanBtn}
+                    onClick={() => handleDeletePlan(plan.id, plan.name)}
+                    title="Eliminar este plan"
+                  >
+                    <Trash2 size={14} />
+                    <span>Eliminar</span>
+                  </button>
                 </div>
               </div>
             );
@@ -1438,6 +1481,65 @@ export function FinanceView() {
           />
         </div>
       </Modal>
+
+      {/* Toast Alert de Arc */}
+      {toast && (
+        <div className={styles.toastContainer}>
+          <Alert
+            tone={toast.tone}
+            title={toast.title}
+            onDismiss={() => setToast(null)}
+          >
+            {toast.description}
+          </Alert>
+        </div>
+      )}
+
+      {/* Modal Arc para Confirmar Eliminación de Plan */}
+      {planToDelete && (
+        <Modal
+          isOpen={true}
+          onClose={() => setPlanToDelete(null)}
+          title="Eliminar Plan de Pago"
+          maxWidth="440px"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setPlanToDelete(null)}>
+                Cancelar
+              </Button>
+              <Button variant="danger" onClick={confirmDeletePlan}>
+                Eliminar Plan
+              </Button>
+            </>
+          }
+        >
+          <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "rgba(239, 68, 68, 0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ef4444",
+                flexShrink: 0,
+              }}
+            >
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: "14px", color: "var(--foreground)" }}>
+                ¿Estás seguro de que deseas eliminar el plan <strong>{planToDelete.name}</strong>?
+              </p>
+              <p style={{ margin: "6px 0 0", fontSize: "12px", color: "var(--text-muted)" }}>
+                Esta acción no se puede deshacer. Los enlaces de pago existentes dejarán de funcionar.
+              </p>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

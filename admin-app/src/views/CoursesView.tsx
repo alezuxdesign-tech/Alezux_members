@@ -887,7 +887,12 @@ export function CoursesView() {
                   <label className={styles.label}>
                     Precio del Curso {isFreeCourse ? "(Gratuito)" : "($ USD)"}
                   </label>
-                  <div className={styles.inputWithIcon}>
+                  <div
+                    className={[
+                      styles.currencyContainer,
+                      isFreeCourse ? styles.currencyContainerDisabled : "",
+                    ].join(" ")}
+                  >
                     <span className={styles.currencyPrefix} aria-hidden="true">$</span>
                     <input
                       type="text"
@@ -898,7 +903,7 @@ export function CoursesView() {
                       onChange={handlePriceChange}
                       onFocus={handlePriceFocus}
                       onBlur={handlePriceBlur}
-                      className={[styles.currencyInput, isFreeCourse ? styles.currencyInputDisabled : ""].join(" ")}
+                      className={styles.currencyInput}
                     />
                     <span className={styles.currencySuffix}>USD</span>
                   </div>
