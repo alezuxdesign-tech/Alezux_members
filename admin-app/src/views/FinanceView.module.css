@@ -90,11 +90,11 @@
 }
 
 .planCard {
-  background: #11141c;
+  background: #18181b;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 22px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  border-radius: 24px;
+  padding: 26px 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -135,7 +135,7 @@
 .planPriceRow {
   display: flex;
   align-items: baseline;
-  gap: 2px;
+  gap: 4px;
   margin-top: -4px;
 }
 
@@ -157,7 +157,7 @@
 
 .pricePeriod {
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
   color: rgba(255, 255, 255, 0.45);
   margin-left: 2px;
 }
@@ -167,11 +167,11 @@
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.65);
-  background: #161922;
+  color: rgba(255, 255, 255, 0.7);
+  background: #222226;
   padding: 11px 18px;
   border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   box-sizing: border-box;
 }
 
@@ -233,8 +233,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: #161922;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #222226;
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 9999px;
   padding: 5px 6px 5px 16px;
   box-sizing: border-box;
@@ -243,7 +243,7 @@
 }
 
 .shareLinkBox:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .shareLinkUrl {
@@ -263,7 +263,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: #202532;
+  background: #2b2b32;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 9999px;
   padding: 7px 14px;
@@ -279,7 +279,7 @@
 }
 
 .shareCopyBtn:hover {
-  background: #282f40;
+  background: #34343c;
   border-color: rgba(255, 255, 255, 0.2);
 }
 
@@ -308,7 +308,7 @@
 .cardFooterActions {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 16px;
   width: 100%;
   margin-top: 4px;
@@ -319,9 +319,9 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 9px 24px;
-  background: #1a1e28;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 8px 22px;
+  background: #202024;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 9999px;
   color: #ffffff;
   font-size: 13px;
@@ -332,8 +332,8 @@
 }
 
 .configBtn:hover {
-  background: #242938;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: #2a2a30;
+  border-color: rgba(255, 255, 255, 0.28);
   transform: translateY(-1px);
 }
 
@@ -346,7 +346,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 9px 16px;
+  padding: 8px 12px;
   background: transparent;
   border: none;
   color: rgba(255, 255, 255, 0.6);

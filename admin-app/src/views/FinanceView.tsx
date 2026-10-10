@@ -588,7 +588,7 @@ export function FinanceView() {
                   <h3 className={styles.planName}>{plan.name}</h3>
                   <span className={styles.quotaBadge}>
                     {plan.totalQuotas > 1
-                      ? `${plan.totalQuotas} Cuotas Recurrentes`
+                      ? `${plan.totalQuotas} Cuotas`
                       : "Pago Único"}
                   </span>
                 </div>
@@ -596,9 +596,7 @@ export function FinanceView() {
                 <div className={styles.planPriceRow}>
                   <span className={styles.currency}>$</span>
                   <span className={styles.priceAmount}>{formatCurrency(plan.quotaAmount)}</span>
-                  <span className={styles.pricePeriod}>
-                    {plan.totalQuotas > 1 ? "/cuota" : " total"}
-                  </span>
+                  <span className={styles.pricePeriod}>USD</span>
                 </div>
 
                 <div className={styles.courseTag}>
