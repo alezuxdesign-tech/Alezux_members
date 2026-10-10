@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   ArrowLeft, 
   CheckCircle2, 
@@ -65,6 +65,16 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
 
   // Tab de contenido: notas o recursos
   const [contentTab, setContentTab] = useState<"description" | "files">("description");
+
+  // Al cambiar de lección / topic, hacer scroll arriba suavemente
+  useEffect(() => {
+    const scrollEl = document.querySelector('[data-scroll-container="main"]') as HTMLElement | null;
+    if (scrollEl) {
+      scrollEl.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [activeTopicId]);
 
   // Topic seleccionado actualmente
   const currentTopic = useMemo(() => {

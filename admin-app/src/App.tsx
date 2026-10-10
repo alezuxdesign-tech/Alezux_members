@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   BarChart3, 
   GraduationCap, 
@@ -15,7 +15,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Award,
+  LogOut
 } from "lucide-react";
 import { OverviewView } from "./views/OverviewView";
 import { CoursesView } from "./views/CoursesView";
@@ -23,15 +25,21 @@ import { StudentsView } from "./views/StudentsView";
 import { FinanceView } from "./views/FinanceView";
 import { MarketingView } from "./views/MarketingView";
 import { SettingsView } from "./views/SettingsView";
-import { StudentPortal } from "./views/student/StudentPortal";
-import { api } from "./services/api";
+import { StudentDashboardView } from "./views/student/StudentDashboardView";
+import { StudentCommunityView } from "./views/student/StudentCommunityView";
+import { StudentCatalogView } from "./views/student/StudentCatalogView";
+import { StudentCourseNetflixView } from "./views/student/StudentCourseNetflixView";
+import { StudentLessonClassroomView } from "./views/student/StudentLessonClassroomView";
+import { api, Course, CourseSection, CourseLesson, CourseTopic, StudentProfile } from "./services/api";
 import { hexToRgb, getContrastForeground } from "./components/arc/color-picker/color-utils";
 import styles from "./App.module.css";
+import studentStyles from "./views/student/StudentPortal.module.css";
 
-type TabId = "overview" | "courses" | "students" | "finance" | "marketing" | "settings";
+type AdminTabId = "overview" | "courses" | "students" | "finance" | "marketing" | "settings";
+type StudentTabId = "dashboard" | "courses" | "achievements" | "community";
 
-interface NavItemConfig {
-  id: TabId;
+interface NavItemConfig<T extends string = string> {
+  id: T;
   label: string;
   icon: React.ReactNode;
   badge?: string;
@@ -58,7 +66,6 @@ function applyAccentColor(accent: string, theme: "dark" | "light") {
     root.style.setProperty("--accent-foreground", presets[accent].fg);
     root.style.setProperty("--control-glyph", presets[accent].fg);
   } else {
-    // Es un color hexadecimal personalizado (ej: #C7F804 o #0db879)
     root.dataset.accent = "custom";
     const hex = accent.startsWith("#") ? accent : `#${accent}`;
     const { r, g, b } = hexToRgb(hex);
@@ -81,7 +88,6 @@ function applyAccentColor(accent: string, theme: "dark" | "light") {
 
 function setBrowserFavicon(url: string) {
   if (!url) return;
-  // Eliminar favicons anteriores de WP para asegurar que el navegador actualice de inmediato
   const existingLinks = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
   existingLinks.forEach((el) => el.remove());
 
@@ -102,13 +108,38 @@ export interface AppProps {
   isStandaloneStudent?: boolean;
 }
 
+const defaultStudentProfile: StudentProfile = {
+  id: 1,
+  name: "Estudiante",
+  email: "",
+  username: "estudiante",
+  avatar: "",
+  joinedDate: "Hoy",
+  planName: "Plan Activo",
+  enrolledCourseIds: [],
+  completedTopicIds: [],
+  isAdmin: false,
+};
+
 export function App({ initialMode = "admin", isStandaloneStudent = false }: AppProps = {}) {
   const wpData = (window as any).crezca_admin_data || (window as any).alezux_admin_data || {};
+  const mainAreaRef = useRef<HTMLDivElement | null>(null);
 
   const [appMode, setAppMode] = useState<"admin" | "student">(initialMode);
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [activeAdminTab, setActiveAdminTab] = useState<AdminTabId>("overview");
+  const [activeStudentTab, setActiveStudentTab] = useState<StudentTabId>("dashboard");
 
-  const navItems: NavItemConfig[] = [
+  // Estado del Estudiante
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const [studentCourses, setStudentCourses] = useState<Course[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedSection, setSelectedSection] = useState<CourseSection | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<CourseLesson | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<CourseTopic | null>(null);
+  const [studentLoading, setStudentLoading] = useState(false);
+
+  // Navegación para el Administrador
+  const adminNavItems: NavItemConfig<AdminTabId>[] = [
     { id: "overview", label: "Dashboard", icon: <BarChart3 size={18} /> },
     { id: "courses", label: "Cursos", icon: <GraduationCap size={18} /> },
     { id: "students", label: "Estudiantes", icon: <Users size={18} /> },
@@ -117,7 +148,17 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     { id: "settings", label: "Configuración", icon: <Sliders size={18} /> },
   ];
 
-  const currentNav = navItems.find((item) => item.id === activeTab) || navItems[0];
+  // Navegación para el Estudiante (Dashboard, Cursos, Logros, Comunidad)
+  const studentNavItems: NavItemConfig<StudentTabId>[] = [
+    { id: "dashboard", label: "Dashboard", icon: <BarChart3 size={18} /> },
+    { id: "courses", label: "Cursos", icon: <GraduationCap size={18} /> },
+    { id: "achievements", label: "Logros", icon: <Award size={18} /> },
+    { id: "community", label: "Comunidad", icon: <Users size={18} /> },
+  ];
+
+  const currentAdminNav = adminNavItems.find((item) => item.id === activeAdminTab) || adminNavItems[0];
+  const currentStudentNav = studentNavItems.find((item) => item.id === activeStudentTab) || studentNavItems[0];
+
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     const saved = localStorage.getItem("crezca_theme");
     if (saved === "light" || saved === "dark") return saved;
@@ -156,8 +197,9 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
   // Actualizar título y favicon de la pestaña del navegador
   useEffect(() => {
     const titleName = academyName || "Crezca";
-    document.title = `${titleName} | ${currentNav.label}`;
-  }, [academyName, currentNav]);
+    const currentLabel = appMode === "admin" ? currentAdminNav.label : currentStudentNav.label;
+    document.title = `${titleName} | ${currentLabel}`;
+  }, [academyName, appMode, currentAdminNav, currentStudentNav]);
 
   useEffect(() => {
     if (academyLogo) {
@@ -186,6 +228,27 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
       }
     });
   }, []);
+
+  // Cargar datos de Estudiante cuando está en modo estudiante
+  useEffect(() => {
+    if (appMode === "student" && !studentProfile) {
+      setStudentLoading(true);
+      Promise.all([api.getStudentProfile(), api.getStudentCourses()])
+        .then(([prof, crs]) => {
+          setStudentProfile(prof);
+          setStudentCourses(crs);
+        })
+        .catch((err) => console.error("Error cargando datos de estudiante:", err))
+        .finally(() => setStudentLoading(false));
+    }
+  }, [appMode, studentProfile]);
+
+  // Scroll al inicio al cambiar de pestaña o modo
+  useEffect(() => {
+    if (mainAreaRef.current) {
+      mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [appMode, activeAdminTab, activeStudentTab]);
 
   const toggleTheme = () => {
     setTheme((prev) => {
@@ -231,46 +294,120 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     });
   };
 
+  // Manejar marcar / desmarcar topic como completado por el estudiante
+  const handleToggleCompleteTopic = async (topicId: string) => {
+    try {
+      const res = await api.toggleCompleteTopic(topicId, selectedCourse?.id);
+      if (studentProfile) {
+        setStudentProfile({
+          ...studentProfile,
+          completedTopicIds: res.completedTopicIds,
+        });
+      }
+      if (selectedCourse) {
+        setStudentCourses((prev) =>
+          prev.map((c) => {
+            if (c.id !== selectedCourse.id) return c;
+            let total = 0;
+            let done = 0;
+            c.sections?.forEach((s) => {
+              const items = s.lessons || s.topics || [];
+              items.forEach((top) => {
+                total++;
+                if (res.completedTopicIds.includes(top.id)) {
+                  done++;
+                }
+              });
+            });
+            const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+            const updated = { ...c, progress, completedTopics: done, totalTopics: total };
+            setSelectedCourse(updated);
+            return updated;
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Error al actualizar estado del topic:", err);
+    }
+  };
+
+  const handleSelectCourse = (course: Course) => {
+    setSelectedCourse(course);
+    setSelectedSection(null);
+    setSelectedLesson(null);
+    setSelectedTopic(null);
+    setActiveStudentTab("courses");
+    if (mainAreaRef.current) {
+      mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleSelectModule = (sec: CourseSection, les: CourseLesson, top?: CourseTopic) => {
+    setSelectedSection(sec);
+    setSelectedLesson(les);
+    setSelectedTopic(top || null);
+    if (mainAreaRef.current) {
+      mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleBackToCatalog = () => {
+    setSelectedCourse(null);
+    setSelectedSection(null);
+    setSelectedLesson(null);
+    setSelectedTopic(null);
+    if (mainAreaRef.current) {
+      mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleBackToCourse = () => {
+    setSelectedSection(null);
+    setSelectedLesson(null);
+    setSelectedTopic(null);
+    if (mainAreaRef.current) {
+      mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const wpAdminUrl = (window as any).crezca_admin_data?.wp_admin_url 
     || (window as any).alezux_admin_data?.wp_admin_url 
     || "/wp-admin/";
 
+  const logoutUrl = (window as any).crezca_student_data?.logout_url || "/wp-login.php?action=logout";
 
-  if (appMode === "student") {
-    return (
-      <StudentPortal
-        onExitStudentMode={isStandaloneStudent ? undefined : () => setAppMode("admin")}
-        isAdminPreview={!isStandaloneStudent}
-        academyName={academyName}
-        academyLogo={academyLogo}
-      />
-    );
-  }
+  // Determinar si la vista actual de cursos requiere pantalla completa sin padding
+  const isCourseFluid = appMode === "student" && activeStudentTab === "courses" && Boolean(selectedCourse);
 
   return (
     <div className={styles.appShell}>
       {/* =========================================================
-          SIDEBAR VERTICAL ESTILO ARC UI
+          SIDEBAR VERTICAL ESTILO ARC UI (COMÚN A ADMIN Y ESTUDIANTE)
           ========================================================= */}
       <aside className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ""}`}>
         {/* Cabecera del Sidebar */}
         <div className={styles.sidebarHeader}>
           {!isCollapsed ? (
             <>
-              <div className={styles.brandGroup} title={`${academyName || "Crezca"} - Academia & Membresías`}>
+              <div 
+                className={styles.brandGroup} 
+                title={`${academyName || "Crezca"} - ${appMode === "admin" ? "Academia & Membresías" : "Campus del Estudiante"}`}
+              >
                 <div className={`${styles.logoMark} ${academyLogo ? styles.hasCustomLogo : ""}`}>
                   {academyLogo ? (
                     <img src={academyLogo} alt={academyName || "Logo"} className={styles.logoImg} />
                   ) : (
-                    <Layers size={19} className={styles.logoIcon} />
+                    appMode === "admin" ? <Layers size={19} className={styles.logoIcon} /> : <GraduationCap size={19} className={styles.logoIcon} />
                   )}
                 </div>
                 <div className={styles.brandText}>
                   <div className={styles.brandTitleWrap}>
                     <span className={styles.brandName}>{academyName || "Crezca"}</span>
-                    <span className={styles.versionBadge}>v2.0 Arc UI</span>
+                    <span className={styles.versionBadge}>v2.0 Arc</span>
                   </div>
-                  <span className={styles.brandSubtitle}>Academia & Membresías</span>
+                  <span className={styles.brandSubtitle}>
+                    {appMode === "admin" ? "Academia & Membresías" : "Campus del Estudiante"}
+                  </span>
                 </div>
               </div>
 
@@ -296,7 +433,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 {academyLogo ? (
                   <img src={academyLogo} alt={academyName || "Logo"} className={styles.logoImg} />
                 ) : (
-                  <Layers size={19} className={styles.logoIcon} />
+                  appMode === "admin" ? <Layers size={19} className={styles.logoIcon} /> : <GraduationCap size={19} className={styles.logoIcon} />
                 )}
               </div>
             </button>
@@ -306,16 +443,46 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
         {/* Lista de Navegación Vertical */}
         <nav className={styles.navSection}>
           {!isCollapsed && (
-            <div className={styles.navSectionLabel}>Plataforma</div>
+            <div className={styles.navSectionLabel}>
+              {appMode === "admin" ? "Plataforma" : "Campus"}
+            </div>
           )}
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
+
+          {/* Menú para Administrador */}
+          {appMode === "admin" && adminNavItems.map((item) => {
+            const isActive = activeAdminTab === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
                 className={`${styles.navItem} ${isActive ? styles.active : ""}`}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => setActiveAdminTab(item.id)}
+                title={isCollapsed ? item.label : undefined}
+              >
+                {isActive && <span className={styles.activeIndicator} />}
+                <span className={styles.navIconWrap}>{item.icon}</span>
+                {!isCollapsed && <span className={styles.navLabel}>{item.label}</span>}
+                {!isCollapsed && item.badge && (
+                  <span className={styles.navBadge}>{item.badge}</span>
+                )}
+              </button>
+            );
+          })}
+
+          {/* Menú para Estudiante (Dashboard, Cursos, Logros, Comunidad) */}
+          {appMode === "student" && studentNavItems.map((item) => {
+            const isActive = activeStudentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`${styles.navItem} ${isActive ? styles.active : ""}`}
+                onClick={() => {
+                  setActiveStudentTab(item.id);
+                  if (item.id === "courses" && !selectedCourse) {
+                    // Mantener catálogo
+                  }
+                }}
                 title={isCollapsed ? item.label : undefined}
               >
                 {isActive && <span className={styles.activeIndicator} />}
@@ -334,13 +501,21 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
           {!isCollapsed && (
             <div className={styles.userCard}>
               <div className={styles.userAvatar}>
-                <ShieldCheck size={15} />
+                {appMode === "admin" ? (
+                  <ShieldCheck size={15} />
+                ) : studentProfile?.avatar ? (
+                  <img src={studentProfile.avatar} alt="Avatar" className={styles.userAvatarImg} />
+                ) : (
+                  <GraduationCap size={15} />
+                )}
               </div>
               <div className={styles.userInfo}>
-                <span className={styles.userName}>Administrador</span>
+                <span className={styles.userName}>
+                  {appMode === "admin" ? "Administrador" : (studentProfile?.name || "Estudiante")}
+                </span>
                 <span className={styles.userStatus}>
                   <span className={styles.statusDot} />
-                  Sesión activa
+                  {appMode === "admin" ? "Sesión activa" : "Estudiante activo"}
                 </span>
               </div>
             </div>
@@ -371,62 +546,219 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             </button>
           </div>
 
-          {/* Enlace para volver a WordPress */}
-          <a
-            href={wpAdminUrl}
-            className={styles.backToWpBtn}
-            title="Regresar al panel tradicional de WordPress"
-          >
-            <ArrowLeft size={14} />
-            {!isCollapsed && <span>Volver a WordPress</span>}
-          </a>
+          {/* Acción inferior: Volver a WordPress o Alternar Modo */}
+          {appMode === "admin" ? (
+            <a
+              href={wpAdminUrl}
+              className={styles.backToWpBtn}
+              title="Regresar al panel tradicional de WordPress"
+            >
+              <ArrowLeft size={14} />
+              {!isCollapsed && <span>Volver a WordPress</span>}
+            </a>
+          ) : (
+            !isStandaloneStudent ? (
+              <button
+                type="button"
+                onClick={() => setAppMode("admin")}
+                className={styles.backToWpBtn}
+                title="Regresar a la administración"
+              >
+                <ShieldCheck size={14} />
+                {!isCollapsed && <span>Modo Administrador</span>}
+              </button>
+            ) : (
+              <a
+                href={logoutUrl}
+                className={styles.backToWpBtn}
+                title="Cerrar sesión del campus virtual"
+              >
+                <LogOut size={14} />
+                {!isCollapsed && <span>Cerrar sesión</span>}
+              </a>
+            )
+          )}
         </div>
       </aside>
 
       {/* =========================================================
-          CONTENIDO PRINCIPAL
+          CONTENIDO PRINCIPAL CON SCROLL FLUIDO
           ========================================================= */}
-      <div className={styles.mainArea}>
+      <div 
+        ref={mainAreaRef} 
+        data-scroll-container="main" 
+        className={styles.mainArea}
+      >
         {/* Cabecera superior del contenido */}
         <header className={styles.mainHeader}>
           <div className={styles.headerBreadcrumb}>
             <span>{academyName || "Crezca"}</span>
             <ChevronRight size={14} />
-            <span className={styles.headerTitle}>{currentNav.label}</span>
+
+            {appMode === "admin" ? (
+              <span className={styles.headerTitle}>{currentAdminNav.label}</span>
+            ) : (
+              <>
+                {activeStudentTab === "dashboard" && <span className={styles.headerTitle}>Dashboard</span>}
+                {activeStudentTab === "achievements" && <span className={styles.headerTitle}>Logros</span>}
+                {activeStudentTab === "community" && <span className={styles.headerTitle}>Comunidad</span>}
+                {activeStudentTab === "courses" && (
+                  !selectedCourse ? (
+                    <span className={styles.headerTitle}>Cursos</span>
+                  ) : !selectedLesson ? (
+                    <>
+                      <span 
+                        style={{ cursor: "pointer", color: "var(--text-muted)" }} 
+                        onClick={handleBackToCatalog}
+                      >
+                        Cursos
+                      </span>
+                      <ChevronRight size={14} />
+                      <span className={styles.headerTitle}>{selectedCourse.title}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span 
+                        style={{ cursor: "pointer", color: "var(--text-muted)" }} 
+                        onClick={handleBackToCourse}
+                      >
+                        {selectedCourse.title}
+                      </span>
+                      <ChevronRight size={14} />
+                      <span className={styles.headerTitle}>{selectedLesson.title}</span>
+                    </>
+                  )
+                )}
+              </>
+            )}
           </div>
 
           <div className={styles.headerActions}>
-            <button
-              type="button"
-              className={styles.studentModeBtn}
-              onClick={() => setAppMode("student")}
-              title="Previsualizar el campus virtual como un estudiante"
-            >
-              <GraduationCap size={15} />
-              <span>Modo Estudiante</span>
-            </button>
+            {appMode === "admin" ? (
+              <button
+                type="button"
+                className={styles.studentModeBtn}
+                onClick={() => setAppMode("student")}
+                title="Previsualizar el campus virtual como un estudiante"
+              >
+                <GraduationCap size={15} />
+                <span>Modo Estudiante</span>
+              </button>
+            ) : (
+              !isStandaloneStudent ? (
+                <button
+                  type="button"
+                  className={styles.studentModeBtn}
+                  onClick={() => setAppMode("admin")}
+                  title="Regresar a la administración"
+                >
+                  <ShieldCheck size={15} />
+                  <span>Modo Administrador</span>
+                </button>
+              ) : (
+                <div className={styles.studentHeaderBadge}>
+                  <ShieldCheck size={14} />
+                  <span>{studentProfile?.planName || "Membresía Activa"}</span>
+                </div>
+              )
+            )}
+
             <span className={styles.versionBadge}>Arc Design System</span>
           </div>
         </header>
 
         {/* Cuerpo del módulo activo */}
-        <main className={styles.mainBody}>
-          {activeTab === "overview" && <OverviewView onNavigate={(tab) => setActiveTab(tab as TabId)} />}
-          {activeTab === "courses" && <CoursesView />}
-          {activeTab === "students" && <StudentsView />}
-          {activeTab === "finance" && <FinanceView />}
-          {activeTab === "marketing" && <MarketingView />}
-          {activeTab === "settings" && (
-            <SettingsView
-              currentAccent={accent}
-              onAccentChange={handleAccentChange}
-              currentTheme={theme}
-              onThemeToggle={toggleTheme}
-              academyName={academyName}
-              onAcademyNameChange={handleAcademyNameChange}
-              academyLogo={academyLogo}
-              onAcademyLogoChange={handleAcademyLogoChange}
-            />
+        <main className={`${styles.mainBody} ${isCourseFluid ? styles.mainBodyNoPadding : ""}`}>
+          {/* MODO ADMINISTRADOR */}
+          {appMode === "admin" && (
+            <>
+              {activeAdminTab === "overview" && <OverviewView onNavigate={(tab) => setActiveAdminTab(tab as AdminTabId)} />}
+              {activeAdminTab === "courses" && <CoursesView />}
+              {activeAdminTab === "students" && <StudentsView />}
+              {activeAdminTab === "finance" && <FinanceView />}
+              {activeAdminTab === "marketing" && <MarketingView />}
+              {activeAdminTab === "settings" && (
+                <SettingsView
+                  currentAccent={accent}
+                  onAccentChange={handleAccentChange}
+                  currentTheme={theme}
+                  onThemeToggle={toggleTheme}
+                  academyName={academyName}
+                  onAcademyNameChange={handleAcademyNameChange}
+                  academyLogo={academyLogo}
+                  onAcademyLogoChange={handleAcademyLogoChange}
+                />
+              )}
+            </>
+          )}
+
+          {/* MODO ESTUDIANTE */}
+          {appMode === "student" && (
+            <>
+              {/* 1. Dashboard del Estudiante */}
+              {activeStudentTab === "dashboard" && (
+                <StudentDashboardView
+                  profile={studentProfile || defaultStudentProfile}
+                  courses={studentCourses}
+                  onSelectCourse={handleSelectCourse}
+                  onNavigateTab={(tab) => setActiveStudentTab(tab)}
+                />
+              )}
+
+              {/* 2. Cursos del Estudiante (Catálogo -> Netflix -> Aula) */}
+              {activeStudentTab === "courses" && (
+                <>
+                  {!selectedCourse && (
+                    <StudentCatalogView
+                      courses={studentCourses}
+                      profile={studentProfile || defaultStudentProfile}
+                      onSelectCourse={handleSelectCourse}
+                      onOpenProfile={() => {}}
+                    />
+                  )}
+
+                  {selectedCourse && !selectedLesson && (
+                    <StudentCourseNetflixView
+                      course={selectedCourse}
+                      academyName={academyName}
+                      academyLogo={academyLogo}
+                      onBack={handleBackToCatalog}
+                      onSelectModule={handleSelectModule}
+                    />
+                  )}
+
+                  {selectedCourse && selectedSection && selectedLesson && (
+                    <StudentLessonClassroomView
+                      course={selectedCourse}
+                      currentSection={selectedSection}
+                      currentLesson={selectedLesson}
+                      initialTopic={selectedTopic || undefined}
+                      completedTopicIds={studentProfile?.completedTopicIds || []}
+                      onToggleCompleteTopic={handleToggleCompleteTopic}
+                      onBackToCourse={handleBackToCourse}
+                      onSwitchModule={(sec, les, top) => {
+                        setSelectedSection(sec);
+                        setSelectedLesson(les);
+                        setSelectedTopic(top || null);
+                      }}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* 3. Logros del Estudiante (Requerimiento explícito: Dejar la vista en blanco por ahora) */}
+              {activeStudentTab === "achievements" && (
+                <div className={studentStyles.blankAchievementsView} />
+              )}
+
+              {/* 4. Comunidad del Estudiante */}
+              {activeStudentTab === "community" && (
+                <StudentCommunityView
+                  courses={studentCourses}
+                  academyName={academyName}
+                />
+              )}
+            </>
           )}
         </main>
       </div>
