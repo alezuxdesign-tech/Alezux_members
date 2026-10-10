@@ -156,13 +156,17 @@ class Admin_Dashboard {
 	}
 
 	public function add_admin_menu() {
+		$academy_name = get_option( 'alezux_academy_name', 'Crezca' );
+		$academy_logo = get_option( 'alezux_academy_logo', '' );
+		$menu_icon    = ! empty( $academy_logo ) ? $academy_logo : ALEZUX_MEMBERS_URL . 'modules/demo-block/assets/css/img/LOGO.svg';
+
 		add_menu_page(
-			'Crezca',
-			'Crezca',
+			$academy_name,
+			$academy_name,
 			'manage_options',
 			'crezca',
 			[ $this, 'render_dashboard' ],
-			ALEZUX_MEMBERS_URL . 'modules/demo-block/assets/css/img/LOGO.svg',
+			$menu_icon,
 			2
 		);
 

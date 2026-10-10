@@ -39,6 +39,17 @@ export function App() {
   const wpData = (window as any).crezca_admin_data || (window as any).alezux_admin_data || {};
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+
+  const navItems: NavItemConfig[] = [
+    { id: "overview", label: "Métricas & Resumen", icon: <BarChart3 size={18} /> },
+    { id: "courses", label: "Cursos & Builder", icon: <GraduationCap size={18} /> },
+    { id: "students", label: "Estudiantes & Accesos", icon: <Users size={18} /> },
+    { id: "finance", label: "Finanzas & Planes", icon: <CreditCard size={18} /> },
+    { id: "marketing", label: "Marketing & Emails", icon: <Mail size={18} /> },
+    { id: "settings", label: "Configuración", icon: <Sliders size={18} /> },
+  ];
+
+  const currentNav = navItems.find((item) => item.id === activeTab) || navItems[0];
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     const saved = localStorage.getItem("crezca_theme");
     if (saved === "light" || saved === "dark") return saved;
@@ -73,6 +84,24 @@ export function App() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, [theme, accent]);
+
+  // Actualizar título y favicon de la pestaña del navegador
+  useEffect(() => {
+    const titleName = academyName || "Crezca";
+    document.title = `${titleName} | ${currentNav.label}`;
+  }, [academyName, currentNav]);
+
+  useEffect(() => {
+    if (academyLogo) {
+      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "shortcut icon";
+        document.head.appendChild(link);
+      }
+      link.href = academyLogo;
+    }
+  }, [academyLogo]);
 
   // Sincronizar ajustes de la plataforma en segundo plano desde el servidor
   useEffect(() => {
@@ -141,16 +170,6 @@ export function App() {
     || (window as any).alezux_admin_data?.wp_admin_url 
     || "/wp-admin/";
 
-  const navItems: NavItemConfig[] = [
-    { id: "overview", label: "Métricas & Resumen", icon: <BarChart3 size={18} /> },
-    { id: "courses", label: "Cursos & Builder", icon: <GraduationCap size={18} /> },
-    { id: "students", label: "Estudiantes & Accesos", icon: <Users size={18} /> },
-    { id: "finance", label: "Finanzas & Planes", icon: <CreditCard size={18} /> },
-    { id: "marketing", label: "Marketing & Emails", icon: <Mail size={18} /> },
-    { id: "settings", label: "Configuración", icon: <Sliders size={18} /> },
-  ];
-
-  const currentNav = navItems.find((item) => item.id === activeTab) || navItems[0];
 
   return (
     <div className={styles.appShell}>
@@ -295,7 +314,7 @@ export function App() {
         {/* Cabecera superior del contenido */}
         <header className={styles.mainHeader}>
           <div className={styles.headerBreadcrumb}>
-            <span>Crezca</span>
+            <span>{academyName || "Crezca"}</span>
             <ChevronRight size={14} />
             <span className={styles.headerTitle}>{currentNav.label}</span>
           </div>
