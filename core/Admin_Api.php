@@ -380,7 +380,12 @@ class Admin_Api {
 			}
 
 			$thumb_id = get_post_thumbnail_id( $post->ID );
-			$thumb_url = $thumb_id ? wp_get_attachment_image_url( $thumb_id, 'medium' ) : 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80';
+			$custom_thumb = get_post_meta( $post->ID, '_course_thumbnail', true );
+			$thumb_url = $custom_thumb ?: ( $thumb_id ? wp_get_attachment_image_url( $thumb_id, 'medium' ) : 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80' );
+
+			$banner_url = get_post_meta( $post->ID, '_course_banner', true ) ?: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80';
+			$price = get_post_meta( $post->ID, '_course_price', true );
+			$linked_plan_id = get_post_meta( $post->ID, '_course_linked_plan_id', true );
 
 			$courses[] = [
 				'id'           => $post->ID,
@@ -388,6 +393,9 @@ class Admin_Api {
 				'slug'         => $post->post_name,
 				'description'  => wp_strip_all_tags( $post->post_content ),
 				'thumbnail'    => $thumb_url,
+				'banner'       => $banner_url,
+				'price'        => ( '' !== $price && false !== $price ) ? (float) $price : 0,
+				'linkedPlanId' => $linked_plan_id ? (int) $linked_plan_id : null,
 				'status'       => $post->post_status,
 				'studentCount' => (int) get_post_meta( $post->ID, '_student_count', true ) ?: 120,
 				'sections'     => $sections,
@@ -398,18 +406,55 @@ class Admin_Api {
 	}
 
 	/**
-	 * Guardar currículum ordenado desde el Builder Drag & Drop
+	 * Guardar currículum ordenado desde el Builder Drag & Drop y datos del curso
 	 */
 	public function save_course_curriculum( $request ) {
 		$course_id = (int) $request['id'];
 		$params = $request->get_json_params();
 		$sections = isset( $params['sections'] ) ? $params['sections'] : [];
 
-		update_post_meta( $course_id, '_alezux_curriculum_structure', $sections );
+		if ( ! empty( $sections ) || is_array( $sections ) ) {
+			update_post_meta( $course_id, '_alezux_curriculum_structure', $sections );
+		}
+
+		// Actualizar información general del curso si viene en la petición
+		$post_update = [ 'ID' => $course_id ];
+		$needs_post_update = false;
+
+		if ( isset( $params['title'] ) && '' !== trim( $params['title'] ) ) {
+			$post_update['post_title'] = sanitize_text_field( $params['title'] );
+			$needs_post_update = true;
+		}
+		if ( isset( $params['description'] ) ) {
+			$post_update['post_content'] = wp_kses_post( $params['description'] );
+			$needs_post_update = true;
+		}
+		if ( isset( $params['status'] ) && in_array( $params['status'], [ 'publish', 'draft' ], true ) ) {
+			$post_update['post_status'] = $params['status'];
+			$needs_post_update = true;
+		}
+
+		if ( $needs_post_update ) {
+			wp_update_post( $post_update );
+		}
+
+		if ( isset( $params['thumbnail'] ) ) {
+			update_post_meta( $course_id, '_course_thumbnail', esc_url_raw( $params['thumbnail'] ) );
+		}
+		if ( isset( $params['banner'] ) ) {
+			update_post_meta( $course_id, '_course_banner', esc_url_raw( $params['banner'] ) );
+		}
+		if ( isset( $params['price'] ) ) {
+			update_post_meta( $course_id, '_course_price', (float) $params['price'] );
+		}
+		if ( array_key_exists( 'linkedPlanId', $params ) ) {
+			$val = ! empty( $params['linkedPlanId'] ) ? (int) $params['linkedPlanId'] : null;
+			update_post_meta( $course_id, '_course_linked_plan_id', $val );
+		}
 
 		return rest_ensure_response( [
 			'success' => true,
-			'message' => 'Estructura de currículum guardada correctamente.',
+			'message' => 'Curso y currículum guardados correctamente.',
 		] );
 	}
 
