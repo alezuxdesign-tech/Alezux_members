@@ -128,6 +128,44 @@ export interface StudentProfile {
   isAdmin: boolean;
 }
 
+export interface CommunityChannel {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  category: string;
+  course_id: number;
+  course_name?: string;
+  is_announcement: boolean;
+  has_access: boolean;
+  messages_count?: number;
+  last_message?: {
+    text: string;
+    date: string;
+    user_name: string;
+  } | null;
+}
+
+export interface CommunityMessage {
+  id: number;
+  channel_id: number;
+  user_id: number;
+  user_name: string;
+  user_avatar?: string;
+  user_role: "admin" | "instructor" | "student" | string;
+  message: string;
+  attachments?: Array<{ name: string; url: string; size?: string }>;
+  created_at: string;
+}
+
+export interface CreateCommunityChannelPayload {
+  name: string;
+  description?: string;
+  category: string;
+  course_id: number;
+  is_announcement?: boolean;
+}
+
 export interface FinancePlan {
   id: number;
   name: string;
@@ -1687,6 +1725,222 @@ class ApiService {
     localStorage.setItem("crezca_completed_topics", JSON.stringify(next));
     return { isCompleted, completedTopicIds: next };
   }
+
+  /* ========================================================
+     COMUNIDAD TIPO DISCORD (CANALES & MENSAJES)
+     ======================================================== */
+  async getCommunityChannels(): Promise<CommunityChannel[]> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}community/channels`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error getCommunityChannels:", e);
+    }
+    const saved = localStorage.getItem("crezca_community_channels");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (_) {}
+    }
+    const defaults: CommunityChannel[] = [
+      { id: 1, name: "bienvenida", slug: "bienvenida", description: "Canal de bienvenida para todos los nuevos estudiantes.", category: "General", course_id: 0, is_announcement: false, has_access: true, messages_count: 1 },
+      { id: 2, name: "anuncios-oficiales", slug: "anuncios-oficiales", description: "Comunicados oficiales de la academia.", category: "General", course_id: 0, is_announcement: true, has_access: true, messages_count: 0 },
+      { id: 3, name: "charla-general", slug: "charla-general", description: "Espacio para compartir ideas y proyectos.", category: "Comunidad", course_id: 0, is_announcement: false, has_access: true, messages_count: 0 },
+      { id: 4, name: "networking-proyectos", slug: "networking-proyectos", description: "Colabora en proyectos con tus compañeros.", category: "Comunidad", course_id: 0, is_announcement: false, has_access: true, messages_count: 0 },
+    ];
+    localStorage.setItem("crezca_community_channels", JSON.stringify(defaults));
+    return defaults;
+  }
+
+  async createCommunityChannel(payload: CreateCommunityChannelPayload): Promise<CommunityChannel[]> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}community/channels`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error createCommunityChannel:", e);
+    }
+    const current = await this.getCommunityChannels();
+    const cleanName = payload.name.toLowerCase().replace(/#/g, "").replace(/[^a-z0-9_-]/g, "-");
+    const newCh: CommunityChannel = {
+      id: Date.now(),
+      name: cleanName,
+      slug: cleanName,
+      description: payload.description || "",
+      category: payload.category || "General",
+      course_id: payload.course_id || 0,
+      is_announcement: !!payload.is_announcement,
+      has_access: true,
+      messages_count: 0,
+    };
+    const updated = [...current, newCh];
+    localStorage.setItem("crezca_community_channels", JSON.stringify(updated));
+    return updated;
+  }
+
+  async updateCommunityChannel(id: number, payload: Partial<CreateCommunityChannelPayload>): Promise<CommunityChannel[]> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}community/channels/${id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error updateCommunityChannel:", e);
+    }
+    const current = await this.getCommunityChannels();
+    const updated = current.map((c) => (c.id === id ? { ...c, ...payload } : c));
+    localStorage.setItem("crezca_community_channels", JSON.stringify(updated));
+    return updated;
+  }
+
+  async deleteCommunityChannel(id: number): Promise<CommunityChannel[]> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}community/channels/${id}`, {
+          method: "DELETE",
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error deleteCommunityChannel:", e);
+    }
+    const current = await this.getCommunityChannels();
+    const updated = current.filter((c) => c.id !== id);
+    localStorage.setItem("crezca_community_channels", JSON.stringify(updated));
+    return updated;
+  }
+
+  async getChannelMessages(channelId: number): Promise<{ channel: CommunityChannel; messages: CommunityMessage[] }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}community/channels/${channelId}/messages`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error getChannelMessages:", e);
+    }
+    const channels = await this.getCommunityChannels();
+    const channel = channels.find((c) => c.id === channelId) || channels[0] || {
+      id: 1,
+      name: "general",
+      slug: "general",
+      description: "",
+      category: "General",
+      course_id: 0,
+      is_announcement: false,
+      has_access: true,
+    };
+    const key = `crezca_channel_messages_${channelId}`;
+    const saved = localStorage.getItem(key);
+    let messages: CommunityMessage[] = [];
+    if (saved) {
+      try { messages = JSON.parse(saved); } catch (_) {}
+    } else {
+      messages = [{
+        id: 1,
+        channel_id: channelId,
+        user_id: 1,
+        user_name: "Academia (Admin)",
+        user_avatar: "",
+        user_role: "admin",
+        message: "¡Hola a todos! 👋 Les damos una cordial bienvenida a este canal. Este espacio funciona como nuestro Discord interno para conectar, resolver dudas y aprender juntos. ¡Saludad por aquí!",
+        created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }];
+      localStorage.setItem(key, JSON.stringify(messages));
+    }
+    return { channel, messages };
+  }
+
+  async sendChannelMessage(channelId: number, message: string, attachments: Array<{ name: string; url: string }> = []): Promise<CommunityMessage> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}community/channels/${channelId}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ message, attachments }),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error sendChannelMessage:", e);
+    }
+    const key = `crezca_channel_messages_${channelId}`;
+    const current = JSON.parse(localStorage.getItem(key) || "[]");
+    const userProfile = await this.getStudentProfile();
+    const newMsg: CommunityMessage = {
+      id: Date.now(),
+      channel_id: channelId,
+      user_id: userProfile.id,
+      user_name: userProfile.name,
+      user_avatar: userProfile.avatar,
+      user_role: userProfile.isAdmin ? "admin" : "student",
+      message,
+      attachments,
+      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    const updated = [...current, newMsg];
+    localStorage.setItem(key, JSON.stringify(updated));
+    return newMsg;
+  }
+
+  async deleteChannelMessage(messageId: number, channelId?: number): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}community/messages/${messageId}`, {
+          method: "DELETE",
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn("API Error deleteChannelMessage:", e);
+    }
+    if (channelId) {
+      const key = `crezca_channel_messages_${channelId}`;
+      const current = JSON.parse(localStorage.getItem(key) || "[]");
+      const updated = current.filter((m: CommunityMessage) => m.id !== messageId);
+      localStorage.setItem(key, JSON.stringify(updated));
+    }
+    return true;
+  }
 }
 
 export const api = new ApiService();
+

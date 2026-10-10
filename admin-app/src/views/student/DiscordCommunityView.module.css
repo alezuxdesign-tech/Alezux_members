@@ -1,0 +1,1205 @@
+/* =========================================================
+   DISCORD-STYLE COMMUNITY HUB - ARC DESIGN SYSTEM
+   ========================================================= */
+
+.discordContainer {
+  display: flex;
+  height: calc(100vh - 65px);
+  width: 100%;
+  overflow: hidden;
+  background: var(--background);
+  color: var(--foreground);
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------
+   1. BARRA LATERAL DE CANALES (DISCORD SIDEBAR)
+   --------------------------------------------------------- */
+.channelsSidebar {
+  width: 280px;
+  min-width: 280px;
+  max-width: 320px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  box-sizing: border-box;
+  overflow: hidden;
+  z-index: 10;
+}
+
+/* Cabecera del servidor / academia */
+.serverHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.serverInfo {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 2px;
+}
+
+.serverName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.serverBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.serverStatusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.serverStatusText {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.addChannelBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.addChannelBtn:hover {
+  background: var(--accent);
+  color: var(--accent-foreground, #ffffff);
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+
+/* Lista scrollable de canales */
+.channelsScrollList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* Sección de enlaces externos (WhatsApp, Slack, Zoom) */
+.externalSection {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.externalSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.externalLinkItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: var(--radius-control);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--foreground);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  transition: all var(--duration-fast);
+}
+
+.externalLinkItem:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+  transform: translateX(2px);
+}
+
+.externalLinkLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.externalLinkIconBox {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Categorías de canales */
+.categoryGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast);
+}
+
+.categoryHeader:hover {
+  background: var(--surface-hover);
+}
+
+.categoryTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.categoryChevron {
+  transition: transform var(--duration-fast);
+}
+
+.categoryChevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.categoryChannelList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+/* Ítem de canal */
+.channelItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px 7px 12px;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: all var(--duration-fast);
+  color: var(--text-muted);
+}
+
+.channelItem:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+}
+
+.channelItem.active {
+  background: var(--accent-subtle);
+  color: var(--foreground);
+  font-weight: 600;
+  border-color: var(--accent-subtle);
+}
+
+.activeIndicatorPill {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+}
+
+.channelItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.channelIcon {
+  flex-shrink: 0;
+  color: var(--text-dim);
+  transition: color var(--duration-fast);
+}
+
+.channelItem.active .channelIcon {
+  color: var(--accent);
+}
+
+.channelName {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.channelItemRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.channelLockBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channelLockBadge.locked {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.channelAdminActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.channelItem:hover .channelAdminActions {
+  opacity: 1;
+}
+
+.channelActionIconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.channelActionIconBtn:hover {
+  background: var(--surface-raised);
+  color: var(--foreground);
+}
+
+.channelActionIconBtn.delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* Pie de la barra lateral de canales con usuario activo */
+.channelUserFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface-raised);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.channelUserLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.channelUserAvatarWrap {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.channelUserAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.channelUserAvatarFallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.channelUserOnlineDot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid var(--surface-raised);
+}
+
+.channelUserInfo {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.channelUserName {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channelUserRoleBadge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ---------------------------------------------------------
+   2. VENTANA PRINCIPAL DE CHAT (DISCORD MAIN CHAT)
+   --------------------------------------------------------- */
+.chatMainArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--background);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Cabecera superior del canal activo */
+.chatHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+.chatHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.chatHeaderIcon {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.chatHeaderTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.chatHeaderDivider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.chatHeaderDesc {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 420px;
+}
+
+.chatHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chatHeaderBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.chatHeaderBadge.exclusive {
+  background: rgba(119, 71, 255, 0.12);
+  color: var(--accent);
+  border-color: rgba(119, 71, 255, 0.25);
+}
+
+.chatHeaderBadge.announcement {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.chatHeaderIconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.chatHeaderIconBtn:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+  border-color: var(--border-strong);
+}
+
+.chatHeaderIconBtn.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Área de mensajes con scroll */
+.messagesStream {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-sizing: border-box;
+}
+
+/* Banner de bienvenida al canal */
+.channelHeroCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 24px 0 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 12px;
+}
+
+.channelHeroIconBox {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.channelHeroTitle {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--foreground);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.02em;
+}
+
+.channelHeroSubtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 580px;
+}
+
+/* Separador de fecha */
+.dateSeparator {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.dateSeparator::before,
+.dateSeparator::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.dateSeparatorBadge {
+  padding: 3px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  margin: 0 12px;
+}
+
+/* Fila de Mensaje individual */
+.messageRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast);
+  position: relative;
+}
+
+.messageRow:hover {
+  background: var(--surface-hover);
+}
+
+.messageAvatarWrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.messageAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.messageAvatarFallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.messageContentWrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.messageAuthorName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.roleBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.roleBadge.admin {
+  background: var(--accent);
+  color: var(--accent-foreground, #ffffff);
+}
+
+.roleBadge.instructor {
+  background: rgba(14, 165, 233, 0.2);
+  color: #0ea5e9;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.roleBadge.student {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+.messageTimestamp {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.messageBody {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Formato markdown ligero dentro del mensaje */
+.messageBody strong {
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.messageBody em {
+  font-style: italic;
+}
+
+.messageBody code {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.messageBody a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.messageBody a:hover {
+  text-decoration: none;
+}
+
+/* Botón flotante para borrar mensaje */
+.messageActionsBar {
+  position: absolute;
+  right: 12px;
+  top: -8px;
+  display: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-sm);
+  padding: 2px;
+  z-index: 2;
+}
+
+.messageRow:hover .messageActionsBar {
+  display: flex;
+  align-items: center;
+}
+
+.deleteMsgBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.deleteMsgBtn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* ---------------------------------------------------------
+   3. BARRA INFERIOR DE REDACCIÓN DE MENSAJES
+   --------------------------------------------------------- */
+.chatInputContainer {
+  padding: 14px 24px 20px;
+  background: var(--surface);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Barra rápida de emojis */
+.emojiQuickBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.emojiQuickLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-right: 4px;
+}
+
+.emojiQuickBtn {
+  font-size: 15px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: transform var(--duration-fast), background var(--duration-fast);
+  line-height: 1.2;
+}
+
+.emojiQuickBtn:hover {
+  transform: scale(1.2);
+  background: var(--surface-hover);
+}
+
+/* Caja de entrada de texto */
+.inputBoxWrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  padding: 8px 12px;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.inputBoxWrapper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.messageTextarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--foreground);
+  resize: none;
+  max-height: 120px;
+  min-height: 24px;
+  line-height: 1.4;
+}
+
+.messageTextarea::placeholder {
+  color: var(--text-muted);
+}
+
+.sendMessageBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--accent-foreground, #ffffff);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform var(--duration-fast), opacity var(--duration-fast);
+}
+
+.sendMessageBtn:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.sendMessageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Aviso de canal solo lectura / anuncios */
+.announcementLockedBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---------------------------------------------------------
+   4. MURO DE ACCESO A CANALES BLOQUEADOS POR CURSO
+   --------------------------------------------------------- */
+.lockedAccessWall {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.lockedWallCard {
+  max-width: 480px;
+  padding: 36px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-modal);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.lockedWallIconBox {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.lockedWallTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.lockedWallDesc {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.lockedWallCourseBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border: 1px solid rgba(119, 71, 255, 0.25);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------
+   5. MODAL DE CREACIÓN / EDICIÓN DE CANAL
+   --------------------------------------------------------- */
+.modalFormGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.modalLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalLabelHint {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.modalInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.modalInputPrefix {
+  position: absolute;
+  left: 12px;
+  color: var(--text-dim);
+  font-weight: 700;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.modalInput {
+  width: 100%;
+  padding: 9px 12px 9px 28px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  color: var(--foreground);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  box-sizing: border-box;
+}
+
+.modalInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.modalInputNormal {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  color: var(--foreground);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  box-sizing: border-box;
+}
+
+.modalInputNormal:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.modalSelect {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  color: var(--foreground);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.modalSelect:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.modalTextarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  color: var(--foreground);
+  font-size: 13px;
+  outline: none;
+  min-height: 70px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.modalTextarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.modalCheckboxCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  user-select: none;
+}
+
+.modalCheckboxInput {
+  margin-top: 3px;
+  cursor: pointer;
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+
+.modalCheckboxTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modalCheckboxTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.modalCheckboxDesc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.modalFooterBtns {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.btnSecondary {
+  padding: 8px 16px;
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.btnSecondary:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.btnPrimary {
+  padding: 8px 18px;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--accent-foreground, #ffffff);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btnDanger {
+  padding: 8px 18px;
+  border-radius: var(--radius-control);
+  background: #ef4444;
+  border: 1px solid #ef4444;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.btnDanger:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* ---------------------------------------------------------
+   6. RESPONSIVE / DISPOSITIVOS PEQUEÑOS
+   --------------------------------------------------------- */
+@media (max-width: 860px) {
+  .channelsSidebar {
+    width: 220px;
+    min-width: 220px;
+  }
+  .chatHeaderDesc {
+    display: none;
+  }
+}

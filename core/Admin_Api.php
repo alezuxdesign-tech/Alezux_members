@@ -223,6 +223,52 @@ class Admin_Api {
 				'callback'            => [ $this, 'toggle_student_complete_topic' ],
 				'permission_callback' => [ $this, 'student_permissions_check' ],
 			] );
+
+			// Comunidad & Canales tipo Discord
+			register_rest_route( $namespace, '/community/channels', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_community_channels' ],
+					'permission_callback' => [ $this, 'student_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'create_community_channel' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/community/channels/(?P<id>\d+)', [
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'update_community_channel' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'DELETE',
+					'callback'            => [ $this, 'delete_community_channel' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/community/channels/(?P<id>\d+)/messages', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_community_messages' ],
+					'permission_callback' => [ $this, 'student_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'send_community_message' ],
+					'permission_callback' => [ $this, 'student_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/community/messages/(?P<id>\d+)', [
+				'methods'             => 'DELETE',
+				'callback'            => [ $this, 'delete_community_message' ],
+				'permission_callback' => [ $this, 'student_permissions_check' ],
+			] );
 		}
 	}
 
@@ -2049,5 +2095,446 @@ class Admin_Api {
 			'completedTopicIds' => $completed,
 		] );
 	}
+
+	/**
+	 * Asegurar que existan las tablas para la comunidad tipo Discord
+	 */
+	public function init_community_tables() {
+		global $wpdb;
+		$charset_collate = $wpdb->get_charset_collate();
+
+		$table_channels = $wpdb->prefix . 'crezca_community_channels';
+		$table_messages = $wpdb->prefix . 'crezca_community_messages';
+
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_channels'" ) !== $table_channels ) {
+			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+			$sql1 = "CREATE TABLE $table_channels (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				name varchar(100) NOT NULL,
+				slug varchar(120) NOT NULL,
+				description text NULL,
+				category varchar(100) NOT NULL DEFAULT 'General',
+				course_id bigint(20) unsigned NOT NULL DEFAULT 0,
+				is_announcement tinyint(1) NOT NULL DEFAULT 0,
+				sort_order int(11) NOT NULL DEFAULT 0,
+				created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY  (id),
+				KEY category (category),
+				KEY course_id (course_id)
+			) $charset_collate;";
+			dbDelta( $sql1 );
+
+			// Canales por defecto iniciales
+			$wpdb->insert( $table_channels, [
+				'name'            => 'bienvenida',
+				'slug'            => 'bienvenida',
+				'description'     => 'Canal de bienvenida para todos los nuevos estudiantes de la academia.',
+				'category'        => 'General',
+				'course_id'       => 0,
+				'is_announcement' => 0,
+				'sort_order'      => 1,
+			] );
+
+			$wpdb->insert( $table_channels, [
+				'name'            => 'anuncios-oficiales',
+				'slug'            => 'anuncios-oficiales',
+				'description'     => 'Comunicados, actualizaciones y lanzamientos importantes de la academia.',
+				'category'        => 'General',
+				'course_id'       => 0,
+				'is_announcement' => 1,
+				'sort_order'      => 2,
+			] );
+
+			$wpdb->insert( $table_channels, [
+				'name'            => 'charla-general',
+				'slug'            => 'charla-general',
+				'description'     => 'Espacio libre para compartir ideas, hablar de proyectos y conectar.',
+				'category'        => 'Comunidad',
+				'course_id'       => 0,
+				'is_announcement' => 0,
+				'sort_order'      => 3,
+			] );
+
+			$wpdb->insert( $table_channels, [
+				'name'            => 'networking-proyectos',
+				'slug'            => 'networking-proyectos',
+				'description'     => 'Comparte tus avances, busca colaboradores y muestra tus proyectos.',
+				'category'        => 'Comunidad',
+				'course_id'       => 0,
+				'is_announcement' => 0,
+				'sort_order'      => 4,
+			] );
+		}
+
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_messages'" ) !== $table_messages ) {
+			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+			$sql2 = "CREATE TABLE $table_messages (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				channel_id bigint(20) unsigned NOT NULL,
+				user_id bigint(20) unsigned NOT NULL,
+				user_name varchar(150) NOT NULL,
+				user_avatar text NULL,
+				user_role varchar(50) NOT NULL DEFAULT 'student',
+				message text NOT NULL,
+				attachments longtext NULL,
+				created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY  (id),
+				KEY channel_id (channel_id),
+				KEY created_at (created_at)
+			) $charset_collate;";
+			dbDelta( $sql2 );
+
+			// Insertar mensaje de bienvenida inicial
+			$first_channel = $wpdb->get_var( "SELECT id FROM $table_channels WHERE slug = 'bienvenida' LIMIT 1" );
+			if ( $first_channel ) {
+				$wpdb->insert( $table_messages, [
+					'channel_id'  => $first_channel,
+					'user_id'     => 1,
+					'user_name'   => 'Academia (Admin)',
+					'user_avatar' => '',
+					'user_role'   => 'admin',
+					'message'     => '¡Hola a todos! 👋 Les damos una cordial bienvenida a la comunidad oficial tipo Discord. Aquí podrán interactuar por canales temáticos, resolver dudas de sus cursos y colaborar juntos. ¡Saludad por aquí!',
+					'created_at'  => current_time( 'mysql' ),
+				] );
+			}
+		}
+	}
+
+	/**
+	 * Listar canales de la comunidad (con control de acceso por curso)
+	 */
+	public function get_community_channels( $request = null ) {
+		global $wpdb;
+		$this->init_community_tables();
+
+		$table_channels = $wpdb->prefix . 'crezca_community_channels';
+		$table_messages = $wpdb->prefix . 'crezca_community_messages';
+
+		$channels_raw = $wpdb->get_results( "SELECT * FROM $table_channels ORDER BY category ASC, sort_order ASC, name ASC" );
+
+		$user_id = get_current_user_id();
+		$is_admin = current_user_can( 'administrator' );
+
+		$enrolled_ids = [];
+		if ( ! $is_admin && $user_id ) {
+			$saved = get_user_meta( $user_id, '_alezux_enabled_courses', true );
+			if ( is_array( $saved ) ) {
+				$enrolled_ids = array_map( 'intval', $saved );
+			}
+			if ( function_exists( 'ld_get_mycourses' ) ) {
+				$ld = ld_get_mycourses( $user_id );
+				if ( ! empty( $ld ) ) {
+					$enrolled_ids = array_unique( array_merge( $enrolled_ids, array_map( 'intval', $ld ) ) );
+				}
+			}
+		}
+
+		$result = [];
+		foreach ( $channels_raw as $ch ) {
+			$course_id = (int) $ch->course_id;
+			$course_name = '';
+			if ( $course_id > 0 ) {
+				$course_post = get_post( $course_id );
+				$course_name = $course_post ? $course_post->post_title : "Curso #$course_id";
+			}
+
+			// Comprobar acceso
+			$has_access = true;
+			if ( ! $is_admin && $course_id > 0 ) {
+				$has_access = in_array( $course_id, $enrolled_ids, true );
+			}
+
+			// Contar mensajes del canal
+			$msg_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_messages WHERE channel_id = %d", $ch->id ) );
+
+			// Último mensaje
+			$last_msg = $wpdb->get_row( $wpdb->prepare( "SELECT message, created_at, user_name FROM $table_messages WHERE channel_id = %d ORDER BY id DESC LIMIT 1", $ch->id ) );
+
+			$result[] = [
+				'id'              => (int) $ch->id,
+				'name'            => $ch->name,
+				'slug'            => $ch->slug,
+				'description'     => $ch->description ?: '',
+				'category'        => $ch->category ?: 'General',
+				'course_id'       => $course_id,
+				'course_name'     => $course_name,
+				'is_announcement' => (bool) $ch->is_announcement,
+				'has_access'      => $has_access,
+				'messages_count'  => $msg_count,
+				'last_message'    => $last_msg ? [
+					'text'       => wp_trim_words( $last_msg->message, 10 ),
+					'date'       => $last_msg->created_at,
+					'user_name'  => $last_msg->user_name,
+				] : null,
+			];
+		}
+
+		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * Crear un nuevo canal (solo admin)
+	 */
+	public function create_community_channel( $request ) {
+		global $wpdb;
+		$this->init_community_tables();
+
+		$params = $request->get_json_params();
+		$raw_name = sanitize_text_field( $params['name'] ?? '' );
+		$name = sanitize_title( str_replace( '#', '', $raw_name ) );
+		if ( empty( $name ) ) {
+			return new \WP_Error( 'invalid_name', 'El nombre del canal es requerido', [ 'status' => 400 ] );
+		}
+
+		$category = sanitize_text_field( $params['category'] ?? 'General' );
+		$description = sanitize_textarea_field( $params['description'] ?? '' );
+		$course_id = isset( $params['course_id'] ) ? (int) $params['course_id'] : 0;
+		$is_announcement = ! empty( $params['is_announcement'] ) ? 1 : 0;
+
+		$table_channels = $wpdb->prefix . 'crezca_community_channels';
+		$wpdb->insert( $table_channels, [
+			'name'            => $name,
+			'slug'            => $name,
+			'description'     => $description,
+			'category'        => $category ?: 'General',
+			'course_id'       => $course_id,
+			'is_announcement' => $is_announcement,
+			'created_at'      => current_time( 'mysql' ),
+		] );
+
+		return $this->get_community_channels();
+	}
+
+	/**
+	 * Editar un canal existente (solo admin)
+	 */
+	public function update_community_channel( $request ) {
+		global $wpdb;
+		$id = (int) $request['id'];
+		$params = $request->get_json_params();
+
+		$data = [];
+		if ( isset( $params['name'] ) ) {
+			$data['name'] = sanitize_title( str_replace( '#', '', $params['name'] ) );
+			$data['slug'] = $data['name'];
+		}
+		if ( isset( $params['description'] ) ) {
+			$data['description'] = sanitize_textarea_field( $params['description'] );
+		}
+		if ( isset( $params['category'] ) ) {
+			$data['category'] = sanitize_text_field( $params['category'] );
+		}
+		if ( isset( $params['course_id'] ) ) {
+			$data['course_id'] = (int) $params['course_id'];
+		}
+		if ( isset( $params['is_announcement'] ) ) {
+			$data['is_announcement'] = ! empty( $params['is_announcement'] ) ? 1 : 0;
+		}
+
+		if ( ! empty( $data ) ) {
+			$wpdb->update( $wpdb->prefix . 'crezca_community_channels', $data, [ 'id' => $id ] );
+		}
+
+		return $this->get_community_channels();
+	}
+
+	/**
+	 * Eliminar un canal y sus mensajes (solo admin)
+	 */
+	public function delete_community_channel( $request ) {
+		global $wpdb;
+		$id = (int) $request['id'];
+
+		$wpdb->delete( $wpdb->prefix . 'crezca_community_channels', [ 'id' => $id ] );
+		$wpdb->delete( $wpdb->prefix . 'crezca_community_messages', [ 'channel_id' => $id ] );
+
+		return $this->get_community_channels();
+	}
+
+	/**
+	 * Obtener mensajes de un canal
+	 */
+	public function get_community_messages( $request ) {
+		global $wpdb;
+		$this->init_community_tables();
+
+		$channel_id = (int) $request['id'];
+		$table_channels = $wpdb->prefix . 'crezca_community_channels';
+		$table_messages = $wpdb->prefix . 'crezca_community_messages';
+
+		$channel = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_channels WHERE id = %d", $channel_id ) );
+		if ( ! $channel ) {
+			return new \WP_Error( 'not_found', 'Canal no encontrado', [ 'status' => 404 ] );
+		}
+
+		// Validar acceso del estudiante al curso si está restringido
+		$user_id = get_current_user_id();
+		$is_admin = current_user_can( 'administrator' );
+		if ( ! $is_admin && (int) $channel->course_id > 0 ) {
+			$saved = get_user_meta( $user_id, '_alezux_enabled_courses', true );
+			$enrolled_ids = is_array( $saved ) ? array_map( 'intval', $saved ) : [];
+			if ( function_exists( 'ld_get_mycourses' ) ) {
+				$ld = ld_get_mycourses( $user_id );
+				if ( ! empty( $ld ) ) {
+					$enrolled_ids = array_unique( array_merge( $enrolled_ids, array_map( 'intval', $ld ) ) );
+				}
+			}
+			if ( ! in_array( (int) $channel->course_id, $enrolled_ids, true ) ) {
+				return new \WP_Error( 'forbidden', 'No tienes acceso a este canal exclusivo.', [ 'status' => 403 ] );
+			}
+		}
+
+		$messages = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM $table_messages WHERE channel_id = %d ORDER BY id ASC LIMIT 200",
+			$channel_id
+		) );
+
+		$formatted = [];
+		foreach ( $messages as $m ) {
+			$attachments = [];
+			if ( ! empty( $m->attachments ) ) {
+				$decoded = json_decode( $m->attachments, true );
+				if ( is_array( $decoded ) ) {
+					$attachments = $decoded;
+				}
+			}
+
+			$formatted[] = [
+				'id'          => (int) $m->id,
+				'channel_id'  => (int) $m->channel_id,
+				'user_id'     => (int) $m->user_id,
+				'user_name'   => $m->user_name,
+				'user_avatar' => $m->user_avatar ?: get_avatar_url( $m->user_id, [ 'size' => 64 ] ),
+				'user_role'   => $m->user_role,
+				'message'     => $m->message,
+				'attachments' => $attachments,
+				'created_at'  => $m->created_at,
+			];
+		}
+
+		$course_name = '';
+		if ( (int) $channel->course_id > 0 ) {
+			$course_post = get_post( (int) $channel->course_id );
+			$course_name = $course_post ? $course_post->post_title : "Curso #" . $channel->course_id;
+		}
+
+		return rest_ensure_response( [
+			'channel'  => [
+				'id'              => (int) $channel->id,
+				'name'            => $channel->name,
+				'slug'            => $channel->slug,
+				'description'     => $channel->description ?: '',
+				'category'        => $channel->category ?: 'General',
+				'course_id'       => (int) $channel->course_id,
+				'course_name'     => $course_name,
+				'is_announcement' => (bool) $channel->is_announcement,
+			],
+			'messages' => $formatted,
+		] );
+	}
+
+	/**
+	 * Enviar un mensaje a un canal
+	 */
+	public function send_community_message( $request ) {
+		global $wpdb;
+		$this->init_community_tables();
+
+		$channel_id = (int) $request['id'];
+		$table_channels = $wpdb->prefix . 'crezca_community_channels';
+		$table_messages = $wpdb->prefix . 'crezca_community_messages';
+
+		$channel = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_channels WHERE id = %d", $channel_id ) );
+		if ( ! $channel ) {
+			return new \WP_Error( 'not_found', 'Canal no encontrado', [ 'status' => 404 ] );
+		}
+
+		$user_id = get_current_user_id();
+		$is_admin = current_user_can( 'administrator' );
+
+		// Si es canal de anuncios y no es admin, prohibir publicación
+		if ( (bool) $channel->is_announcement && ! $is_admin ) {
+			return new \WP_Error( 'announcement_only', 'Este es un canal de anuncios. Solo administradores pueden publicar.', [ 'status' => 403 ] );
+		}
+
+		// Validar acceso del estudiante si el canal está restringido a un curso
+		if ( ! $is_admin && (int) $channel->course_id > 0 ) {
+			$saved = get_user_meta( $user_id, '_alezux_enabled_courses', true );
+			$enrolled_ids = is_array( $saved ) ? array_map( 'intval', $saved ) : [];
+			if ( function_exists( 'ld_get_mycourses' ) ) {
+				$ld = ld_get_mycourses( $user_id );
+				if ( ! empty( $ld ) ) {
+					$enrolled_ids = array_unique( array_merge( $enrolled_ids, array_map( 'intval', $ld ) ) );
+				}
+			}
+			if ( ! in_array( (int) $channel->course_id, $enrolled_ids, true ) ) {
+				return new \WP_Error( 'forbidden', 'No tienes acceso al curso requerido para este canal.', [ 'status' => 403 ] );
+			}
+		}
+
+		$params = $request->get_json_params();
+		$message_text = trim( $params['message'] ?? '' );
+		if ( empty( $message_text ) ) {
+			return new \WP_Error( 'empty_message', 'El mensaje no puede estar vacío.', [ 'status' => 400 ] );
+		}
+
+		$user = wp_get_current_user();
+		$user_name = $user && $user->ID ? ( $user->display_name ?: $user->user_login ) : 'Estudiante';
+		$user_role = $is_admin ? 'admin' : ( current_user_can( 'edit_posts' ) ? 'instructor' : 'student' );
+		$custom_avatar = $user && $user->ID ? get_user_meta( $user->ID, '_crezca_custom_avatar', true ) : '';
+		$user_avatar = $custom_avatar ?: ( $user && $user->ID ? get_avatar_url( $user->ID, [ 'size' => 64 ] ) : '' );
+
+		$attachments = isset( $params['attachments'] ) && is_array( $params['attachments'] ) ? wp_json_encode( $params['attachments'] ) : null;
+
+		$wpdb->insert( $table_messages, [
+			'channel_id'  => $channel_id,
+			'user_id'     => $user_id ?: 1,
+			'user_name'   => $user_name,
+			'user_avatar' => $user_avatar,
+			'user_role'   => $user_role,
+			'message'     => wp_kses_post( $message_text ),
+			'attachments' => $attachments,
+			'created_at'  => current_time( 'mysql' ),
+		] );
+
+		$new_id = $wpdb->insert_id;
+
+		return rest_ensure_response( [
+			'id'          => (int) $new_id,
+			'channel_id'  => $channel_id,
+			'user_id'     => $user_id ?: 1,
+			'user_name'   => $user_name,
+			'user_avatar' => $user_avatar,
+			'user_role'   => $user_role,
+			'message'     => wp_kses_post( $message_text ),
+			'attachments' => $params['attachments'] ?? [],
+			'created_at'  => current_time( 'mysql' ),
+		] );
+	}
+
+	/**
+	 * Borrar un mensaje
+	 */
+	public function delete_community_message( $request ) {
+		global $wpdb;
+		$message_id = (int) $request['id'];
+		$table_messages = $wpdb->prefix . 'crezca_community_messages';
+
+		$msg = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_messages WHERE id = %d", $message_id ) );
+		if ( ! $msg ) {
+			return new \WP_Error( 'not_found', 'Mensaje no encontrado', [ 'status' => 404 ] );
+		}
+
+		$user_id = get_current_user_id();
+		$is_admin = current_user_can( 'administrator' );
+
+		if ( ! $is_admin && (int) $msg->user_id !== $user_id ) {
+			return new \WP_Error( 'forbidden', 'No tienes permiso para borrar este mensaje.', [ 'status' => 403 ] );
+		}
+
+		$wpdb->delete( $table_messages, [ 'id' => $message_id ] );
+		return rest_ensure_response( [ 'success' => true, 'deleted_id' => $message_id ] );
+	}
 }
+
 

@@ -17,7 +17,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Award,
-  LogOut
+  LogOut,
+  MessageSquare
 } from "lucide-react";
 import { OverviewView } from "./views/OverviewView";
 import { CoursesView } from "./views/CoursesView";
@@ -35,7 +36,7 @@ import { hexToRgb, getContrastForeground } from "./components/arc/color-picker/c
 import styles from "./App.module.css";
 import studentStyles from "./views/student/StudentPortal.module.css";
 
-type AdminTabId = "overview" | "courses" | "students" | "finance" | "marketing" | "settings";
+type AdminTabId = "overview" | "courses" | "students" | "finance" | "marketing" | "community" | "settings";
 type StudentTabId = "dashboard" | "courses" | "achievements" | "community";
 
 interface NavItemConfig<T extends string = string> {
@@ -145,6 +146,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     { id: "students", label: "Estudiantes", icon: <Users size={18} /> },
     { id: "finance", label: "Finanzas", icon: <CreditCard size={18} /> },
     { id: "marketing", label: "Marketing", icon: <Mail size={18} /> },
+    { id: "community", label: "Comunidad", icon: <MessageSquare size={18} /> },
     { id: "settings", label: "Configuración", icon: <Sliders size={18} /> },
   ];
 
@@ -376,8 +378,10 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
 
   const logoutUrl = (window as any).crezca_student_data?.logout_url || "/wp-login.php?action=logout";
 
-  // Determinar si la vista actual de cursos requiere pantalla completa sin padding
+  // Determinar si la vista actual requiere pantalla completa sin padding
   const isCourseFluid = appMode === "student" && activeStudentTab === "courses" && Boolean(selectedCourse);
+  const isCommunityFluid = (appMode === "student" && activeStudentTab === "community") || (appMode === "admin" && activeAdminTab === "community");
+  const isFluidMain = isCourseFluid || isCommunityFluid;
 
   return (
     <div className={styles.appShell}>
@@ -668,7 +672,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
         </header>
 
         {/* Cuerpo del módulo activo */}
-        <main className={`${styles.mainBody} ${isCourseFluid ? styles.mainBodyNoPadding : ""}`}>
+        <main className={`${styles.mainBody} ${isFluidMain ? styles.mainBodyNoPadding : ""}`}>
           {/* MODO ADMINISTRADOR */}
           {appMode === "admin" && (
             <>
@@ -677,6 +681,21 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               {activeAdminTab === "students" && <StudentsView />}
               {activeAdminTab === "finance" && <FinanceView />}
               {activeAdminTab === "marketing" && <MarketingView />}
+              {activeAdminTab === "community" && (
+                <StudentCommunityView
+                  courses={studentCourses}
+                  academyName={academyName}
+                  isAdmin={true}
+                  currentUser={{
+                    id: 1,
+                    name: "Administrador",
+                    role: "admin",
+                  }}
+                  onNavigateToCourse={() => {
+                    setActiveAdminTab("courses");
+                  }}
+                />
+              )}
               {activeAdminTab === "settings" && (
                 <SettingsView
                   currentAccent={accent}
@@ -756,6 +775,19 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 <StudentCommunityView
                   courses={studentCourses}
                   academyName={academyName}
+                  isAdmin={Boolean(studentProfile?.isAdmin)}
+                  currentUser={studentProfile ? {
+                    id: studentProfile.id,
+                    name: studentProfile.name,
+                    avatar: studentProfile.avatar,
+                    role: studentProfile.isAdmin ? "admin" : "student",
+                  } : undefined}
+                  onNavigateToCourse={(courseId) => {
+                    const crs = studentCourses.find((c) => c.id === courseId);
+                    if (crs) {
+                      handleSelectCourse(crs);
+                    }
+                  }}
                 />
               )}
             </>
