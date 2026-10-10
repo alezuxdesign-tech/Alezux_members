@@ -85,27 +85,37 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
+console.log("%c🔥 [Crezca Bundle] alezux-dashboard.js script execution started!", "color: #38bdf8; font-weight: bold; font-size: 14px;");
+
 function mountApp() {
+  console.log("🔍 [Crezca Bundle] mountApp() triggered. Checking for #crezca-admin-root in DOM...");
   const container =
     document.getElementById("crezca-admin-root") ||
     document.getElementById("alezux-admin-root") ||
     document.getElementById("root");
 
-  if (!container) return;
+  if (!container) {
+    console.warn("⚠️ [Crezca Bundle] Target container element (#crezca-admin-root) not found yet.");
+    return;
+  }
 
   if (!(container as any).__crezcaRootMounted) {
     (container as any).__crezcaRootMounted = true;
-    console.log("🚀 [Crezca] Crezca root container detected. Initializing React 18...");
+    console.log("%c🚀 [Crezca Bundle] Crezca root container detected. Initializing React 18...", "color: #a855f7; font-weight: bold; font-size: 14px;");
     container.innerHTML = "";
-    const root = ReactDOM.createRoot(container);
-    root.render(
-      <React.StrictMode>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </React.StrictMode>
-    );
-    console.log("✅ [Crezca] React dashboard mounted successfully.");
+    try {
+      const root = ReactDOM.createRoot(container);
+      root.render(
+        <React.StrictMode>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </React.StrictMode>
+      );
+      console.log("%c✅ [Crezca Bundle] React dashboard mounted successfully into DOM!", "color: #22c55e; font-weight: bold; font-size: 15px;");
+    } catch (err) {
+      console.error("❌ [Crezca Bundle] Fatal error during createRoot/render:", err);
+    }
   }
 }
 
@@ -117,3 +127,4 @@ if (document.readyState === "loading") {
 
 setTimeout(mountApp, 50);
 setTimeout(mountApp, 250);
+setTimeout(mountApp, 800);

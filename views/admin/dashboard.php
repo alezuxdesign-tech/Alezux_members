@@ -9,21 +9,52 @@ if ( ! defined( 'ABSPATH' ) ) {
 $dist_css = ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.css';
 $dist_js  = ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.js';
 $has_arc_bundle = file_exists( $dist_js );
-$js_ver  = $has_arc_bundle ? filemtime( $dist_js ) : ALEZUX_MEMBERS_VERSION;
-$css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : ALEZUX_MEMBERS_VERSION;
+$js_ver  = $has_arc_bundle ? filemtime( $dist_js ) : time();
+$css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : time();
 ?>
 
 <div id="crezca-admin-root">
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#090a0f;color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;user-select:none;">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#090a0f;color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;user-select:none;text-align:center;padding:20px;">
     <div style="width:42px;height:42px;border:3px solid rgba(119,71,255,0.2);border-top-color:#7747ff;border-radius:50%;animation:crezca-spin 0.8s linear infinite;margin-bottom:16px;"></div>
     <div style="font-size:16px;font-weight:700;color:#f8fafc;letter-spacing:-0.01em;">Crezca</div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">Cargando panel de administración...</div>
+    <div id="crezca-loading-hint" style="font-size:13px;color:#94a3b8;margin-top:6px;max-width:480px;line-height:1.4;">
+      Cargando panel de administración...
+    </div>
     <style>@keyframes crezca-spin { to { transform: rotate(360deg); } }</style>
   </div>
 </div>
 
-<?php if ( $has_arc_bundle ) : ?>
-<link rel="stylesheet" id="crezca-direct-arc-css" href="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.css?v=' . $css_ver ); ?>">
+<!-- DIAGNÓSTICO EN TIEMPO REAL EN CONSOLA -->
+<script id="crezca-diagnostic-start">
+  console.log("%c=======================================================", "color: #7747ff;");
+  console.log("%c🚀 [Crezca PHP] Template views/admin/dashboard.php rendered", "color: #7747ff; font-weight: bold; font-size: 14px;");
+  console.log("   • URL base del plugin:", "<?php echo esc_url( ALEZUX_MEMBERS_URL ); ?>");
+  console.log("   • Archivo JS bundle:", "<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.js?v=' . $js_ver ); ?>");
+  console.log("   • File exists en servidor:", <?php echo $has_arc_bundle ? 'true' : 'false'; ?>);
+  console.log("   • Contenedor #crezca-admin-root en DOM:", !!document.getElementById("crezca-admin-root"));
+  console.log("%c=======================================================", "color: #7747ff;");
+
+  // Alerta si tras 4 segundos no ha montado React
+  setTimeout(function() {
+    var root = document.getElementById("crezca-admin-root");
+    if (root && !root.__crezcaRootMounted) {
+      console.error("%c⚠️ [Crezca Alerta] React no se ha montado tras 4s. Comprueba si el script JS se descargó correctamente en la pestaña Network.", "color: red; font-weight: bold; font-size: 14px;");
+      var hint = document.getElementById("crezca-loading-hint");
+      if (hint) {
+        hint.innerHTML = '<span style="color:#f87171;font-weight:600;">El script de React aún no ha respondido.</span><br><small style="color:#64748b;">Abre la pestaña Console y Network (F12) para ver si el archivo alezux-dashboard.js fue bloqueado o no se encuentra.</small>';
+      }
+    }
+  }, 4000);
+</script>
+
+<link 
+  rel="stylesheet" 
+  id="crezca-direct-arc-css" 
+  href="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.css?v=' . $css_ver ); ?>"
+  onload="console.log('✅ [Crezca Diagnostic] CSS alezux-dashboard.css cargado correctamente.');"
+  onerror="console.error('❌ [Crezca Diagnostic] Error al cargar alezux-dashboard.css:', this.href);"
+>
+
 <script id="crezca-direct-admin-data">
   window.crezca_admin_data = <?php echo json_encode([
     'root_url'        => esc_url_raw( rest_url( 'crezca/v1/' ) ),
@@ -34,8 +65,13 @@ $css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : ALEZUX_MEMBERS_VE
   ]); ?>;
   window.alezux_admin_data = window.crezca_admin_data;
 </script>
-<script id="crezca-direct-arc-js" src="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.js?v=' . $js_ver ); ?>"></script>
-<?php endif; ?>
+
+<script 
+  id="crezca-direct-arc-js" 
+  src="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.js?v=' . $js_ver ); ?>"
+  onload="console.log('%c✅ [Crezca Diagnostic] alezux-dashboard.js DESCARGADO y ejecutado por el navegador.', 'color: #22c55e; font-weight: bold;');"
+  onerror="console.error('%c❌ [Crezca Diagnostic] ERROR HTTP AL DESCARGAR alezux-dashboard.js. Verifica la pestaña Network (Código 404, 403 o CORS):', 'color: #ef4444; font-weight: bold;', this.src);"
+></script>
 
 <?php if ( ! $has_arc_bundle ) : ?>
 <style>
