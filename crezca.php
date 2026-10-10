@@ -206,3 +206,54 @@ add_filter( 'show_admin_bar', function( $show ) {
     }
     return $show;
 } );
+
+/**
+ * Shortcode [crezca_aula] / [alezux_aula] para renderizar el Campus Virtual de Estudiantes
+ */
+function crezca_render_student_portal_shortcode( $atts = [] ) {
+	$dist_css = CREZCA_PATH . 'assets/dist/alezux-dashboard.css';
+	$dist_js  = CREZCA_PATH . 'assets/dist/alezux-dashboard.js';
+	
+	if ( ! file_exists( $dist_js ) ) {
+		return '<div style="padding:40px;text-align:center;color:#94a3b8;background:#090a0f;">Cargando aula virtual de estudiantes...</div>';
+	}
+	
+	$js_ver  = filemtime( $dist_js );
+	$css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : time();
+	
+	wp_enqueue_style( 'crezca-dashboard-style', CREZCA_URL . 'assets/dist/alezux-dashboard.css', [], $css_ver );
+	wp_enqueue_script( 'crezca-dashboard-script', CREZCA_URL . 'assets/dist/alezux-dashboard.js', [], $js_ver, true );
+	
+	$current_user = wp_get_current_user();
+	$academy_name = get_option( 'alezux_academy_name', 'Crezca' );
+	$academy_logo = get_option( 'alezux_academy_logo', '' );
+	$accent       = get_option( 'alezux_accent', 'violet' );
+	$theme        = get_option( 'alezux_theme', 'dark' );
+
+	$data = [
+		'root_url'        => esc_url_raw( rest_url( 'crezca/v1/' ) ),
+		'legacy_root_url' => esc_url_raw( rest_url( 'alezux/v1/' ) ),
+		'nonce'           => wp_create_nonce( 'wp_rest' ),
+		'is_student_mode' => true,
+		'is_logged_in'    => is_user_logged_in(),
+		'user_id'         => $current_user ? $current_user->ID : 0,
+		'academy_name'    => $academy_name,
+		'academy_logo'    => $academy_logo,
+		'accent'          => $accent,
+		'theme'           => $theme,
+		'login_url'       => wp_login_url( get_permalink() ),
+		'logout_url'      => wp_logout_url( home_url() ),
+	];
+
+	ob_start();
+	?>
+	<script id="crezca-student-portal-data">
+		window.crezca_student_data = <?php echo json_encode( $data ); ?>;
+		window.crezca_admin_data = window.crezca_admin_data || window.crezca_student_data;
+	</script>
+	<div id="crezca-student-root" data-mode="student" style="min-height:100vh;background:var(--background,#090a0f);"></div>
+	<?php
+	return ob_get_clean();
+}
+add_shortcode( 'crezca_aula', 'crezca_render_student_portal_shortcode' );
+add_shortcode( 'alezux_aula', 'crezca_render_student_portal_shortcode' );

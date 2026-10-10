@@ -105,6 +105,27 @@ export interface Course {
   status: "publish" | "draft";
   studentCount: number;
   sections: CourseSection[];
+  whatsapp_url?: string;
+  slack_url?: string;
+  zoom_url?: string;
+  checkoutUrl?: string;
+  hasAccess?: boolean;
+  progress?: number;
+  totalTopics?: number;
+  completedTopics?: number;
+}
+
+export interface StudentProfile {
+  id: number;
+  name: string;
+  email: string;
+  username: string;
+  avatar: string;
+  joinedDate: string;
+  planName: string;
+  enrolledCourseIds: number[];
+  completedTopicIds: string[];
+  isAdmin: boolean;
 }
 
 export interface FinancePlan {
@@ -1534,6 +1555,137 @@ class ApiService {
       console.warn("API Error resending log:", e);
     }
     return { success: true, message: "Correo reenviado correctamente." };
+  }
+
+  // --- MODO ESTUDIANTE / CAMPUS VIRTUAL ---
+  async getStudentProfile(): Promise<StudentProfile> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}student/profile`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error getting student profile:", e);
+    }
+    const savedCompleted = JSON.parse(localStorage.getItem("crezca_completed_topics") || "[]");
+    return {
+      id: 99,
+      name: "Alejandro Zuñiga",
+      email: "alejandro@crezca.io",
+      username: "alezux",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      joinedDate: "15 Ene 2026",
+      planName: "Plan Maestro VIP",
+      enrolledCourseIds: [1], // Acceso habilitado al curso 1, curso 2 restringido para compra
+      completedTopicIds: savedCompleted,
+      isAdmin: true,
+    };
+  }
+
+  async updateStudentProfile(data: { name?: string; email?: string; password?: string; avatar?: string }): Promise<StudentProfile> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}student/profile`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(data),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error updating student profile:", e);
+    }
+    const current = await this.getStudentProfile();
+    return {
+      ...current,
+      name: data.name || current.name,
+      email: data.email || current.email,
+      avatar: data.avatar || current.avatar,
+    };
+  }
+
+  async getStudentCourses(): Promise<Course[]> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}student/courses`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error getting student courses:", e);
+    }
+    const profile = await this.getStudentProfile();
+    const courses = await this.getCourses();
+    return courses.map((c) => {
+      const hasAccess = profile.enrolledCourseIds.includes(c.id);
+      let totalTopics = 0;
+      let completedTopics = 0;
+      c.sections?.forEach((s) => {
+        const items = s.lessons || s.topics || [];
+        items.forEach((top) => {
+          totalTopics++;
+          if (profile.completedTopicIds.includes(top.id)) {
+            completedTopics++;
+          }
+        });
+      });
+      const progress = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+      return {
+        ...c,
+        hasAccess,
+        progress,
+        totalTopics,
+        completedTopics,
+        whatsapp_url: c.whatsapp_url || "https://chat.whatsapp.com/demo",
+        slack_url: c.slack_url || "https://slack.com/demo",
+        zoom_url: c.zoom_url || "https://zoom.us/j/demo",
+        checkoutUrl: c.checkoutUrl || `/pago/?course=${c.id}`,
+      };
+    });
+  }
+
+  async toggleCompleteTopic(topicId: string, courseId?: number): Promise<{ isCompleted: boolean; completedTopicIds: string[] }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}student/complete-topic`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ topicId, courseId }),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error toggling complete topic:", e);
+    }
+    const currentCompleted: string[] = JSON.parse(localStorage.getItem("crezca_completed_topics") || "[]");
+    let next: string[];
+    let isCompleted: boolean;
+    if (currentCompleted.includes(topicId)) {
+      next = currentCompleted.filter((id) => id !== topicId);
+      isCompleted = false;
+    } else {
+      next = [...currentCompleted, topicId];
+      isCompleted = true;
+    }
+    localStorage.setItem("crezca_completed_topics", JSON.stringify(next));
+    return { isCompleted, completedTopicIds: next };
   }
 }
 

@@ -92,14 +92,20 @@ console.log("%c🔥 [Crezca Bundle] alezux-dashboard.js script execution started
 function mountApp() {
   console.log("🔍 [Crezca Bundle] mountApp() triggered. Checking for #crezca-admin-root in DOM...");
   const container =
+    document.getElementById("crezca-student-root") ||
     document.getElementById("crezca-admin-root") ||
     document.getElementById("alezux-admin-root") ||
     document.getElementById("root");
 
   if (!container) {
-    console.warn("⚠️ [Crezca Bundle] Target container element (#crezca-admin-root) not found yet.");
+    console.warn("⚠️ [Crezca Bundle] Target container element (#crezca-admin-root or #crezca-student-root) not found yet.");
     return;
   }
+
+  const isStudent =
+    container.id === "crezca-student-root" ||
+    container.dataset.mode === "student" ||
+    Boolean((window as any).crezca_student_data?.is_student_mode);
 
   if (!(container as any).__crezcaRootMounted) {
     (container as any).__crezcaRootMounted = true;
@@ -120,7 +126,7 @@ function mountApp() {
         root.render(
           <React.StrictMode>
             <ErrorBoundary>
-              <App />
+              <App initialMode={isStudent ? "student" : "admin"} isStandaloneStudent={isStudent} />
             </ErrorBoundary>
           </React.StrictMode>
         );
@@ -129,7 +135,7 @@ function mountApp() {
         (ReactDOM as any).render(
           <React.StrictMode>
             <ErrorBoundary>
-              <App />
+              <App initialMode={isStudent ? "student" : "admin"} isStandaloneStudent={isStudent} />
             </ErrorBoundary>
           </React.StrictMode>,
           container

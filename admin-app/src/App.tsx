@@ -23,6 +23,7 @@ import { StudentsView } from "./views/StudentsView";
 import { FinanceView } from "./views/FinanceView";
 import { MarketingView } from "./views/MarketingView";
 import { SettingsView } from "./views/SettingsView";
+import { StudentPortal } from "./views/student/StudentPortal";
 import { api } from "./services/api";
 import { hexToRgb, getContrastForeground } from "./components/arc/color-picker/color-utils";
 import styles from "./App.module.css";
@@ -96,9 +97,15 @@ function setBrowserFavicon(url: string) {
   document.head.appendChild(linkIcon);
 }
 
-export function App() {
+export interface AppProps {
+  initialMode?: "admin" | "student";
+  isStandaloneStudent?: boolean;
+}
+
+export function App({ initialMode = "admin", isStandaloneStudent = false }: AppProps = {}) {
   const wpData = (window as any).crezca_admin_data || (window as any).alezux_admin_data || {};
 
+  const [appMode, setAppMode] = useState<"admin" | "student">(initialMode);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   const navItems: NavItemConfig[] = [
@@ -228,6 +235,17 @@ export function App() {
     || (window as any).alezux_admin_data?.wp_admin_url 
     || "/wp-admin/";
 
+
+  if (appMode === "student") {
+    return (
+      <StudentPortal
+        onExitStudentMode={isStandaloneStudent ? undefined : () => setAppMode("admin")}
+        isAdminPreview={!isStandaloneStudent}
+        academyName={academyName}
+        academyLogo={academyLogo}
+      />
+    );
+  }
 
   return (
     <div className={styles.appShell}>
@@ -378,7 +396,15 @@ export function App() {
           </div>
 
           <div className={styles.headerActions}>
-            {/* Quick status pill */}
+            <button
+              type="button"
+              className={styles.studentModeBtn}
+              onClick={() => setAppMode("student")}
+              title="Previsualizar el campus virtual como un estudiante"
+            >
+              <GraduationCap size={15} />
+              <span>Modo Estudiante</span>
+            </button>
             <span className={styles.versionBadge}>Arc Design System</span>
           </div>
         </header>

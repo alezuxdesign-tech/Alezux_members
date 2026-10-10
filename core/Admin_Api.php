@@ -197,11 +197,41 @@ class Admin_Api {
 					'permission_callback' => [ $this, 'admin_permissions_check' ],
 				],
 			] );
+
+			// Modo Estudiante / Campus Virtual
+			register_rest_route( $namespace, '/student/profile', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_student_profile' ],
+					'permission_callback' => [ $this, 'student_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'update_student_profile' ],
+					'permission_callback' => [ $this, 'student_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/student/courses', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_student_courses' ],
+				'permission_callback' => [ $this, 'student_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/student/complete-topic', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'toggle_student_complete_topic' ],
+				'permission_callback' => [ $this, 'student_permissions_check' ],
+			] );
 		}
 	}
 
 	public function admin_permissions_check() {
 		return current_user_can( 'manage_options' );
+	}
+
+	public function student_permissions_check() {
+		return is_user_logged_in() || current_user_can( 'read' );
 	}
 
 	/**
@@ -428,6 +458,22 @@ class Admin_Api {
 			$price = get_post_meta( $post->ID, '_course_price', true );
 			$linked_plan_id = get_post_meta( $post->ID, '_course_linked_plan_id', true );
 
+			$whatsapp_url = get_post_meta( $post->ID, '_alezux_course_whatsapp', true ) ?: '';
+			$slack_url    = get_post_meta( $post->ID, '_alezux_course_slack', true ) ?: '';
+			$zoom_url     = get_post_meta( $post->ID, '_alezux_course_zoom', true ) ?: '';
+
+			$checkout_url = '';
+			if ( ! empty( $linked_plan_id ) ) {
+				global $wpdb;
+				$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
+				if ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table ) {
+					$token = $wpdb->get_var( $wpdb->prepare( "SELECT token FROM $plans_table WHERE id = %d", $linked_plan_id ) );
+					if ( $token ) {
+						$checkout_url = home_url( '/pago/?plan=' . $token );
+					}
+				}
+			}
+
 			$courses[] = [
 				'id'           => $post->ID,
 				'title'        => $post->post_title,
@@ -440,6 +486,10 @@ class Admin_Api {
 				'status'       => $post->post_status,
 				'studentCount' => (int) get_post_meta( $post->ID, '_student_count', true ) ?: 120,
 				'sections'     => $sections,
+				'whatsapp_url' => $whatsapp_url,
+				'slack_url'    => $slack_url,
+				'zoom_url'     => $zoom_url,
+				'checkoutUrl'  => $checkout_url,
 			];
 		}
 
@@ -1836,6 +1886,167 @@ class Admin_Api {
 				'theme'        => get_option( 'alezux_theme', 'dark' ),
 				'accent'       => get_option( 'alezux_accent', 'violet' ),
 			],
+		] );
+	}
+
+	/**
+	 * Obtener perfil del estudiante conectado
+	 */
+	public function get_student_profile() {
+		$user = wp_get_current_user();
+		if ( ! $user || ! $user->ID ) {
+			return new \WP_Error( 'not_logged_in', 'Usuario no identificado', [ 'status' => 401 ] );
+		}
+
+		$enrolled_ids = [];
+		if ( current_user_can( 'administrator' ) ) {
+			// Los administradores tienen acceso a todos los cursos en modo preview
+			$all = get_posts( [ 'post_type' => 'sfwd-courses', 'posts_per_page' => -1, 'fields' => 'ids' ] );
+			$enrolled_ids = array_map( 'intval', $all );
+		} else {
+			$saved = get_user_meta( $user->ID, '_alezux_enabled_courses', true );
+			if ( is_array( $saved ) ) {
+				$enrolled_ids = array_map( 'intval', $saved );
+			}
+			if ( function_exists( 'ld_get_mycourses' ) ) {
+				$ld_courses = ld_get_mycourses( $user->ID );
+				if ( ! empty( $ld_courses ) ) {
+					$enrolled_ids = array_unique( array_merge( $enrolled_ids, array_map( 'intval', $ld_courses ) ) );
+				}
+			}
+		}
+
+		$custom_avatar = get_user_meta( $user->ID, '_crezca_custom_avatar', true );
+		$avatar = $custom_avatar ?: get_avatar_url( $user->ID, [ 'size' => 120 ] );
+		$completed = get_user_meta( $user->ID, '_crezca_completed_topics', true ) ?: [];
+
+		return rest_ensure_response( [
+			'id'                => $user->ID,
+			'name'              => $user->display_name ?: $user->user_login,
+			'email'             => $user->user_email,
+			'username'          => $user->user_login,
+			'avatar'            => $avatar,
+			'joinedDate'        => date( 'd M Y', strtotime( $user->user_registered ) ),
+			'planName'          => get_user_meta( $user->ID, '_alezux_plan_name', true ) ?: ( current_user_can( 'administrator' ) ? 'Administrador' : 'Estudiante Pro' ),
+			'enrolledCourseIds' => $enrolled_ids,
+			'completedTopicIds' => is_array( $completed ) ? array_values( $completed ) : [],
+			'isAdmin'           => current_user_can( 'administrator' ),
+		] );
+	}
+
+	/**
+	 * Actualizar perfil de estudiante (nombre, contraseña, avatar)
+	 */
+	public function update_student_profile( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new \WP_Error( 'not_logged_in', 'No autorizado', [ 'status' => 401 ] );
+		}
+
+		$params = $request->get_json_params();
+		$userdata = [ 'ID' => $user_id ];
+
+		if ( ! empty( $params['name'] ) ) {
+			$userdata['display_name'] = sanitize_text_field( $params['name'] );
+		}
+		if ( ! empty( $params['email'] ) && is_email( $params['email'] ) ) {
+			$userdata['user_email'] = sanitize_email( $params['email'] );
+		}
+		if ( ! empty( $params['password'] ) ) {
+			$userdata['user_pass'] = $params['password'];
+		}
+		if ( ! empty( $params['avatar'] ) ) {
+			update_user_meta( $user_id, '_crezca_custom_avatar', esc_url_raw( $params['avatar'] ) );
+		}
+
+		$updated = wp_update_user( $userdata );
+		if ( is_wp_error( $updated ) ) {
+			return $updated;
+		}
+
+		return $this->get_student_profile();
+	}
+
+	/**
+	 * Listar cursos para el estudiante (incluye flag hasAccess y progress)
+	 */
+	public function get_student_courses() {
+		$courses_response = $this->get_courses();
+		$courses = $courses_response->get_data();
+
+		$profile_res = $this->get_student_profile();
+		$enrolled_ids = [];
+		$completed_topic_ids = [];
+
+		if ( ! is_wp_error( $profile_res ) ) {
+			$profile = $profile_res->get_data();
+			$enrolled_ids = $profile['enrolledCourseIds'];
+			$completed_topic_ids = $profile['completedTopicIds'];
+		}
+
+		foreach ( $courses as &$c ) {
+			$c['hasAccess'] = in_array( (int) $c['id'], $enrolled_ids, true );
+
+			// Calcular progreso de topics completados en este curso
+			$total_topics = 0;
+			$done_topics = 0;
+			if ( ! empty( $c['sections'] ) && is_array( $c['sections'] ) ) {
+				foreach ( $c['sections'] as $sec ) {
+					$topics = ! empty( $sec['lessons'] ) ? $sec['lessons'] : ( ! empty( $sec['topics'] ) ? $sec['topics'] : [] );
+					foreach ( $topics as $top ) {
+						$total_topics++;
+						$top_id = isset( $top['id'] ) ? (string) $top['id'] : '';
+						if ( in_array( $top_id, $completed_topic_ids, true ) ) {
+							$done_topics++;
+						}
+					}
+				}
+			}
+
+			$c['progress'] = $total_topics > 0 ? (int) round( ( $done_topics / $total_topics ) * 100 ) : 0;
+			$c['totalTopics'] = $total_topics;
+			$c['completedTopics'] = $done_topics;
+		}
+
+		return rest_ensure_response( $courses );
+	}
+
+	/**
+	 * Marcar / desmarcar topic como completado por el estudiante
+	 */
+	public function toggle_student_complete_topic( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new \WP_Error( 'not_logged_in', 'No autorizado', [ 'status' => 401 ] );
+		}
+
+		$params = $request->get_json_params();
+		$topic_id = isset( $params['topicId'] ) ? sanitize_text_field( $params['topicId'] ) : '';
+
+		if ( empty( $topic_id ) ) {
+			return new \WP_Error( 'missing_topic', 'Topic ID requerido', [ 'status' => 400 ] );
+		}
+
+		$completed = get_user_meta( $user_id, '_crezca_completed_topics', true );
+		if ( ! is_array( $completed ) ) {
+			$completed = [];
+		}
+
+		$is_now_completed = false;
+		if ( in_array( $topic_id, $completed, true ) ) {
+			$completed = array_values( array_diff( $completed, [ $topic_id ] ) );
+			$is_now_completed = false;
+		} else {
+			$completed[] = $topic_id;
+			$is_now_completed = true;
+		}
+
+		update_user_meta( $user_id, '_crezca_completed_topics', $completed );
+
+		return rest_ensure_response( [
+			'success'           => true,
+			'isCompleted'       => $is_now_completed,
+			'completedTopicIds' => $completed,
 		] );
 	}
 }

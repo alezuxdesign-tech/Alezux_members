@@ -1,0 +1,2209 @@
+/* ==========================================================================
+   CREZCA CAMPUS VIRTUAL & MODO ESTUDIANTE (ARC DESIGN SYSTEM)
+   ========================================================================== */
+
+.portalWrapper {
+  min-height: 100vh;
+  background-color: var(--background, #090a0f);
+  color: var(--foreground, #f8fafc);
+  font-family: var(--font-body, system-ui, -apple-system, sans-serif);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Loading */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: var(--space-4, 16px);
+  color: var(--text-muted, #94a3b8);
+  font-size: var(--text-sm, 14px);
+}
+
+.loadingSpinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-top-color: var(--accent, #7747ff);
+  border-radius: 50%;
+  animation: portalSpin 0.8s linear infinite;
+}
+
+@keyframes portalSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* 1. Barra de Previsualización para el Administrador */
+.adminPreviewBanner {
+  background: color-mix(in oklab, var(--accent, #7747ff) 18%, #090a0f);
+  border-bottom: 1px solid var(--accent, #7747ff);
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+}
+
+.adminPreviewText {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--foreground, #ffffff);
+}
+
+.exitPreviewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-raised, #1f1f23);
+  color: var(--foreground, #ffffff);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.2));
+  padding: 4px 12px;
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms);
+}
+
+.exitPreviewBtn:hover {
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border-color: var(--accent, #7747ff);
+}
+
+/* 2. Cabecera Principal del Portal (Catálogo & Perfil) */
+.portalHeader {
+  height: 64px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface, #12141a);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+}
+
+.portalHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.headerLogoImg {
+  height: 32px;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+.headerLogoPlaceholder {
+  width: 34px;
+  height: 34px;
+  background: var(--surface-raised, #1f1f23);
+  border-radius: var(--radius-control, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent, #7747ff);
+}
+
+.headerBrandTitle {
+  font-family: var(--font-display, inherit);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  letter-spacing: -0.01em;
+}
+
+.portalHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.headerNavBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill, 9999px);
+  color: var(--text-muted, #94a3b8);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms);
+}
+
+.headerNavBtn:hover {
+  color: var(--foreground, #ffffff);
+  background: var(--surface-raised, #1f1f23);
+}
+
+.headerNavBtnActive {
+  background: var(--surface-raised, #1f1f23);
+  color: var(--foreground, #ffffff);
+  border-color: var(--border-subtle, rgba(255, 255, 255, 0.12));
+  font-weight: 600;
+}
+
+.headerAvatarImg {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ==========================================================================
+   CATÁLOGO DE CURSOS (CAMPUS PRINCIPAL)
+   ========================================================================== */
+
+.catalogContainer {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* Welcome Card */
+.heroWelcomeCard {
+  background: linear-gradient(135deg, rgba(22, 27, 38, 0.9) 0%, rgba(13, 16, 23, 0.95) 100%);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-surface, 16px);
+  padding: 36px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.heroWelcomeCard::after {
+  content: "";
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, var(--accent-subtle, rgba(119, 71, 255, 0.2)) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.heroWelcomeContent {
+  flex: 1;
+  max-width: 680px;
+  position: relative;
+  z-index: 1;
+}
+
+.welcomeTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent, #7747ff);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.welcomeTitle {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--foreground, #ffffff);
+  margin: 0 0 10px;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.welcomeDesc {
+  color: var(--text-muted, #94a3b8);
+  font-size: 14px;
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
+.searchBarWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-muted, #1a1e27);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-control, 10px);
+  padding: 10px 16px;
+  max-width: 440px;
+  transition: border-color var(--duration-fast, 150ms);
+}
+
+.searchBarWrapper:focus-within {
+  border-color: var(--accent, #7747ff);
+  box-shadow: 0 0 0 3px var(--accent-subtle, rgba(119, 71, 255, 0.15));
+}
+
+.searchIcon {
+  color: var(--text-muted, #94a3b8);
+}
+
+.catalogSearchInput {
+  background: transparent;
+  border: none;
+  color: var(--foreground, #ffffff);
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+}
+
+.heroWelcomeBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.membershipPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--surface-raised, #1f1f23);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16));
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground, #ffffff);
+}
+
+.shieldIcon {
+  color: var(--accent, #7747ff);
+}
+
+.profileShortcutBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  padding: 6px 14px;
+  border-radius: var(--radius-pill, 9999px);
+  color: var(--text-secondary, #cbd5e1);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms);
+}
+
+.profileShortcutBtn:hover {
+  background: var(--surface-raised, #1f1f23);
+  color: var(--foreground, #ffffff);
+}
+
+.shortcutAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Sections */
+.catalogSection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.sectionHeading {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.sectionSub {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+  margin: 4px 0 0;
+}
+
+.courseCountBadge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent, #7747ff);
+  background: var(--accent-subtle, rgba(119, 71, 255, 0.12));
+  padding: 4px 10px;
+  border-radius: var(--radius-pill, 9999px);
+}
+
+.catalogBadge {
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.emptyCard {
+  background: var(--surface, #12141a);
+  border: 1px dashed var(--border-strong, rgba(255, 255, 255, 0.16));
+  border-radius: var(--radius-surface, 16px);
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted, #94a3b8);
+}
+
+.emptyIcon {
+  color: var(--text-muted, #94a3b8);
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+/* Grilla de Cursos */
+.coursesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.courseCard {
+  background: var(--surface, #12141a);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-surface, 14px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--duration-fast, 150ms), box-shadow var(--duration-fast, 150ms), border-color var(--duration-fast, 150ms);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
+.courseCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.4);
+  border-color: var(--border-strong, rgba(255, 255, 255, 0.2));
+}
+
+.courseCardLocked {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.courseCoverWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000000;
+  overflow: hidden;
+}
+
+.courseCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.courseCard:hover .courseCoverImg {
+  transform: scale(1.04);
+}
+
+.coverBadgeUnlocked {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(13, 184, 121, 0.85);
+  backdrop-filter: blur(6px);
+  color: #ffffff;
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.coverBadgeLocked {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(6px);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pricePill {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid var(--accent, #7747ff);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.courseBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.courseTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0 0 8px;
+  line-height: 1.35;
+}
+
+.courseDescription {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+  margin: 0 0 16px;
+  line-height: 1.45;
+  flex: 1;
+}
+
+.progressBarWrapper {
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progressTextRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.progressTextRow strong {
+  color: var(--foreground, #ffffff);
+}
+
+.progressTrack {
+  height: 6px;
+  background: var(--surface-muted, #1a1e27);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent, #7747ff);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  margin-bottom: 16px;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.previewNotice {
+  color: var(--accent, #7747ff);
+  font-weight: 500;
+}
+
+.courseFooter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.enterCourseBtn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-control, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast, 150ms);
+}
+
+.enterCourseBtn:hover {
+  filter: brightness(1.1);
+}
+
+.courseFooterLocked {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.exploreCurriculumBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  background: var(--surface-raised, #1f1f23);
+  color: var(--foreground, #ffffff);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16));
+  border-radius: var(--radius-control, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms);
+}
+
+.exploreCurriculumBtn:hover {
+  background: var(--surface-muted, #252830);
+  border-color: var(--accent, #7747ff);
+  color: var(--accent, #7747ff);
+}
+
+.buyShortcutBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 14px;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border-radius: var(--radius-control, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: filter var(--duration-fast, 150ms);
+}
+
+.buyShortcutBtn:hover {
+  filter: brightness(1.1);
+}
+
+/* ==========================================================================
+   VISTA DE CURSO TIPO NETFLIX (IMAGEN 1 DE REFERENCIA)
+   ========================================================================== */
+
+.netflixContainer {
+  min-height: 100vh;
+  background-color: #000000;
+  color: #ffffff;
+  padding-bottom: 80px;
+}
+
+/* Hero Banner Gigante con Portada del Curso */
+.netflixHeroBanner {
+  position: relative;
+  width: 100%;
+  min-height: 520px;
+  background-size: cover;
+  background-position: center top;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 40px 32px;
+}
+
+.heroOverlayGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(0, 0, 0, 0.2) 30%,
+    rgba(0, 0, 0, 0.8) 75%,
+    #000000 100%
+  );
+  pointer-events: none;
+}
+
+.heroTopBar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.heroBrandRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.heroLogoImg {
+  height: 24px;
+  object-fit: contain;
+}
+
+.heroLogoIcon {
+  font-size: 18px;
+}
+
+.heroBrandName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.heroBackButtonRow {
+  position: relative;
+  z-index: 10;
+  margin-top: 140px;
+  margin-bottom: 24px;
+}
+
+/* Botón Regresar al aula estilo screenshot del usuario */
+.backToHallBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3ad20; /* Color mostaza/dorado de la imagen */
+  color: #090a0f;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(243, 173, 32, 0.35);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.backToHallBtn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+/* Fila de Widgets Flotantes: Curso Completo, WhatsApp, Slack, Zoom */
+.heroWidgetsRow {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .heroWidgetsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .heroWidgetsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Widget de Progreso del Curso */
+.heroWidgetCard {
+  background: rgba(14, 17, 24, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.progressHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.widgetTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.widgetPercentage {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.heroProgressTrack {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.heroProgressFill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+/* Widgets de Comunidad (WhatsApp, Slack, Zoom) */
+.heroCommunityCard {
+  background: rgba(14, 17, 24, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  backdrop-filter: blur(12px);
+  text-decoration: none;
+  color: #ffffff;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.heroCommunityCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(20, 24, 34, 0.95);
+}
+
+.communityIconWrapperWhatsapp {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #25d366;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.communityIconWrapperSlack {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #e01e5a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.communityIconWrapperZoom {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #2d8cff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.communityInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.communityTitle {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  color: #ffffff;
+}
+
+.communitySub {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.communityActionLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.heroCommunityCard:hover .communityActionLink {
+  color: #f3ad20;
+}
+
+/* Banner de Aviso Bloqueado */
+.lockedNoticeBanner {
+  max-width: 1380px;
+  margin: 20px auto 0;
+  padding: 16px 24px;
+  background: rgba(243, 173, 32, 0.12);
+  border: 1px solid rgba(243, 173, 32, 0.35);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: #ffffff;
+}
+
+.lockedNoticeText {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lockedBannerIcon {
+  color: #f3ad20;
+  flex-shrink: 0;
+}
+
+.lockedNoticeText strong {
+  display: block;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.lockedNoticeText p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.unlockCourseBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f3ad20;
+  color: #090a0f;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(243, 173, 32, 0.3);
+}
+
+/* Lista de Secciones y Carruseles Tipo Netflix */
+.sectionsList {
+  max-width: 1380px;
+  margin: 40px auto 0;
+  padding: 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.netflixSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.netflixSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.netflixSectionTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.carouselNavControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Botones circulares < y > estilo captura de referencia */
+.carouselArrowBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #b59223; /* Tono dorado/oliva de los controles en la captura */
+  color: #000000;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.carouselArrowBtn:hover {
+  transform: scale(1.1);
+  filter: brightness(1.15);
+}
+
+/* Fila de carrusel horizontal */
+.netflixCarouselRow {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 12px 4px 20px;
+  scrollbar-width: none; /* Firefox */
+}
+
+.netflixCarouselRow::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* Tarjetas Portadas Verticales (Poster 2:3) como en la Imagen 1 */
+.netflixPosterCard {
+  position: relative;
+  width: 220px;
+  min-width: 220px;
+  height: 330px;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.netflixPosterCard:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(243, 173, 32, 0.2);
+  border-color: rgba(243, 173, 32, 0.6);
+}
+
+.netflixCardLocked {
+  opacity: 0.88;
+}
+
+.posterBgImage {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  /* Fondo atmosférico cálido como el gradiente naranja de la foto */
+  background: linear-gradient(145deg, #e65c00 0%, #f9d423 100%);
+  z-index: 1;
+  transition: transform 0.4s ease;
+}
+
+.netflixPosterCard:hover .posterBgImage {
+  transform: scale(1.05);
+}
+
+.posterGradientOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.0) 40%,
+    rgba(0, 0, 0, 0.75) 75%,
+    rgba(0, 0, 0, 0.95) 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Badge superior: Modulo 1, Modulo 2... */
+.posterTopBadge {
+  position: relative;
+  z-index: 5;
+  align-self: flex-start;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Overlay de Candado si no tiene acceso */
+.posterLockOverlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f3ad20;
+}
+
+/* Textos inferiores de la portada */
+.posterBottomContent {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.posterTrackTag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffd27d;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.posterTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.25;
+}
+
+/* Botón flotante de Play al hacer Hover */
+.posterHoverPlay {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 6;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f3ad20;
+  color: #090a0f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(243, 173, 32, 0.5);
+}
+
+.netflixPosterCard:hover .posterHoverPlay {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Modal de Compra */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modalCard {
+  background: #12141a;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 440px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+}
+
+.modalIconRing {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(243, 173, 32, 0.15);
+  border: 1px solid #f3ad20;
+  color: #f3ad20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.modalTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px;
+}
+
+.modalDesc {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.modalPriceBox {
+  width: 100%;
+  background: #1a1e27;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #cbd5e1;
+  margin-bottom: 24px;
+}
+
+.modalPriceBox strong {
+  font-size: 18px;
+  color: #ffffff;
+}
+
+.modalActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.modalCloseBtn {
+  flex: 1;
+  padding: 10px;
+  background: #1f1f23;
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modalBuyBtn {
+  flex: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  background: #f3ad20;
+  color: #090a0f;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   AULA / REPRODUCTOR DE LECCIÓN (REQUERIMIENTO 4)
+   ========================================================================== */
+
+.classroomContainer {
+  min-height: 100vh;
+  background-color: #090a0f;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.classroomHeader {
+  height: 60px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #11141c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.classroomHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.classroomBackBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1a1e27;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.classroomBackBtn:hover {
+  background: #252830;
+  color: #ffffff;
+}
+
+.classroomBreadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.classroomCourseName {
+  color: #94a3b8;
+}
+
+.classroomDivider {
+  color: #64748b;
+}
+
+.classroomModuleName {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.classroomModuleBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(13, 184, 121, 0.12);
+  color: #0db879;
+  border: 1px solid rgba(13, 184, 121, 0.25);
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.classroomLayout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  flex: 1;
+}
+
+@media (max-width: 1024px) {
+  .classroomLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.classroomMainColumn {
+  padding: 28px 36px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Reproductor de Video 16:9 */
+.playerWrapper {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000000;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.videoResponsiveWrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.videoIframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.videoHtmlTag {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000000;
+}
+
+.videoPlaceholderContainer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #11141c 0%, #090a0f 100%);
+  padding: 32px;
+  text-align: center;
+}
+
+.videoPlaceholderContent {
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.videoPlaceholderPlayIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px var(--accent-subtle, rgba(119, 71, 255, 0.4));
+}
+
+.videoPlaceholderTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.videoPlaceholderSubtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Fila de Título y Acción de la Lección */
+.topicActionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.topicMetaInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.topicModuleSubtitle {
+  font-size: 12px;
+  color: var(--accent, #7747ff);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.activeTopicTitle {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.topicDurationBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* Botón de Marcar Completado */
+.completeToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: #1a1e27;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.completeToggleBtn:hover {
+  background: #252830;
+  border-color: #0db879;
+}
+
+.completeToggleBtnDone {
+  background: rgba(13, 184, 121, 0.15);
+  border-color: #0db879;
+  color: #0db879;
+}
+
+/* Fila Anterior / Siguiente */
+.prevNextNavRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.prevNextBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #12141a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  max-width: 280px;
+}
+
+.prevNextBtn:hover {
+  background: #1a1e27;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.prevNextBtnInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.prevNextBtnInfo small {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+}
+
+.prevNextBtnInfo span {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.nextBtn .prevNextBtnInfo {
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* Tabs de Descripción y Archivos */
+.topicTabsContainer {
+  background: #11141c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.topicTabsList {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #161923;
+}
+
+.topicTabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topicTabBtn:hover {
+  color: #ffffff;
+}
+
+.topicTabBtnActive {
+  color: var(--accent, #7747ff);
+  border-bottom-color: var(--accent, #7747ff);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.topicTabBody {
+  padding: 24px;
+}
+
+.topicDescriptionBox p {
+  color: #cbd5e1;
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.noContentText {
+  color: #64748b;
+  font-size: 13px;
+  font-style: italic;
+  margin: 0;
+}
+
+.filesList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fileDownloadItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #1a1e27;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #ffffff;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.fileDownloadItem:hover {
+  background: #222632;
+  border-color: var(--accent, #7747ff);
+}
+
+.fileIconWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--accent-subtle, rgba(119, 71, 255, 0.15));
+  color: var(--accent, #7747ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fileDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.fileName {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fileSize {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Columna Lateral Derecha (Temario del Módulo) */
+.classroomSidebar {
+  background: #0f121a;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 16px;
+  position: sticky;
+  top: 60px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+
+.sidebarHeaderCard {
+  background: #161923;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebarHeaderTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebarBookIcon {
+  color: var(--accent, #7747ff);
+}
+
+.sidebarModuleTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.sidebarModuleSub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebarProgressBarTrack {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.sidebarProgressBarFill {
+  height: 100%;
+  background: #0db879;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+/* Lista Scroll de Topics */
+.topicsScrollList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.topicListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #141721;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topicListItem:hover {
+  background: #1a1e2a;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.topicListItemActive {
+  background: rgba(119, 71, 255, 0.15);
+  border-color: var(--accent, #7747ff);
+}
+
+.topicItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.topicItemCheckBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.checkDoneIcon {
+  color: #0db879;
+}
+
+.checkPendingIcon {
+  color: #475569;
+}
+
+.topicItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.topicIndexNumber {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.topicItemTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topicItemDuration {
+  font-size: 11px;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Otros Módulos */
+.otherModulesSection {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.otherModulesHeading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  margin: 0 0 4px;
+}
+
+.otherModulesList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.otherModuleBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #141721;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.otherModuleBtn:hover {
+  background: #1d212e;
+  color: #ffffff;
+}
+
+.otherModuleBtnActive {
+  background: rgba(119, 71, 255, 0.15);
+  border-color: var(--accent, #7747ff);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   PERFIL DEL ESTUDIANTE (REQUERIMIENTO 1)
+   ========================================================================== */
+
+.profileContainer {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profileHeaderNav {
+  display: flex;
+  align-items: center;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--surface, #12141a);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-pill, 9999px);
+  color: var(--foreground, #ffffff);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+@media (max-width: 860px) {
+  .profileGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profileCardSide {
+  background: var(--surface, #12141a);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-surface, 16px);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.avatarWrapper {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  margin-bottom: 16px;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent, #7747ff);
+}
+
+.avatarChangeBtn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border: 2px solid #090a0f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.profileName {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0 0 4px;
+}
+
+.profileUsername {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+  margin-bottom: 12px;
+}
+
+.profilePlanBadge {
+  background: var(--accent-subtle, rgba(119, 71, 255, 0.15));
+  color: var(--accent, #7747ff);
+  border: 1px solid var(--accent, #7747ff);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.profileStatsList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  padding-top: 20px;
+}
+
+.profileStatItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.profileStatIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface-muted, #1a1e27);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent, #7747ff);
+  flex-shrink: 0;
+}
+
+.profileStatText {
+  display: flex;
+  flex-direction: column;
+}
+
+.profileStatText strong {
+  font-size: 14px;
+  color: var(--foreground, #ffffff);
+}
+
+.profileStatText span {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.logoutBtn {
+  margin-top: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  padding: 8px 18px;
+  border-radius: var(--radius-control, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logoutBtn:hover {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: #f87171;
+}
+
+.profileCardMain {
+  background: var(--surface, #12141a);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-surface, 16px);
+  padding: 36px 32px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.profileSectionTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sparkleIcon {
+  color: var(--accent, #7747ff);
+}
+
+.profileSectionTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0;
+}
+
+.profileSectionDesc {
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+  margin: 4px 0 24px;
+}
+
+.alertSuccess {
+  background: rgba(13, 184, 121, 0.15);
+  border: 1px solid #0db879;
+  color: #0db879;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.alertError {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.profileForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 600px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formLabel span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground, #ffffff);
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-muted, #1a1e27);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-control, 8px);
+  padding: 10px 14px;
+  transition: border-color 0.15s ease;
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--accent, #7747ff);
+}
+
+.inputIcon {
+  color: var(--text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.textInput {
+  background: transparent;
+  border: none;
+  color: var(--foreground, #ffffff);
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+}
+
+.formDivider {
+  height: 1px;
+  background: var(--border-subtle, rgba(255, 255, 255, 0.08));
+  margin: 10px 0;
+}
+
+.formSubtitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0;
+}
+
+.formSubtext {
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  margin: 2px 0 10px;
+}
+
+.formSubmitRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-control, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.saveBtn:hover {
+  filter: brightness(1.1);
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
