@@ -26,8 +26,14 @@ class Admin_Dashboard {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 		$is_crezca_page = ( $screen && ( 'toplevel_page_crezca' === $screen->id || 'toplevel_page_alezux-members' === $screen->id ) )
 			|| ( isset( $_GET['page'] ) && ( 'crezca' === $_GET['page'] || 'alezux-members' === $_GET['page'] ) );
-		?>
-		<style>
+		<?php
+		$academy_logo = get_option( 'alezux_academy_logo', '' );
+		if ( $is_crezca_page && ! empty( $academy_logo ) ) : ?>
+			<link rel="icon" href="<?php echo esc_url( $academy_logo ); ?>" />
+			<link rel="shortcut icon" href="<?php echo esc_url( $academy_logo ); ?>" />
+			<link rel="apple-touch-icon" href="<?php echo esc_url( $academy_logo ); ?>" />
+		<?php endif; ?>
+		<style id="crezca-admin-styles">
 			/* Icono de Crezca en el menú lateral */
 			#adminmenu #toplevel_page_alezux-members .wp-menu-image img,
 			#adminmenu #toplevel_page_crezca .wp-menu-image img {
@@ -43,18 +49,13 @@ class Admin_Dashboard {
 				opacity: 1;
 			}
 
-			<?php if ( $is_crezca_page ) : 
-				$academy_logo = get_option( 'alezux_academy_logo', '' );
-				if ( ! empty( $academy_logo ) ) : ?>
-					<link rel="icon" href="<?php echo esc_url( $academy_logo ); ?>" />
-					<link rel="shortcut icon" href="<?php echo esc_url( $academy_logo ); ?>" />
-					<link rel="apple-touch-icon" href="<?php echo esc_url( $academy_logo ); ?>" />
-				<?php endif; ?>
+			<?php if ( $is_crezca_page ) : ?>
 			/* ===================================================
 			   MODO APP INDEPENDIENTE (VENTANA COMPLETA LIMPIA)
 			   Elimina todo el entorno/chrome de WordPress
 			   =================================================== */
 			html.wp-toolbar,
+			html,
 			body.toplevel_page_crezca,
 			body.toplevel_page_alezux-members {
 				padding: 0 !important;
@@ -66,6 +67,10 @@ class Admin_Dashboard {
 			}
 			#wpadminbar {
 				display: none !important;
+				height: 0 !important;
+				min-height: 0 !important;
+				overflow: hidden !important;
+				visibility: hidden !important;
 			}
 			#adminmenumain,
 			#adminmenuback,

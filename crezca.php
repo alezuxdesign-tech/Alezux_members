@@ -198,9 +198,12 @@ add_action( 'elementor/elements/categories_registered', function( $elements_mana
 } );
 
 /**
- * Ocultar la barra de administración de WordPress para estudiantes / no administradores
+ * Ocultar la barra de administración de WordPress en páginas de Crezca / Alezux y para estudiantes
  */
 add_filter( 'show_admin_bar', function( $show ) {
+    if ( is_admin() && isset( $_GET['page'] ) && in_array( $_GET['page'], [ 'crezca', 'alezux-members' ], true ) ) {
+        return false;
+    }
     if ( ! current_user_can( 'edit_posts' ) ) {
         return false;
     }
@@ -211,6 +214,7 @@ add_filter( 'show_admin_bar', function( $show ) {
  * Shortcode [crezca_aula] / [alezux_aula] para renderizar el Campus Virtual de Estudiantes
  */
 function crezca_render_student_portal_shortcode( $atts = [] ) {
+    add_filter( 'show_admin_bar', '__return_false' );
 	$dist_css = CREZCA_PATH . 'assets/dist/alezux-dashboard.css';
 	$dist_js  = CREZCA_PATH . 'assets/dist/alezux-dashboard.js';
 	
