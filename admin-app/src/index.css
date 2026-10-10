@@ -51,6 +51,9 @@ body {
 #crezca-admin-root input,
 #crezca-admin-root select,
 #crezca-admin-root textarea,
+#crezca-student-root input,
+#crezca-student-root select,
+#crezca-student-root textarea,
 #alezux-admin-root input,
 #alezux-admin-root select,
 #alezux-admin-root textarea {
@@ -66,6 +69,7 @@ body {
 }
 
 #crezca-admin-root select,
+#crezca-student-root select,
 #alezux-admin-root select {
   background-color: var(--surface) !important;
   color: var(--foreground) !important;
@@ -73,6 +77,7 @@ body {
 }
 
 #crezca-admin-root select option,
+#crezca-student-root select option,
 #alezux-admin-root select option {
   background-color: var(--surface) !important;
   color: var(--foreground) !important;
@@ -80,6 +85,8 @@ body {
 
 #crezca-admin-root input::placeholder,
 #crezca-admin-root textarea::placeholder,
+#crezca-student-root input::placeholder,
+#crezca-student-root textarea::placeholder,
 #alezux-admin-root input::placeholder,
 #alezux-admin-root textarea::placeholder {
   color: var(--text-muted) !important;
@@ -88,16 +95,55 @@ body {
 #crezca-admin-root input:focus,
 #crezca-admin-root select:focus,
 #crezca-admin-root textarea:focus,
+#crezca-student-root input:focus,
+#crezca-student-root select:focus,
+#crezca-student-root textarea:focus,
 #alezux-admin-root input:focus,
 #alezux-admin-root select:focus,
 #alezux-admin-root textarea:focus {
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 1px var(--accent) !important;
+  border-color: var(--border-strong) !important;
+  box-shadow: 0 0 0 1px var(--border-strong) !important;
   outline: none !important;
 }
 
 /* Reset buttons from WP Admin styling */
 #crezca-admin-root button,
+#crezca-student-root button,
 #alezux-admin-root button {
   box-shadow: none;
+}
+
+/* Ensure nested inputs inside styled containers never display internal borders or focus rings */
+#crezca-admin-root [class*="container"] input,
+#crezca-admin-root [class*="container"] input:focus,
+#crezca-admin-root [class*="inputRoot"] input,
+#crezca-admin-root [class*="inputRoot"] input:focus,
+#crezca-admin-root [class*="arcInput"] input,
+#crezca-admin-root [class*="arcInput"] input:focus,
+#crezca-admin-root [class*="inputBox"] input,
+#crezca-admin-root [class*="inputBox"] input:focus,
+#crezca-student-root [class*="container"] input,
+#crezca-student-root [class*="container"] input:focus,
+#crezca-student-root [class*="inputRoot"] input,
+#crezca-student-root [class*="inputRoot"] input:focus,
+#crezca-student-root [class*="arcInput"] input,
+#crezca-student-root [class*="arcInput"] input:focus,
+#crezca-student-root [class*="inputBox"] input,
+#crezca-student-root [class*="inputBox"] input:focus,
+#alezux-admin-root [class*="container"] input,
+#alezux-admin-root [class*="container"] input:focus,
+#alezux-admin-root [class*="inputRoot"] input,
+#alezux-admin-root [class*="inputRoot"] input:focus,
+#alezux-admin-root [class*="arcInput"] input,
+#alezux-admin-root [class*="arcInput"] input:focus,
+#alezux-admin-root [class*="inputBox"] input,
+#alezux-admin-root [class*="inputBox"] input:focus {
+  border: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
 }

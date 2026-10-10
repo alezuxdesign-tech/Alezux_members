@@ -38,8 +38,8 @@
 
 .trigger:focus-visible,
 .trigger.open {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--border-strong);
 }
 
 .trigger.disabled {

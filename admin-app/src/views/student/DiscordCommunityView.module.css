@@ -855,8 +855,8 @@
 }
 
 .inputBoxWrapper:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-subtle);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--border-strong);
 }
 
 .messageTextarea {
@@ -1048,8 +1048,8 @@
 }
 
 .modalInput:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-subtle);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--border-strong);
 }
 
 .newCategoryRow {
@@ -1095,8 +1095,8 @@
 }
 
 .modalInputNormal:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-subtle);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--border-strong);
 }
 
 .modalSelect {
@@ -1135,8 +1135,8 @@
 }
 
 .arcInputBox:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--border-strong);
 }
 
 .arcInputBoxIcon {
@@ -1148,13 +1148,17 @@
 }
 
 .arcInputBox:focus-within .arcInputBoxIcon {
-  color: var(--accent);
+  color: var(--foreground);
 }
 
-.arcInputField {
+.arcInputField,
+.arcInputField:focus {
   flex: 1;
   min-width: 0;
   border: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
   outline: none !important;
   box-shadow: none !important;
   background: transparent !important;
@@ -1194,8 +1198,8 @@
 }
 
 .modalTextarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--border-strong);
 }
 
 .modalCheckboxCard {

@@ -37,8 +37,8 @@
 }
 
 .container:focus-within:not(.disabled) {
-  border-color: var(--accent, #a78bff) !important;
-  box-shadow: 0 0 0 1px var(--accent, #a78bff) !important;
+  border-color: var(--border-strong, rgba(255, 255, 255, 0.22)) !important;
+  box-shadow: 0 0 0 1px var(--border-strong, rgba(255, 255, 255, 0.22)) !important;
 }
 
 .disabled {
@@ -50,7 +50,7 @@
 .symbol {
   font-weight: 700;
   font-size: 16px;
-  color: var(--accent, #a78bff);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   user-select: none;
   flex-shrink: 0;
   display: inline-flex;
@@ -58,6 +58,11 @@
   justify-content: center;
   line-height: 1;
   pointer-events: none;
+  transition: color var(--duration-fast, 160ms);
+}
+
+.container:focus-within .symbol {
+  color: var(--foreground, #ffffff);
 }
 
 .disabled .symbol {
@@ -65,8 +70,15 @@
 }
 
 :global(#crezca-admin-root) .input,
+:global(#crezca-admin-root) .input:focus,
+:global(#crezca-student-root) .input,
+:global(#crezca-student-root) .input:focus,
 :global(#alezux-admin-root) .input,
-.input {
+:global(#alezux-admin-root) .input:focus,
+.input,
+.input:focus,
+.input:hover,
+.input:active {
   flex: 1 1 auto !important;
   min-width: 0 !important;
   width: 100% !important;
@@ -74,13 +86,16 @@
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
   outline: none !important;
   box-shadow: none !important;
   padding: 0 !important;
   margin: 0 !important;
   font-family: inherit !important;
   font-size: var(--text-sm, 14px) !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: var(--foreground, #ffffff) !important;
   font-variant-numeric: tabular-nums !important;
   -webkit-appearance: none !important;
@@ -88,6 +103,7 @@
 }
 
 :global(#crezca-admin-root) .input:disabled,
+:global(#crezca-student-root) .input:disabled,
 :global(#alezux-admin-root) .input:disabled,
 .input:disabled {
   cursor: not-allowed !important;
