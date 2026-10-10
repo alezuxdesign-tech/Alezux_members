@@ -163,7 +163,7 @@ export function App() {
           {!isCollapsed ? (
             <>
               <div className={styles.brandGroup} title={`${academyName || "Crezca"} - Academia & Membresías`}>
-                <div className={styles.logoMark}>
+                <div className={`${styles.logoMark} ${academyLogo ? styles.hasCustomLogo : ""}`}>
                   {academyLogo ? (
                     <img src={academyLogo} alt={academyName || "Logo"} className={styles.logoImg} />
                   ) : (
@@ -197,7 +197,7 @@ export function App() {
               title="Expandir barra lateral"
               aria-label="Expandir barra lateral"
             >
-              <div className={styles.logoMark}>
+              <div className={`${styles.logoMark} ${academyLogo ? styles.hasCustomLogo : ""}`}>
                 {academyLogo ? (
                   <img src={academyLogo} alt={academyName || "Logo"} className={styles.logoImg} />
                 ) : (

@@ -109,10 +109,11 @@
   height: 42px;
   width: 42px;
   min-width: 42px;
-  border-radius: var(--radius-control);
-  object-fit: cover;
+  border-radius: 8px;
+  object-fit: contain;
   background: var(--surface);
   border: 1px solid var(--border);
+  padding: 2px;
 }
 
 .logoDetails {
