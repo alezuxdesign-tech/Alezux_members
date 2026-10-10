@@ -18,10 +18,6 @@
   cursor: pointer;
 }
 
-.clickable:hover {
-  border-color: var(--accent);
-}
-
 .top { 
   display: flex; 
   align-items: center; 

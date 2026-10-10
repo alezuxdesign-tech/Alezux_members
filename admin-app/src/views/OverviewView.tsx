@@ -9,15 +9,12 @@ import {
   CheckCircle2, 
   TrendingUp, 
   ArrowUpRight,
-  RefreshCw,
   Sparkles,
   CreditCard,
   UserPlus,
-  SlidersHorizontal,
-  Activity
+  SlidersHorizontal
 } from "lucide-react";
 import { MetricCard } from "../components/arc/metric-card/metric-card";
-import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { SegmentedControl } from "../components/arc/segmented-control/segmented-control";
 import { LineChart, LineChartPoint } from "../components/arc/line-chart/line-chart";
@@ -30,32 +27,16 @@ interface OverviewViewProps {
 }
 
 type RangeType = "7d" | "30d" | "90d";
-type MetricType = "students" | "revenue" | "activity";
 
 export function OverviewView({ onNavigate }: OverviewViewProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activeRange, setActiveRange] = useState<RangeType>("7d");
-  const [activeMetric, setActiveMetric] = useState<MetricType>("students");
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const fetchStats = async () => {
-    try {
-      const data = await api.getDashboardStats();
-      setStats(data);
-    } catch (err) {
-      console.error("Error al cargar estadísticas del Dashboard:", err);
-    }
-  };
 
   useEffect(() => {
-    fetchStats();
+    api.getDashboardStats()
+      .then(setStats)
+      .catch((err) => console.error("Error al cargar estadísticas del Dashboard:", err));
   }, []);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await fetchStats();
-    setTimeout(() => setIsRefreshing(false), 400);
-  };
 
   // Puntos sin procesar para el rango seleccionado
   const rawPoints: FlowDataPoint[] = useMemo(() => {
@@ -66,67 +47,17 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
     return stats.studentFlow || [];
   }, [stats, activeRange]);
 
-  // Configuración de la métrica activa (prefijo, sufijo y nombres)
-  const metricConfig = useMemo(() => {
-    switch (activeMetric) {
-      case "revenue":
-        return {
-          title: "Facturación Proyectada",
-          subtitle: "Ingresos por ventas de cursos y cobros de cuotas periódicas",
-          prefix: "$",
-          suffix: " USD",
-          metricName: "Facturación",
-          secondaryMetricName: "Estudiantes",
-          statSuffix: "USD",
-        };
-      case "activity":
-        return {
-          title: "Lecciones y Actividad de Estudio",
-          subtitle: "Progreso de los alumnos y consumo de lecciones en la plataforma",
-          prefix: "",
-          suffix: " lecc.",
-          metricName: "Lecciones vistas",
-          secondaryMetricName: "Estudiantes activos",
-          statSuffix: "lecciones",
-        };
-      case "students":
-      default:
-        return {
-          title: "Estudiantes Activos en Campus",
-          subtitle: "Alumnos conectados e interactuando en las formaciones de la academia",
-          prefix: "",
-          suffix: " alumnos",
-          metricName: "Estudiantes activos",
-          secondaryMetricName: "Lecciones",
-          statSuffix: "alumnos",
-        };
-    }
-  }, [activeMetric]);
-
-  // Puntos calculados para el LineChart según métrica
+  // Puntos calculados exclusivamente para la Facturación en el LineChart
   const chartPoints: LineChartPoint[] = useMemo(() => {
-    return rawPoints.map((pt) => {
-      let val = pt.students;
-      let secVal = pt.activity;
+    return rawPoints.map((pt) => ({
+      label: pt.label,
+      value: pt.revenue ?? Math.round(pt.students * 12.5),
+      secondaryValue: pt.students,
+      detail: pt.detail || pt.label,
+    }));
+  }, [rawPoints]);
 
-      if (activeMetric === "revenue") {
-        val = pt.revenue ?? Math.round(pt.students * 12.5);
-        secVal = pt.students;
-      } else if (activeMetric === "activity") {
-        val = pt.activity;
-        secVal = pt.students;
-      }
-
-      return {
-        label: pt.label,
-        value: val,
-        secondaryValue: secVal,
-        detail: pt.detail || pt.label,
-      };
-    });
-  }, [rawPoints, activeMetric]);
-
-  // Cálculos estadísticos rápidos del período seleccionado
+  // Cálculos estadísticos rápidos de la facturación en el período seleccionado
   const summaryMetrics = useMemo(() => {
     if (chartPoints.length === 0) return { total: 0, avg: 0, peakLabel: "-", peakVal: 0 };
     const total = chartPoints.reduce((acc, p) => acc + p.value, 0);
@@ -147,7 +78,7 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
 
   return (
     <div className={styles.container}>
-      {/* Encabezado limpio estilo Arc PageHeader */}
+      {/* Encabezado limpio estilo Arc PageHeader sin botones redundantes */}
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>Dashboard</h1>
@@ -155,26 +86,9 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
             Métricas de rendimiento operativo, alumnos activos y facturación en tiempo real.
           </p>
         </div>
-        <div className={styles.pageActions}>
-          <Button 
-            variant="secondary" 
-            size="md" 
-            onClick={handleRefresh}
-            className={styles.refreshBtn}
-          >
-            <RefreshCw size={15} className={isRefreshing ? styles.spinning : ""} />
-            <span>Actualizar</span>
-          </Button>
-          <Button variant="secondary" size="md" onClick={() => onNavigate("finance")}>
-            Generar Enlace de Pago
-          </Button>
-          <Button variant="primary" size="md" onClick={() => onNavigate("courses")}>
-            + Nuevo Curso
-          </Button>
-        </div>
       </div>
 
-      {/* Grid de KPIs con Arc MetricCard - Todos interactivos */}
+      {/* Grid de KPIs principales con Arc MetricCard */}
       <div className={styles.metricsGrid}>
         <MetricCard
           label="Estudiantes Inscritos"
@@ -182,7 +96,6 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
           change={stats.totalStudentsChange}
           context="Alumnos registrados con acceso a la plataforma"
           icon={<Users size={16} />}
-          onClick={() => onNavigate("students")}
         />
         <MetricCard
           label="Cursos Activos"
@@ -190,7 +103,6 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
           change={stats.activeCoursesChange}
           context="Formaciones publicadas disponibles para alumnos"
           icon={<GraduationCap size={16} />}
-          onClick={() => onNavigate("courses")}
         />
         <MetricCard
           label="Facturación del Mes"
@@ -201,7 +113,6 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
           change={stats.monthlyRevenueChange}
           context="Cobros de cuotas y membresías recurrentes"
           icon={<DollarSign size={16} />}
-          onClick={() => onNavigate("finance")}
         />
         <MetricCard
           label="Vistas Lección Popular"
@@ -209,58 +120,25 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
           change={stats.topClass.completionRate}
           context={`"${stats.topClass.title.slice(0, 32)}..."`}
           icon={<Award size={16} />}
-          onClick={() => onNavigate("courses")}
         />
       </div>
 
-      {/* Grilla Principal: Gráfico Line Chart & Tarjetas Complementarias */}
+      {/* Grilla Principal: Gráfico de Facturación & Tarjetas Complementarias */}
       <div className={styles.mainGrid}>
-        {/* Bloque de Gráfico Line Chart */}
+        {/* Bloque de Gráfico Line Chart: Exclusivamente Facturación */}
         <section className={styles.cardSection}>
           <div className={styles.cardHeader}>
             <div className={styles.chartHeaderTitles}>
               <div className={styles.chartTitleRow}>
-                <Activity size={18} className={styles.chartIcon} />
-                <h2 className={styles.cardTitle}>{metricConfig.title}</h2>
+                <DollarSign size={18} className={styles.chartIcon} />
+                <h2 className={styles.cardTitle}>Facturación</h2>
               </div>
-              <p className={styles.cardSubtitle}>{metricConfig.subtitle}</p>
+              <p className={styles.cardSubtitle}>
+                Ingresos por ventas de cursos y cobros de cuotas periódicas
+              </p>
             </div>
 
             <div className={styles.controlsGroup}>
-              {/* Selector de Métrica */}
-              <div className={styles.metricSwitcher}>
-                <button
-                  type="button"
-                  className={[
-                    styles.metricSwitchBtn,
-                    activeMetric === "students" ? styles.metricSwitchBtnActive : "",
-                  ].join(" ")}
-                  onClick={() => setActiveMetric("students")}
-                >
-                  Estudiantes
-                </button>
-                <button
-                  type="button"
-                  className={[
-                    styles.metricSwitchBtn,
-                    activeMetric === "revenue" ? styles.metricSwitchBtnActive : "",
-                  ].join(" ")}
-                  onClick={() => setActiveMetric("revenue")}
-                >
-                  Facturación
-                </button>
-                <button
-                  type="button"
-                  className={[
-                    styles.metricSwitchBtn,
-                    activeMetric === "activity" ? styles.metricSwitchBtnActive : "",
-                  ].join(" ")}
-                  onClick={() => setActiveMetric("activity")}
-                >
-                  Lecciones
-                </button>
-              </div>
-
               {/* Selector de Rango de Tiempo */}
               <SegmentedControl
                 size="sm"
@@ -279,38 +157,32 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
           <div className={styles.chartWrapper}>
             <LineChart
               data={chartPoints}
-              valuePrefix={metricConfig.prefix}
-              valueSuffix={metricConfig.suffix}
+              valuePrefix="$"
+              valueSuffix=" USD"
               height={260}
-              metricName={metricConfig.metricName}
-              secondaryMetricName={metricConfig.secondaryMetricName}
+              metricName="Facturación"
+              secondaryMetricName="Estudiantes activos"
             />
           </div>
 
-          {/* Ribbon de Resumen de Métricas del Gráfico */}
+          {/* Ribbon de Resumen de Facturación del Período */}
           <div className={styles.summaryRibbon}>
             <div className={styles.summaryItem}>
               <span className={styles.summaryLabel}>Total en período</span>
               <span className={styles.summaryValue}>
-                {metricConfig.prefix}
-                {summaryMetrics.total.toLocaleString()}
-                {" "}
-                <small>{metricConfig.statSuffix}</small>
+                ${summaryMetrics.total.toLocaleString()} <small>USD</small>
               </span>
             </div>
             <div className={styles.summaryItem}>
               <span className={styles.summaryLabel}>Promedio / día</span>
               <span className={styles.summaryValue}>
-                {metricConfig.prefix}
-                {summaryMetrics.avg.toLocaleString()}
-                {" "}
-                <small>{metricConfig.statSuffix}</small>
+                ${summaryMetrics.avg.toLocaleString()} <small>USD</small>
               </span>
             </div>
             <div className={styles.summaryItem}>
               <span className={styles.summaryLabel}>Pico más alto</span>
               <span className={styles.summaryValue}>
-                {summaryMetrics.peakLabel}: {metricConfig.prefix}{summaryMetrics.peakVal.toLocaleString()}
+                {summaryMetrics.peakLabel}: ${summaryMetrics.peakVal.toLocaleString()}
               </span>
             </div>
             <div className={styles.summaryTrend}>
