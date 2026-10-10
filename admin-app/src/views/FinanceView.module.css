@@ -939,3 +939,14 @@
   width: calc(100% - 48px);
   pointer-events: auto;
 }
+
+.planTypeSegmentWrapper {
+  margin-bottom: var(--space-2);
+}
+
+.membershipProgress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}

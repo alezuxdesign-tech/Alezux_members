@@ -34,6 +34,7 @@ import { Alert } from "../components/arc/alert/alert";
 import {
   api,
   FinancePlan,
+  PlanType,
   Course,
   SaleTransaction,
   SubscriptionItem,
@@ -54,6 +55,12 @@ const TABS: SegmentOption<FinanceTab>[] = [
 const PLAN_MODAL_TABS: SegmentOption<PlanModalTab>[] = [
   { value: "general", label: "Detalles del Plan" },
   { value: "reglas", label: "Reglas de Liberación" },
+];
+
+const PLAN_TYPE_OPTIONS: SegmentOption<PlanType>[] = [
+  { value: "one_time", label: "Pago Único" },
+  { value: "installments", label: "En Cuotas" },
+  { value: "subscription", label: "Membresía Recurrente" },
 ];
 
 const formatCurrency = (amount: number, decimals: number = 2): string => {
@@ -125,6 +132,7 @@ export function FinanceView() {
   // Modal Crear Plan
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalTab, setCreateModalTab] = useState<PlanModalTab>("general");
+  const [createPlanType, setCreatePlanType] = useState<PlanType>("installments");
   const [createName, setCreateName] = useState("");
   const [createCourseId, setCreateCourseId] = useState<number>(0);
   const [createTotalQuotas, setCreateTotalQuotas] = useState<number>(4);
@@ -139,6 +147,7 @@ export function FinanceView() {
   // Modal Configurar / Editar Plan
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editModalTab, setEditModalTab] = useState<PlanModalTab>("general");
+  const [editPlanType, setEditPlanType] = useState<PlanType>("installments");
   const [editingPlan, setEditingPlan] = useState<FinancePlan | null>(null);
   const [editName, setEditName] = useState("");
   const [editCourseId, setEditCourseId] = useState<number>(0);
@@ -297,6 +306,7 @@ export function FinanceView() {
   const handleOpenCreateModal = () => {
     setIsCreateModalOpen(true);
     setCreateModalTab("general");
+    setCreatePlanType("installments");
     const firstCourse = courses.length > 0 ? courses[0].id : 0;
     setCreateCourseId(firstCourse);
     fetchModulesForCreate(firstCourse);
@@ -307,13 +317,18 @@ export function FinanceView() {
     setIsCreating(true);
 
     const targetCourse = courses.find((c) => c.id === createCourseId);
+    const finalQuotas =
+      createPlanType === "subscription" ? 0 : createPlanType === "one_time" ? 1 : Math.max(2, createTotalQuotas);
+    const finalFrequency = createPlanType === "one_time" ? "contado" : createFrequency;
+
     const created = await api.createPlan({
       name: createName,
       courseId: createCourseId,
       courseTitle: targetCourse ? targetCourse.title : "Todos los Cursos",
-      totalQuotas: createTotalQuotas,
+      planType: createPlanType,
+      totalQuotas: finalQuotas,
       quotaAmount: createQuotaAmount,
-      frequency: createFrequency,
+      frequency: finalFrequency,
       whatsapp_number: createWhatsapp,
       access_rules: createAccessRules,
     });
@@ -325,6 +340,7 @@ export function FinanceView() {
 
     // Reset
     setCreateName("");
+    setCreatePlanType("installments");
     setCreateTotalQuotas(4);
     setCreateQuotaAmount(97);
     setCreateWhatsapp("");
@@ -333,12 +349,16 @@ export function FinanceView() {
   };
 
   const handleOpenEditPlan = (plan: FinancePlan) => {
+    const determinedType: PlanType =
+      plan.planType ||
+      (plan.totalQuotas === 0 ? "subscription" : plan.totalQuotas === 1 ? "one_time" : "installments");
     setEditingPlan(plan);
+    setEditPlanType(determinedType);
     setEditName(plan.name);
     setEditCourseId(plan.courseId);
-    setEditTotalQuotas(plan.totalQuotas);
+    setEditTotalQuotas(plan.totalQuotas === 0 ? 4 : plan.totalQuotas);
     setEditQuotaAmount(plan.quotaAmount);
-    setEditFrequency(plan.frequency || "month");
+    setEditFrequency(plan.frequency && plan.frequency !== "contado" ? plan.frequency : "month");
     setEditWhatsapp(plan.whatsapp_number || "");
     setEditModalTab("general");
     setIsEditModalOpen(true);
@@ -350,12 +370,17 @@ export function FinanceView() {
     setIsSavingEdit(true);
 
     const targetCourse = courses.find((c) => c.id === editCourseId);
+    const finalQuotas =
+      editPlanType === "subscription" ? 0 : editPlanType === "one_time" ? 1 : Math.max(2, editTotalQuotas);
+    const finalFrequency = editPlanType === "one_time" ? "contado" : editFrequency;
+
     await api.updatePlan(editingPlan.id, {
       name: editName,
       courseId: editCourseId,
-      totalQuotas: editTotalQuotas,
+      planType: editPlanType,
+      totalQuotas: finalQuotas,
       quotaAmount: editQuotaAmount,
-      frequency: editFrequency,
+      frequency: finalFrequency,
       whatsapp_number: editWhatsapp,
       access_rules: editAccessRules,
     });
@@ -368,10 +393,11 @@ export function FinanceView() {
               name: editName,
               courseId: editCourseId,
               courseTitle: targetCourse ? targetCourse.title : "Todos los Cursos",
-              totalQuotas: editTotalQuotas,
+              planType: editPlanType,
+              totalQuotas: finalQuotas,
               quotaAmount: editQuotaAmount,
-              totalAmount: editTotalQuotas * editQuotaAmount,
-              frequency: editFrequency,
+              totalAmount: editPlanType === "subscription" ? editQuotaAmount : finalQuotas * editQuotaAmount,
+              frequency: finalFrequency,
               whatsapp_number: editWhatsapp,
               access_rules: editAccessRules,
             }
@@ -432,7 +458,12 @@ export function FinanceView() {
   const handleOpenManualPayment = (sub: SubscriptionItem) => {
     setSelectedSubForPayment(sub);
     setPaymentAmount(sub.amount);
-    setPaymentNote(`Abono cuota ${sub.quotasPaid + 1} de ${sub.totalQuotas}`);
+    const isSubMembership = sub.isMembership || sub.totalQuotas === 0;
+    setPaymentNote(
+      isSubMembership
+        ? `Renovación mensual (${sub.quotasPaid + 1}º pago) - Transferencia / Pago Móvil / Binance`
+        : `Abono cuota ${sub.quotasPaid + 1} de ${sub.totalQuotas}`
+    );
     setPaymentNotice(null);
     setIsPaymentModalOpen(true);
   };
@@ -587,7 +618,9 @@ export function FinanceView() {
                 <div className={styles.planTop}>
                   <h3 className={styles.planName}>{plan.name}</h3>
                   <span className={styles.quotaBadge}>
-                    {plan.totalQuotas > 1
+                    {plan.totalQuotas === 0 || plan.planType === "subscription"
+                      ? "Membresía Recurrente"
+                      : plan.totalQuotas > 1
                       ? `${plan.totalQuotas} Cuotas`
                       : "Pago Único"}
                   </span>
@@ -596,7 +629,11 @@ export function FinanceView() {
                 <div className={styles.planPriceRow}>
                   <span className={styles.currency}>$</span>
                   <span className={styles.priceAmount}>{formatCurrency(plan.quotaAmount)}</span>
-                  <span className={styles.pricePeriod}>USD</span>
+                  <span className={styles.pricePeriod}>
+                    {plan.totalQuotas === 0 || plan.planType === "subscription"
+                      ? `USD / ${plan.frequency === "year" ? "año" : plan.frequency === "week" ? "sem" : "mes"}`
+                      : "USD"}
+                  </span>
                 </div>
 
                 <div className={styles.courseTag}>
@@ -613,12 +650,34 @@ export function FinanceView() {
 
                 <div className={styles.planDetails}>
                   <div className={styles.detailRow}>
-                    <span>Total a pagar:</span>
-                    <strong className={styles.totalAmount}>${formatCurrency(plan.totalAmount)} USD</strong>
+                    <span>
+                      {plan.totalQuotas === 0 || plan.planType === "subscription"
+                        ? "Costo por período:"
+                        : "Total a pagar:"}
+                    </span>
+                    <strong className={styles.totalAmount}>
+                      $
+                      {formatCurrency(
+                        plan.totalQuotas === 0 || plan.planType === "subscription"
+                          ? plan.quotaAmount
+                          : plan.totalAmount
+                      )}{" "}
+                      USD
+                    </strong>
                   </div>
                   <div className={styles.detailRow}>
                     <span>Frecuencia:</span>
-                    <span>{plan.frequency === "contado" ? "Inmediato" : "Mensual"}</span>
+                    <span>
+                      {plan.totalQuotas === 0 || plan.planType === "subscription"
+                        ? plan.frequency === "year"
+                          ? "Anual"
+                          : plan.frequency === "week"
+                          ? "Semanal"
+                          : "Mensual"
+                        : plan.frequency === "contado"
+                        ? "Inmediato"
+                        : "Mensual"}
+                    </span>
                   </div>
                   <div className={styles.detailRow}>
                     <span>Alumnos suscritos:</span>
@@ -848,6 +907,8 @@ export function FinanceView() {
               </thead>
               <tbody>
                 {filteredSubs.map((sub) => {
+                  const isSubMembership =
+                    sub.isMembership || sub.totalQuotas === 0 || sub.planType === "subscription";
                   let badgeVariant: "accent" | "success" | "danger" | "neutral" = "neutral";
                   if (sub.status === "active") badgeVariant = "accent";
                   else if (sub.status === "completed") badgeVariant = "success";
@@ -871,31 +932,68 @@ export function FinanceView() {
                           </div>
                         </div>
                       </td>
-                      <td>{sub.plan}</td>
                       <td>
-                        <div className={styles.progressWrapper}>
-                          <div className={styles.progressBarBg}>
-                            <div
-                              className={styles.progressBarFill}
-                              style={{ width: `${sub.percent}%` }}
-                            />
-                          </div>
-                          <span className={styles.progressLabel}>
-                            {sub.quotasPaid} de {sub.totalQuotas} cuotas ({sub.percent}%)
-                          </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                          <span>{sub.plan}</span>
+                          {isSubMembership && (
+                            <div style={{ alignSelf: "flex-start" }}>
+                              <Badge variant="accent" size="sm">
+                                Membresía
+                              </Badge>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td>
-                        <span className={styles.amountText}>${formatCurrency(sub.amount)} USD</span>
+                        {isSubMembership ? (
+                          <div className={styles.membershipProgress}>
+                            <Badge variant="accent" size="sm">
+                              Membresía Continua
+                            </Badge>
+                            <span className={styles.progressLabel}>
+                              {sub.quotasPaid} {sub.quotasPaid === 1 ? "pago realizado" : "pagos realizados"}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className={styles.progressWrapper}>
+                            <div className={styles.progressBarBg}>
+                              <div
+                                className={styles.progressBarFill}
+                                style={{ width: `${sub.percent}%` }}
+                              />
+                            </div>
+                            <span className={styles.progressLabel}>
+                              {sub.quotasPaid} de {sub.totalQuotas} cuotas ({sub.percent}%)
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <span className={styles.amountText}>
+                          ${formatCurrency(sub.amount)} USD
+                          {isSubMembership && (
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                fontWeight: "normal",
+                                color: "var(--text-muted)",
+                                marginLeft: "4px",
+                              }}
+                            >
+                              / mes
+                            </span>
+                          )}
+                        </span>
                       </td>
                       <td>
                         <span
                           style={{
-                            color: sub.nextPayment.includes("Atrasado")
-                              ? "var(--danger)"
-                              : sub.nextPayment.includes("Pagado")
-                              ? "var(--success)"
-                              : "inherit",
+                            color:
+                              sub.nextPayment.includes("Atrasado") || sub.nextPayment.includes("Vencido")
+                                ? "var(--danger)"
+                                : sub.nextPayment.includes("Pagado") || sub.nextPayment.includes("Completado")
+                                ? "var(--success)"
+                                : "inherit",
                             fontWeight: 500,
                           }}
                         >
@@ -918,11 +1016,23 @@ export function FinanceView() {
                           variant="secondary"
                           size="sm"
                           onClick={() => handleOpenManualPayment(sub)}
-                          disabled={sub.status === "completed"}
-                          title="Registrar pago manual de la siguiente cuota"
+                          disabled={sub.status === "completed" || sub.status === "canceled"}
+                          title={
+                            isSubMembership
+                              ? "Registrar pago manual o renovación de membresía"
+                              : "Registrar pago manual de la siguiente cuota"
+                          }
                         >
-                          <DollarSign size={13} />
-                          {sub.status === "completed" ? "Finalizado" : "Registrar Pago"}
+                          {isSubMembership ? (
+                            <>
+                              <RotateCcw size={13} /> Renovar
+                            </>
+                          ) : (
+                            <>
+                              <DollarSign size={13} />
+                              {sub.status === "completed" ? "Finalizado" : "Registrar Pago"}
+                            </>
+                          )}
                         </Button>
                       </td>
                     </tr>
@@ -1052,9 +1162,24 @@ export function FinanceView() {
         {createModalTab === "general" ? (
           <div className={styles.modalTabContent}>
             <div className={styles.formGroup}>
+              <label className={styles.label}>Modalidad de Cobro</label>
+              <SegmentedControl<PlanType>
+                options={PLAN_TYPE_OPTIONS}
+                value={createPlanType}
+                onChange={setCreatePlanType}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
               <Input
                 label="Nombre del Plan *"
-                placeholder="Ej: Master Marketing 4 Cuotas"
+                placeholder={
+                  createPlanType === "subscription"
+                    ? "Ej: Membresía VIP Mensual"
+                    : createPlanType === "one_time"
+                    ? "Ej: Master en Marketing - Pago Único"
+                    : "Ej: Master Marketing 4 Cuotas"
+                }
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
               />
@@ -1082,50 +1207,100 @@ export function FinanceView() {
               </div>
             </div>
 
-            <div className={styles.formRow}>
-              <Input
-                label="Número de Cuotas"
-                type="number"
-                min={1}
-                max={24}
-                value={createTotalQuotas}
-                hint="1 = Pago único, 2-12 = Cuotas"
-                onChange={(e) => setCreateTotalQuotas(Number(e.target.value))}
-              />
-
-              <Input
-                label="Monto por Cuota (USD)"
-                type="number"
-                min={1}
-                value={createQuotaAmount}
-                hint={`Total a cobrar: $${formatCurrency(createTotalQuotas * createQuotaAmount)} USD`}
-                onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
-              />
-            </div>
-
-            <div className={styles.formRow}>
-              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                <label className={styles.label}>Frecuencia de Cobro</label>
-                <div className={styles.selectWrap}>
-                  <select
-                    value={createFrequency}
-                    onChange={(e) => setCreateFrequency(e.target.value)}
-                    className={styles.select}
-                  >
-                    <option value="month">Mensual (Cada 30 días)</option>
-                    <option value="week">Semanal</option>
-                    <option value="year">Anual</option>
-                  </select>
+            {createPlanType === "installments" ? (
+              <div className={styles.formRow}>
+                <Input
+                  label="Número de Cuotas"
+                  type="number"
+                  min={2}
+                  max={24}
+                  value={createTotalQuotas}
+                  hint="Cantidad total de cuotas (2 a 24)"
+                  onChange={(e) => setCreateTotalQuotas(Math.max(2, Number(e.target.value)))}
+                />
+                <Input
+                  label="Monto por Cuota (USD)"
+                  type="number"
+                  min={1}
+                  value={createQuotaAmount}
+                  hint={`Total del plan: $${formatCurrency(createTotalQuotas * createQuotaAmount)} USD`}
+                  onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
+                />
+              </div>
+            ) : createPlanType === "one_time" ? (
+              <div className={styles.formGroup}>
+                <Input
+                  label="Precio del Curso (USD)"
+                  type="number"
+                  min={1}
+                  value={createQuotaAmount}
+                  hint="Cobro único de contado con acceso permanente"
+                  onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
+                />
+              </div>
+            ) : (
+              <div className={styles.formRow}>
+                <Input
+                  label="Precio Recurrente (USD)"
+                  type="number"
+                  min={1}
+                  value={createQuotaAmount}
+                  hint="Se cobrará en cada renovación periódica"
+                  onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
+                />
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Frecuencia de Cobro</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={createFrequency}
+                      onChange={(e) => setCreateFrequency(e.target.value)}
+                      className={styles.select}
+                    >
+                      <option value="month">Mensual (Cada 30 días)</option>
+                      <option value="week">Semanal</option>
+                      <option value="year">Anual</option>
+                    </select>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <Input
-                label="WhatsApp de Soporte (Opcional)"
-                placeholder="+51 987 654 321"
-                value={createWhatsapp}
-                onChange={(e) => setCreateWhatsapp(e.target.value)}
-              />
-            </div>
+            {createPlanType === "installments" && (
+              <div className={styles.formRow}>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Frecuencia de Cobro</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={createFrequency}
+                      onChange={(e) => setCreateFrequency(e.target.value)}
+                      className={styles.select}
+                    >
+                      <option value="month">Mensual (Cada 30 días)</option>
+                      <option value="week">Semanal</option>
+                      <option value="year">Anual</option>
+                    </select>
+                  </div>
+                </div>
+
+                <Input
+                  label="WhatsApp de Soporte (Opcional)"
+                  placeholder="+51 987 654 321"
+                  value={createWhatsapp}
+                  onChange={(e) => setCreateWhatsapp(e.target.value)}
+                />
+              </div>
+            )}
+
+            {createPlanType !== "installments" && (
+              <div className={styles.formGroup}>
+                <Input
+                  label="WhatsApp de Soporte (Opcional)"
+                  placeholder="+51 987 654 321"
+                  value={createWhatsapp}
+                  onChange={(e) => setCreateWhatsapp(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div className={styles.modalTabContent}>
@@ -1135,37 +1310,60 @@ export function FinanceView() {
                 <div>
                   <h4 className={styles.rulesTitle}>Reglas de Liberación de Contenido</h4>
                   <p className={styles.rulesDesc}>
-                    Define en qué cuota pagada se desbloquea cada módulo para el estudiante:
+                    Define las condiciones de desbloqueo de módulos para el estudiante:
                   </p>
                 </div>
 
-                {createCourseId > 0 && createModules.length > 0 && createTotalQuotas > 1 && (
-                  <div className={styles.rulesQuickActions}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={() => unlockAllInQuotaOne(createModules, setCreateAccessRules)}
-                      title="Liberar todas las lecciones en la primera cuota"
-                    >
-                      Todo en Cuota 1
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={() =>
-                        distributeRulesEqually(createModules, createTotalQuotas, setCreateAccessRules)
-                      }
-                      title="Distribuir secuencialmente entre las cuotas"
-                    >
-                      <Sparkles size={12} /> Distribuir por Cuotas
-                    </Button>
-                  </div>
-                )}
+                {createPlanType === "installments" &&
+                  createCourseId > 0 &&
+                  createModules.length > 0 &&
+                  createTotalQuotas > 1 && (
+                    <div className={styles.rulesQuickActions}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => unlockAllInQuotaOne(createModules, setCreateAccessRules)}
+                        title="Liberar todas las lecciones en la primera cuota"
+                      >
+                        Todo en Cuota 1
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() =>
+                          distributeRulesEqually(createModules, createTotalQuotas, setCreateAccessRules)
+                        }
+                        title="Distribuir secuencialmente entre las cuotas"
+                      >
+                        <Sparkles size={12} /> Distribuir por Cuotas
+                      </Button>
+                    </div>
+                  )}
               </div>
 
-              {createCourseId === 0 ? (
+              {createPlanType === "subscription" ? (
+                <div className={styles.allAccessNotice} style={{ padding: "var(--space-4)" }}>
+                  <Check size={20} className={styles.allAccessIcon} />
+                  <div>
+                    <strong>Membresía Recurrente Continua:</strong>
+                    <p style={{ margin: "4px 0 0", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                      En esta modalidad, los alumnos tienen <strong>acceso total e instantáneo a todas las lecciones y módulos</strong> del contenido formativo mientras su suscripción o pago periódico permanezca activo. No se requiere bloqueo escalonado de cuotas.
+                    </p>
+                  </div>
+                </div>
+              ) : createPlanType === "one_time" ? (
+                <div className={styles.allAccessNotice} style={{ padding: "var(--space-4)" }}>
+                  <Check size={20} className={styles.allAccessIcon} />
+                  <div>
+                    <strong>Pago Único (De Contado):</strong>
+                    <p style={{ margin: "4px 0 0", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                      Al cancelarse en un único pago, todos los módulos y lecciones del curso quedan desbloqueados de forma inmediata tras completarse la compra.
+                    </p>
+                  </div>
+                </div>
+              ) : createCourseId === 0 ? (
                 <div className={styles.allAccessNotice}>
                   <Check size={16} className={styles.allAccessIcon} />
                   <div>
@@ -1251,6 +1449,15 @@ export function FinanceView() {
         {editModalTab === "general" ? (
           <div className={styles.modalTabContent}>
             <div className={styles.formGroup}>
+              <label className={styles.label}>Modalidad de Cobro</label>
+              <SegmentedControl<PlanType>
+                options={PLAN_TYPE_OPTIONS}
+                value={editPlanType}
+                onChange={setEditPlanType}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
               <Input
                 label="Nombre del Plan *"
                 value={editName}
@@ -1280,49 +1487,100 @@ export function FinanceView() {
               </div>
             </div>
 
-            <div className={styles.formRow}>
-              <Input
-                label="Número de Cuotas"
-                type="number"
-                min={1}
-                max={24}
-                value={editTotalQuotas}
-                onChange={(e) => setEditTotalQuotas(Number(e.target.value))}
-              />
-
-              <Input
-                label="Monto por Cuota (USD)"
-                type="number"
-                min={1}
-                value={editQuotaAmount}
-                hint={`Total a cobrar: $${formatCurrency(editTotalQuotas * editQuotaAmount)} USD`}
-                onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
-              />
-            </div>
-
-            <div className={styles.formRow}>
-              <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                <label className={styles.label}>Frecuencia de Cobro</label>
-                <div className={styles.selectWrap}>
-                  <select
-                    value={editFrequency}
-                    onChange={(e) => setEditFrequency(e.target.value)}
-                    className={styles.select}
-                  >
-                    <option value="month">Mensual (Cada 30 días)</option>
-                    <option value="week">Semanal</option>
-                    <option value="year">Anual</option>
-                  </select>
+            {editPlanType === "installments" ? (
+              <div className={styles.formRow}>
+                <Input
+                  label="Número de Cuotas"
+                  type="number"
+                  min={2}
+                  max={24}
+                  value={editTotalQuotas}
+                  hint="Cantidad total de cuotas (2 a 24)"
+                  onChange={(e) => setEditTotalQuotas(Math.max(2, Number(e.target.value)))}
+                />
+                <Input
+                  label="Monto por Cuota (USD)"
+                  type="number"
+                  min={1}
+                  value={editQuotaAmount}
+                  hint={`Total del plan: $${formatCurrency(editTotalQuotas * editQuotaAmount)} USD`}
+                  onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
+                />
+              </div>
+            ) : editPlanType === "one_time" ? (
+              <div className={styles.formGroup}>
+                <Input
+                  label="Precio del Curso (USD)"
+                  type="number"
+                  min={1}
+                  value={editQuotaAmount}
+                  hint="Cobro único de contado con acceso permanente"
+                  onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
+                />
+              </div>
+            ) : (
+              <div className={styles.formRow}>
+                <Input
+                  label="Precio Recurrente (USD)"
+                  type="number"
+                  min={1}
+                  value={editQuotaAmount}
+                  hint="Se cobrará en cada renovación periódica"
+                  onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
+                />
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Frecuencia de Cobro</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={editFrequency}
+                      onChange={(e) => setEditFrequency(e.target.value)}
+                      className={styles.select}
+                    >
+                      <option value="month">Mensual (Cada 30 días)</option>
+                      <option value="week">Semanal</option>
+                      <option value="year">Anual</option>
+                    </select>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <Input
-                label="WhatsApp de Soporte (Opcional)"
-                placeholder="+51 987 654 321"
-                value={editWhatsapp}
-                onChange={(e) => setEditWhatsapp(e.target.value)}
-              />
-            </div>
+            {editPlanType === "installments" && (
+              <div className={styles.formRow}>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Frecuencia de Cobro</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={editFrequency}
+                      onChange={(e) => setEditFrequency(e.target.value)}
+                      className={styles.select}
+                    >
+                      <option value="month">Mensual (Cada 30 días)</option>
+                      <option value="week">Semanal</option>
+                      <option value="year">Anual</option>
+                    </select>
+                  </div>
+                </div>
+
+                <Input
+                  label="WhatsApp de Soporte (Opcional)"
+                  placeholder="+51 987 654 321"
+                  value={editWhatsapp}
+                  onChange={(e) => setEditWhatsapp(e.target.value)}
+                />
+              </div>
+            )}
+
+            {editPlanType !== "installments" && (
+              <div className={styles.formGroup}>
+                <Input
+                  label="WhatsApp de Soporte (Opcional)"
+                  placeholder="+51 987 654 321"
+                  value={editWhatsapp}
+                  onChange={(e) => setEditWhatsapp(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div className={styles.modalTabContent}>
@@ -1332,37 +1590,60 @@ export function FinanceView() {
                 <div>
                   <h4 className={styles.rulesTitle}>Reglas de Liberación de Contenido</h4>
                   <p className={styles.rulesDesc}>
-                    Define en qué cuota pagada se desbloquea cada módulo para el estudiante:
+                    Define las condiciones de desbloqueo de módulos para el estudiante:
                   </p>
                 </div>
 
-                {editCourseId > 0 && editModules.length > 0 && editTotalQuotas > 1 && (
-                  <div className={styles.rulesQuickActions}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={() => unlockAllInQuotaOne(editModules, setEditAccessRules)}
-                      title="Liberar todas las lecciones en la primera cuota"
-                    >
-                      Todo en Cuota 1
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={() =>
-                        distributeRulesEqually(editModules, editTotalQuotas, setEditAccessRules)
-                      }
-                      title="Distribuir secuencialmente entre las cuotas"
-                    >
-                      <Sparkles size={12} /> Distribuir por Cuotas
-                    </Button>
-                  </div>
-                )}
+                {editPlanType === "installments" &&
+                  editCourseId > 0 &&
+                  editModules.length > 0 &&
+                  editTotalQuotas > 1 && (
+                    <div className={styles.rulesQuickActions}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => unlockAllInQuotaOne(editModules, setEditAccessRules)}
+                        title="Liberar todas las lecciones en la primera cuota"
+                      >
+                        Todo en Cuota 1
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() =>
+                          distributeRulesEqually(editModules, editTotalQuotas, setEditAccessRules)
+                        }
+                        title="Distribuir secuencialmente entre las cuotas"
+                      >
+                        <Sparkles size={12} /> Distribuir por Cuotas
+                      </Button>
+                    </div>
+                  )}
               </div>
 
-              {editCourseId === 0 ? (
+              {editPlanType === "subscription" ? (
+                <div className={styles.allAccessNotice} style={{ padding: "var(--space-4)" }}>
+                  <Check size={20} className={styles.allAccessIcon} />
+                  <div>
+                    <strong>Membresía Recurrente Continua:</strong>
+                    <p style={{ margin: "4px 0 0", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                      En esta modalidad, los alumnos tienen <strong>acceso total e instantáneo a todas las lecciones y módulos</strong> del contenido formativo mientras su suscripción o pago periódico permanezca activo. No se requiere bloqueo escalonado de cuotas.
+                    </p>
+                  </div>
+                </div>
+              ) : editPlanType === "one_time" ? (
+                <div className={styles.allAccessNotice} style={{ padding: "var(--space-4)" }}>
+                  <Check size={20} className={styles.allAccessIcon} />
+                  <div>
+                    <strong>Pago Único (De Contado):</strong>
+                    <p style={{ margin: "4px 0 0", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                      Al cancelarse en un único pago, todos los módulos y lecciones del curso quedan desbloqueados de forma inmediata tras completarse la compra.
+                    </p>
+                  </div>
+                </div>
+              ) : editCourseId === 0 ? (
                 <div className={styles.allAccessNotice}>
                   <Check size={16} className={styles.allAccessIcon} />
                   <div>
@@ -1418,16 +1699,26 @@ export function FinanceView() {
       </Modal>
 
       {/* ============================================================== */}
-      {/* MODAL PARA REGISTRAR PAGO MANUAL DE CUOTA */}
+      {/* MODAL PARA REGISTRAR PAGO MANUAL / RENOVAR MEMBRESÍA */}
       {/* ============================================================== */}
       <Modal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        title="Registrar Pago Manual de Cuota"
+        title={
+          selectedSubForPayment?.isMembership ||
+          selectedSubForPayment?.totalQuotas === 0 ||
+          selectedSubForPayment?.planType === "subscription"
+            ? "Registrar Pago / Renovar Membresía"
+            : "Registrar Pago Manual de Cuota"
+        }
         description={
           selectedSubForPayment
-            ? `Estudiante: ${selectedSubForPayment.student} · Plan: ${selectedSubForPayment.plan}`
-            : "Registro manual de abono de cuota"
+            ? selectedSubForPayment.isMembership ||
+              selectedSubForPayment.totalQuotas === 0 ||
+              selectedSubForPayment.planType === "subscription"
+              ? `Renovación de membresía para ${selectedSubForPayment.student} (${selectedSubForPayment.plan})`
+              : `Estudiante: ${selectedSubForPayment.student} · Plan: ${selectedSubForPayment.plan}`
+            : "Registro manual de abono de pago"
         }
         footer={
           <>
@@ -1439,7 +1730,11 @@ export function FinanceView() {
               loading={isRegisteringPayment}
               onClick={handleConfirmManualPayment}
             >
-              Confirmar Abono de Cuota
+              {selectedSubForPayment?.isMembership ||
+              selectedSubForPayment?.totalQuotas === 0 ||
+              selectedSubForPayment?.planType === "subscription"
+                ? "Confirmar Pago y Renovar Período"
+                : "Confirmar Abono de Cuota"}
             </Button>
           </>
         }
@@ -1460,12 +1755,20 @@ export function FinanceView() {
           />
 
           <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-            <label className={styles.label}>Estado Actual de la Suscripción</label>
+            <label className={styles.label}>Estado Actual</label>
             <div style={{ marginTop: "6px" }}>
-              <Badge variant="neutral" size="sm">
-                Cuota {selectedSubForPayment ? selectedSubForPayment.quotasPaid : 0} de{" "}
-                {selectedSubForPayment ? selectedSubForPayment.totalQuotas : 0} pagada(s)
-              </Badge>
+              {selectedSubForPayment?.isMembership ||
+              selectedSubForPayment?.totalQuotas === 0 ||
+              selectedSubForPayment?.planType === "subscription" ? (
+                <Badge variant="accent" size="sm">
+                  Membresía Continua ({selectedSubForPayment?.quotasPaid || 0} pagos registrados)
+                </Badge>
+              ) : (
+                <Badge variant="neutral" size="sm">
+                  Cuota {selectedSubForPayment ? selectedSubForPayment.quotasPaid : 0} de{" "}
+                  {selectedSubForPayment ? selectedSubForPayment.totalQuotas : 0} pagada(s)
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -1473,7 +1776,7 @@ export function FinanceView() {
         <div className={styles.formGroup} style={{ marginTop: "var(--space-3)" }}>
           <Input
             label="Nota interna / Comprobante de pago"
-            placeholder="Ej: Transferencia Zelle #129381 o Efectivo"
+            placeholder="Ej: Pago Móvil #49102, Zelle, Binance Pay, transferencia bancaria o efectivo"
             value={paymentNote}
             onChange={(e) => setPaymentNote(e.target.value)}
           />

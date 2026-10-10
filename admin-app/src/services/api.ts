@@ -166,11 +166,14 @@ export interface CreateCommunityChannelPayload {
   is_announcement?: boolean;
 }
 
+export type PlanType = "one_time" | "installments" | "subscription";
+
 export interface FinancePlan {
   id: number;
   name: string;
   courseId: number;
   courseTitle: string;
+  planType?: PlanType;
   totalQuotas: number;
   quotaAmount: number;
   totalAmount: number;
@@ -202,6 +205,8 @@ export interface SubscriptionItem {
   studentEmail: string;
   studentAvatar: string;
   plan: string;
+  planType?: PlanType;
+  isMembership?: boolean;
   totalQuotas: number;
   quotasPaid: number;
   percent: number;
@@ -533,14 +538,16 @@ const MOCK_PLANS: FinancePlan[] = [
   },
   {
     id: 3,
-    name: "Membresía All-Access Anual",
+    name: "Membresía All-Access Mensual",
     courseId: 0,
     courseTitle: "Todos los Cursos",
-    totalQuotas: 12,
-    quotaAmount: 49,
-    totalAmount: 588,
-    token: "token_all_access_annual",
-    checkoutUrl: `${window.location.origin}/?alezux_action=checkout&token=token_all_access_annual`,
+    planType: "subscription",
+    totalQuotas: 0,
+    quotaAmount: 29,
+    totalAmount: 29,
+    frequency: "month",
+    token: "token_all_access_membership",
+    checkoutUrl: `${window.location.origin}/?alezux_action=checkout&token=token_all_access_membership`,
     subscribersCount: 230,
   },
 ];
@@ -670,8 +677,25 @@ const MOCK_SUBSCRIPTIONS: SubscriptionItem[] = [
     percent: 100,
     amount: 97,
     status: "completed",
-    nextPayment: "Pagado Totalmente",
+    nextPayment: "Completado",
     stripeId: "sub_1J9qwe550",
+  },
+  {
+    id: 205,
+    student: "Alejandro Zuleta",
+    studentEmail: "alezu@academia.com",
+    studentAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+    plan: "Membresía All-Access Mensual",
+    planType: "subscription",
+    isMembership: true,
+    totalQuotas: 0,
+    quotasPaid: 6,
+    percent: 100,
+    amount: 29,
+    status: "active",
+    nextPayment: "10/11/2026",
+    nextPaymentRaw: "2026-11-10",
+    stripeId: "",
   },
 ];
 
@@ -1156,14 +1180,17 @@ class ApiService {
     }
 
     const token = `token_${Math.random().toString(36).substring(2, 10)}`;
+    const isSub = data.planType === "subscription" || data.totalQuotas === 0;
+    const finalQuotas = isSub ? 0 : (data.totalQuotas ?? 1);
     const newPlan: FinancePlan = {
       id: Date.now(),
       name: data.name || "Nuevo Plan",
       courseId: data.courseId || 0,
       courseTitle: data.courseTitle || "Todos los Cursos",
-      totalQuotas: data.totalQuotas || 1,
+      planType: data.planType || (finalQuotas === 0 ? "subscription" : finalQuotas === 1 ? "one_time" : "installments"),
+      totalQuotas: finalQuotas,
       quotaAmount: data.quotaAmount || 97,
-      totalAmount: (data.totalQuotas || 1) * (data.quotaAmount || 97),
+      totalAmount: isSub ? (data.quotaAmount || 97) : (finalQuotas * (data.quotaAmount || 97)),
       frequency: data.frequency || "month",
       whatsapp_number: data.whatsapp_number || "",
       token,

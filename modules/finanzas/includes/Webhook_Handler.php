@@ -160,8 +160,8 @@ class Webhook_Handler {
         // Disparar evento
         do_action( 'alezux_finance_payment_received', $subscription->user_id, $subscription->plan_id, $new_quotas_paid );
 
-        // Verificar Completitud
-        if ( $new_quotas_paid >= $subscription->total_quotas ) {
+        // Verificar Completitud (solo para planes con cuotas finitas > 0)
+        if ( (int) $subscription->total_quotas > 0 && $new_quotas_paid >= (int) $subscription->total_quotas ) {
             // Si tenía sub en Stripe vinculada, cancelarla (aunque esto es pago manual, 
             // puede ser un híbrido donde canceló y ahora paga manual).
             if ( ! empty( $subscription->stripe_subscription_id ) ) {
@@ -226,11 +226,10 @@ class Webhook_Handler {
         \error_log( "Alezux Renewal: Cuota $new_quotas_paid pagada para suscripción Local ID {$subscription->id}" );
 
         // Disparar evento para Marketing (Quota Recurrente)
-        do_action( 'alezux_finance_payment_received', $subscription->user_id, '$subscription->plan_id', $new_quotas_paid ); // Error in string interpolation detected, fixing manually below
-         do_action( 'alezux_finance_payment_received', $subscription->user_id, $subscription->plan_id, $new_quotas_paid );
+        do_action( 'alezux_finance_payment_received', $subscription->user_id, $subscription->plan_id, $new_quotas_paid );
 
-        // Verificar si se completaron las cuotas
-        if ( $new_quotas_paid >= $subscription->total_quotas ) {
+        // Verificar si se completaron las cuotas (solo para planes con cuotas finitas > 0)
+        if ( (int) $subscription->total_quotas > 0 && $new_quotas_paid >= (int) $subscription->total_quotas ) {
             $this->cancel_stripe_subscription( $stripe_sub_id );
             
             $wpdb->update( 

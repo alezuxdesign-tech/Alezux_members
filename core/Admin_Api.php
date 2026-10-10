@@ -1082,14 +1082,25 @@ class Admin_Api {
 				$checkout_url = home_url( "/?alezux_action=checkout&token={$token}" );
 				$subs_count = isset( $counts_by_plan[ $row->id ] ) ? $counts_by_plan[ $row->id ] : 0;
 
+				$total_quotas = (int) $row->total_quotas;
+				$plan_type = 'installments';
+				if ( $total_quotas === 0 ) {
+					$plan_type = 'subscription';
+				} elseif ( $total_quotas === 1 ) {
+					$plan_type = 'one_time';
+				}
+
+				$total_amount = $total_quotas > 0 ? (float) ( $total_quotas * $row->quota_amount ) : (float) $row->quota_amount;
+
 				$plans[] = [
 					'id'               => (int) $row->id,
 					'name'             => $row->name,
 					'courseId'         => (int) $row->course_id,
 					'courseTitle'      => $course_title,
-					'totalQuotas'      => (int) $row->total_quotas,
+					'planType'         => $plan_type,
+					'totalQuotas'      => $total_quotas,
 					'quotaAmount'      => (float) $row->quota_amount,
-					'totalAmount'      => (float) ( $row->total_quotas * $row->quota_amount ),
+					'totalAmount'      => $total_amount,
 					'frequency'        => ! empty( $row->frequency ) ? $row->frequency : 'month',
 					'whatsapp_number'  => ! empty( $row->whatsapp_number ) ? $row->whatsapp_number : '',
 					'access_rules'     => ! empty( $row->access_rules ) ? json_decode( $row->access_rules, true ) : [],
@@ -1110,12 +1121,23 @@ class Admin_Api {
 		$params = $request->get_json_params();
 		$name = sanitize_text_field( $params['name'] );
 		$course_id = (int) $params['courseId'];
-		$total_quotas = max( 1, (int) $params['totalQuotas'] );
-		$quota_amount = (float) $params['quotaAmount'];
-		$frequency = sanitize_text_field( isset( $params['frequency'] ) && ! empty( $params['frequency'] ) ? $params['frequency'] : 'month' );
-		if ( $total_quotas === 1 ) {
+		$plan_type = isset( $params['planType'] ) ? sanitize_text_field( $params['planType'] ) : '';
+
+		if ( $plan_type === 'subscription' || ( isset( $params['totalQuotas'] ) && (int) $params['totalQuotas'] === 0 ) ) {
+			$plan_type = 'subscription';
+			$total_quotas = 0;
+			$frequency = sanitize_text_field( ! empty( $params['frequency'] ) ? $params['frequency'] : 'month' );
+		} elseif ( $plan_type === 'one_time' || ( isset( $params['totalQuotas'] ) && (int) $params['totalQuotas'] === 1 ) ) {
+			$plan_type = 'one_time';
+			$total_quotas = 1;
 			$frequency = 'contado';
+		} else {
+			$plan_type = 'installments';
+			$total_quotas = max( 2, (int) ( $params['totalQuotas'] ?? 2 ) );
+			$frequency = sanitize_text_field( ! empty( $params['frequency'] ) ? $params['frequency'] : 'month' );
 		}
+
+		$quota_amount = (float) $params['quotaAmount'];
 		$whatsapp_number = sanitize_text_field( isset( $params['whatsapp_number'] ) ? $params['whatsapp_number'] : '' );
 		$rules = isset( $params['access_rules'] ) ? $params['access_rules'] : [];
 		$token = bin2hex( random_bytes( 16 ) );
@@ -1129,7 +1151,7 @@ class Admin_Api {
 		// Si Stripe está configurado, crear producto y precio
 		if ( class_exists( '\Alezux_Members\Modules\Finanzas\Includes\Stripe_API' ) ) {
 			$stripe = \Alezux_Members\Modules\Finanzas\Includes\Stripe_API::get_instance();
-			$interval = ( $total_quotas == 1 ) ? 'contado' : $frequency;
+			$interval = ( $total_quotas === 1 ) ? 'contado' : $frequency;
 			$stripe_result = $stripe->create_plan( $name, $quota_amount, $interval );
 			if ( ! is_wp_error( $stripe_result ) && is_array( $stripe_result ) ) {
 				$stripe_product_id = $stripe_result['product_id'] ?? null;
@@ -1162,9 +1184,10 @@ class Admin_Api {
 			'name'             => $name,
 			'courseId'         => $course_id,
 			'courseTitle'      => $course_title,
+			'planType'         => $plan_type,
 			'totalQuotas'      => $total_quotas,
 			'quotaAmount'      => $quota_amount,
-			'totalAmount'      => (float) ( $total_quotas * $quota_amount ),
+			'totalAmount'      => (float) ( $total_quotas > 0 ? ( $total_quotas * $quota_amount ) : $quota_amount ),
 			'frequency'        => $frequency,
 			'whatsapp_number'  => $whatsapp_number,
 			'access_rules'     => $rules,
@@ -1195,8 +1218,17 @@ class Admin_Api {
 		if ( isset( $params['courseId'] ) ) {
 			$data_to_update['course_id'] = (int) $params['courseId'];
 		}
-		if ( isset( $params['totalQuotas'] ) ) {
-			$data_to_update['total_quotas'] = max( 1, (int) $params['totalQuotas'] );
+		if ( isset( $params['planType'] ) ) {
+			if ( $params['planType'] === 'subscription' ) {
+				$data_to_update['total_quotas'] = 0;
+			} elseif ( $params['planType'] === 'one_time' ) {
+				$data_to_update['total_quotas'] = 1;
+				$data_to_update['frequency'] = 'contado';
+			} elseif ( isset( $params['totalQuotas'] ) ) {
+				$data_to_update['total_quotas'] = max( 2, (int) $params['totalQuotas'] );
+			}
+		} elseif ( isset( $params['totalQuotas'] ) ) {
+			$data_to_update['total_quotas'] = max( 0, (int) $params['totalQuotas'] );
 		}
 		if ( isset( $params['quotaAmount'] ) ) {
 			$data_to_update['quota_amount'] = (float) $params['quotaAmount'];
@@ -1296,7 +1328,9 @@ class Admin_Api {
 		$data = [];
 		foreach ( $results as $row ) {
 			$payment_desc = 'Pago Único';
-			if ( $row->total_quotas > 1 ) {
+			if ( (int) $row->total_quotas === 0 ) {
+				$payment_desc = 'Membresía Recurrente';
+			} elseif ( $row->total_quotas > 1 ) {
 				$curr_q = $row->sub_quotas_paid ?: 1;
 				$payment_desc = "Recurrente ({$curr_q}/{$row->total_quotas})";
 			} elseif ( $row->total_quotas == 1 ) {
@@ -1349,7 +1383,8 @@ class Admin_Api {
 					u.user_email, 
 					p.name as plan_name, 
 					p.total_quotas, 
-					p.quota_amount 
+					p.quota_amount,
+					p.frequency 
 				FROM $t_subs s
 				LEFT JOIN $t_users u ON s.user_id = u.ID
 				LEFT JOIN $t_plans p ON s.plan_id = p.id
@@ -1371,19 +1406,28 @@ class Admin_Api {
 
 		$data = [];
 		foreach ( $results as $row ) {
+			$is_membership = ( (int) $row->total_quotas === 0 );
+			$plan_type = $is_membership ? 'subscription' : ( (int) $row->total_quotas === 1 ? 'one_time' : 'installments' );
+
 			$next_payment = '—';
 			if ( $row->status === 'active' && $row->next_payment_date ) {
 				$next_payment = date_i18n( get_option( 'date_format' ), strtotime( $row->next_payment_date ) );
 				if ( strtotime( $row->next_payment_date ) < time() ) {
-					$next_payment .= ' (Atrasado)';
+					$next_payment .= ' (Vencido)';
 				}
 			} elseif ( $row->status === 'completed' ) {
-				$next_payment = 'Pagado Totalmente';
+				$next_payment = 'Completado';
+			} elseif ( $row->status === 'canceled' ) {
+				$next_payment = 'Cancelada';
+			} elseif ( $row->status === 'past_due' ) {
+				$next_payment = 'Pago Pendiente';
 			}
 
 			$percent = 0;
 			if ( (int) $row->total_quotas > 0 ) {
-				$percent = round( ( (int) $row->quotas_paid / (int) $row->total_quotas ) * 100 );
+				$percent = min( 100, round( ( (int) $row->quotas_paid / (int) $row->total_quotas ) * 100 ) );
+			} elseif ( $is_membership ) {
+				$percent = ( $row->status === 'active' ) ? 100 : 0;
 			}
 
 			$data[] = [
@@ -1392,9 +1436,12 @@ class Admin_Api {
 				'studentEmail'   => $row->user_email ?: '',
 				'studentAvatar'  => get_avatar_url( $row->user_id, [ 'size' => 48 ] ),
 				'plan'           => $row->plan_name ?: 'Plan de Pagos',
+				'planType'       => $plan_type,
+				'isMembership'   => $is_membership,
+				'frequency'      => $row->frequency ?: 'month',
 				'totalQuotas'    => (int) $row->total_quotas,
 				'quotasPaid'     => (int) $row->quotas_paid,
-				'percent'        => min( 100, $percent ),
+				'percent'        => $percent,
 				'amount'         => (float) $row->quota_amount,
 				'status'         => $row->status ?: 'active',
 				'nextPayment'    => $next_payment,
@@ -1431,14 +1478,31 @@ class Admin_Api {
 
 		$plan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t_plans WHERE id = %d", $sub->plan_id ) );
 		$total_quotas = $plan ? (int) $plan->total_quotas : 1;
+		$is_membership = ( $total_quotas === 0 );
 		$new_quotas_paid = (int) $sub->quotas_paid + 1;
-		$new_status = $sub->status;
+		$new_status = 'active';
 
-		if ( $sub->status === 'past_due' || $sub->status === 'canceled' ) {
-			$new_status = 'active';
+		$interval_str = '+1 month';
+		if ( $plan && ! empty( $plan->frequency ) ) {
+			if ( $plan->frequency === 'year' ) {
+				$interval_str = '+1 year';
+			} elseif ( $plan->frequency === 'week' ) {
+				$interval_str = '+1 week';
+			}
 		}
-		if ( $new_quotas_paid >= $total_quotas ) {
+
+		$base_time = time();
+		if ( ! empty( $sub->next_payment_date ) ) {
+			$existing_next = strtotime( $sub->next_payment_date );
+			if ( $existing_next > time() ) {
+				$base_time = $existing_next;
+			}
+		}
+		$new_next_payment_date = date( 'Y-m-d H:i:s', strtotime( $interval_str, $base_time ) );
+
+		if ( ! $is_membership && $new_quotas_paid >= $total_quotas ) {
 			$new_status = 'completed';
+			$new_next_payment_date = null;
 		}
 
 		$wpdb->update(
@@ -1447,6 +1511,7 @@ class Admin_Api {
 				'quotas_paid'       => $new_quotas_paid,
 				'status'            => $new_status,
 				'last_payment_date' => current_time( 'mysql' ),
+				'next_payment_date' => $new_next_payment_date,
 			],
 			[ 'id' => $sub_id ]
 		);
@@ -1469,11 +1534,16 @@ class Admin_Api {
 			);
 		}
 
+		$message = $is_membership
+			? "Pago de membresía registrado correctamente. Renovado hasta " . date_i18n( get_option( 'date_format' ), strtotime( $new_next_payment_date ) ) . "."
+			: "Pago manual registrado. Cuota {$new_quotas_paid} de {$total_quotas}.";
+
 		return rest_ensure_response( [
-			'success'    => true,
-			'message'    => "Pago manual registrado. Cuota {$new_quotas_paid} de {$total_quotas}.",
-			'status'     => $new_status,
-			'quotasPaid' => $new_quotas_paid,
+			'success'         => true,
+			'message'         => $message,
+			'status'          => $new_status,
+			'quotasPaid'      => $new_quotas_paid,
+			'nextPaymentDate' => $new_next_payment_date,
 		] );
 	}
 

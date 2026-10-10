@@ -150,7 +150,17 @@ class Access_Control {
         $plan_to_check = $active_plan ? $active_plan : $plans[0];
         $subscription = $active_subscription; // Puede ser null
 
-        // 4. Revisar reglas de acceso del Plan Elegido
+        // Si es una Membresía Recurrente (total_quotas == 0): acceso total mientras esté activa
+        if ( (int) $plan_to_check->total_quotas === 0 ) {
+            if ( $subscription && $subscription->status === 'active' ) {
+                if ( $debug_mode ) \wp_die( "DEBUG: Membresía Recurrente Activa. Acceso total concedido." );
+                return false; // Acceso libre a todos los módulos y lecciones
+            }
+            if ( $debug_mode ) \wp_die( "DEBUG: Membresía Recurrente Inactiva o Vencida. Acceso bloqueado." );
+            return true; // Si la membresía está inactiva o falta pago, bloqueado
+        }
+
+        // 4. Revisar reglas de acceso del Plan Elegido (planes en cuotas)
         $access_rules = \json_decode( $plan_to_check->access_rules, true );
         
         if ( empty( $access_rules ) || ! \is_array( $access_rules ) ) {
