@@ -102,11 +102,11 @@ export function App() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   const navItems: NavItemConfig[] = [
-    { id: "overview", label: "Métricas & Resumen", icon: <BarChart3 size={18} /> },
-    { id: "courses", label: "Cursos & Builder", icon: <GraduationCap size={18} /> },
-    { id: "students", label: "Estudiantes & Accesos", icon: <Users size={18} /> },
-    { id: "finance", label: "Finanzas & Planes", icon: <CreditCard size={18} /> },
-    { id: "marketing", label: "Marketing & Emails", icon: <Mail size={18} /> },
+    { id: "overview", label: "Dashboard", icon: <BarChart3 size={18} /> },
+    { id: "courses", label: "Cursos", icon: <GraduationCap size={18} /> },
+    { id: "students", label: "Estudiantes", icon: <Users size={18} /> },
+    { id: "finance", label: "Finanzas", icon: <CreditCard size={18} /> },
+    { id: "marketing", label: "Marketing", icon: <Mail size={18} /> },
     { id: "settings", label: "Configuración", icon: <Sliders size={18} /> },
   ];
 

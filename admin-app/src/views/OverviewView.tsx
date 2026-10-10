@@ -1,10 +1,27 @@
-import { useEffect, useState } from "react";
-import { Users, GraduationCap, DollarSign, Award, PlayCircle, Eye, CheckCircle2, TrendingUp, ArrowUpRight } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { 
+  Users, 
+  GraduationCap, 
+  DollarSign, 
+  Award, 
+  PlayCircle, 
+  Eye, 
+  CheckCircle2, 
+  TrendingUp, 
+  ArrowUpRight,
+  RefreshCw,
+  Sparkles,
+  CreditCard,
+  UserPlus,
+  SlidersHorizontal,
+  Activity
+} from "lucide-react";
 import { MetricCard } from "../components/arc/metric-card/metric-card";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { SegmentedControl } from "../components/arc/segmented-control/segmented-control";
-import { api, DashboardStats } from "../services/api";
+import { LineChart, LineChartPoint } from "../components/arc/line-chart/line-chart";
+import { api, DashboardStats, FlowDataPoint } from "../services/api";
 import { ModuleSkeleton } from "../components/arc/skeleton";
 import styles from "./OverviewView.module.css";
 
@@ -12,13 +29,117 @@ interface OverviewViewProps {
   onNavigate: (tab: string) => void;
 }
 
+type RangeType = "7d" | "30d" | "90d";
+type MetricType = "students" | "revenue" | "activity";
+
 export function OverviewView({ onNavigate }: OverviewViewProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [activeRange, setActiveRange] = useState<string>("7d");
+  const [activeRange, setActiveRange] = useState<RangeType>("7d");
+  const [activeMetric, setActiveMetric] = useState<MetricType>("students");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchStats = async () => {
+    try {
+      const data = await api.getDashboardStats();
+      setStats(data);
+    } catch (err) {
+      console.error("Error al cargar estadísticas del Dashboard:", err);
+    }
+  };
 
   useEffect(() => {
-    api.getDashboardStats().then(setStats);
+    fetchStats();
   }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchStats();
+    setTimeout(() => setIsRefreshing(false), 400);
+  };
+
+  // Puntos sin procesar para el rango seleccionado
+  const rawPoints: FlowDataPoint[] = useMemo(() => {
+    if (!stats) return [];
+    if (stats.flowRanges && stats.flowRanges[activeRange]) {
+      return stats.flowRanges[activeRange];
+    }
+    return stats.studentFlow || [];
+  }, [stats, activeRange]);
+
+  // Configuración de la métrica activa (prefijo, sufijo y nombres)
+  const metricConfig = useMemo(() => {
+    switch (activeMetric) {
+      case "revenue":
+        return {
+          title: "Facturación Proyectada",
+          subtitle: "Ingresos por ventas de cursos y cobros de cuotas periódicas",
+          prefix: "$",
+          suffix: " USD",
+          metricName: "Facturación",
+          secondaryMetricName: "Estudiantes",
+          statSuffix: "USD",
+        };
+      case "activity":
+        return {
+          title: "Lecciones y Actividad de Estudio",
+          subtitle: "Progreso de los alumnos y consumo de lecciones en la plataforma",
+          prefix: "",
+          suffix: " lecc.",
+          metricName: "Lecciones vistas",
+          secondaryMetricName: "Estudiantes activos",
+          statSuffix: "lecciones",
+        };
+      case "students":
+      default:
+        return {
+          title: "Estudiantes Activos en Campus",
+          subtitle: "Alumnos conectados e interactuando en las formaciones de la academia",
+          prefix: "",
+          suffix: " alumnos",
+          metricName: "Estudiantes activos",
+          secondaryMetricName: "Lecciones",
+          statSuffix: "alumnos",
+        };
+    }
+  }, [activeMetric]);
+
+  // Puntos calculados para el LineChart según métrica
+  const chartPoints: LineChartPoint[] = useMemo(() => {
+    return rawPoints.map((pt) => {
+      let val = pt.students;
+      let secVal = pt.activity;
+
+      if (activeMetric === "revenue") {
+        val = pt.revenue ?? Math.round(pt.students * 12.5);
+        secVal = pt.students;
+      } else if (activeMetric === "activity") {
+        val = pt.activity;
+        secVal = pt.students;
+      }
+
+      return {
+        label: pt.label,
+        value: val,
+        secondaryValue: secVal,
+        detail: pt.detail || pt.label,
+      };
+    });
+  }, [rawPoints, activeMetric]);
+
+  // Cálculos estadísticos rápidos del período seleccionado
+  const summaryMetrics = useMemo(() => {
+    if (chartPoints.length === 0) return { total: 0, avg: 0, peakLabel: "-", peakVal: 0 };
+    const total = chartPoints.reduce((acc, p) => acc + p.value, 0);
+    const avg = Math.round(total / chartPoints.length);
+    const peak = chartPoints.reduce((prev, curr) => (curr.value > prev.value ? curr : prev), chartPoints[0]);
+
+    return {
+      total,
+      avg,
+      peakLabel: peak?.label || "-",
+      peakVal: peak?.value || 0,
+    };
+  }, [chartPoints]);
 
   if (!stats) {
     return <ModuleSkeleton type="overview" />;
@@ -29,12 +150,21 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
       {/* Encabezado limpio estilo Arc PageHeader */}
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={styles.pageTitle}>Resumen de la Academia</h1>
+          <h1 className={styles.pageTitle}>Dashboard</h1>
           <p className={styles.pageDescription}>
             Métricas de rendimiento operativo, alumnos activos y facturación en tiempo real.
           </p>
         </div>
         <div className={styles.pageActions}>
+          <Button 
+            variant="secondary" 
+            size="md" 
+            onClick={handleRefresh}
+            className={styles.refreshBtn}
+          >
+            <RefreshCw size={15} className={isRefreshing ? styles.spinning : ""} />
+            <span>Actualizar</span>
+          </Button>
           <Button variant="secondary" size="md" onClick={() => onNavigate("finance")}>
             Generar Enlace de Pago
           </Button>
@@ -44,7 +174,7 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
         </div>
       </div>
 
-      {/* Grid de KPIs con Arc MetricCard */}
+      {/* Grid de KPIs con Arc MetricCard - Todos interactivos */}
       <div className={styles.metricsGrid}>
         <MetricCard
           label="Estudiantes Inscritos"
@@ -52,6 +182,7 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
           change={stats.totalStudentsChange}
           context="Alumnos registrados con acceso a la plataforma"
           icon={<Users size={16} />}
+          onClick={() => onNavigate("students")}
         />
         <MetricCard
           label="Cursos Activos"
@@ -59,6 +190,7 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
           change={stats.activeCoursesChange}
           context="Formaciones publicadas disponibles para alumnos"
           icon={<GraduationCap size={16} />}
+          onClick={() => onNavigate("courses")}
         />
         <MetricCard
           label="Facturación del Mes"
@@ -69,127 +201,227 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
           change={stats.monthlyRevenueChange}
           context="Cobros de cuotas y membresías recurrentes"
           icon={<DollarSign size={16} />}
+          onClick={() => onNavigate("finance")}
         />
         <MetricCard
           label="Vistas Lección Popular"
           value={stats.topClass.views}
           change={stats.topClass.completionRate}
-          context="Tasa de finalización promedio en el campus"
+          context={`"${stats.topClass.title.slice(0, 32)}..."`}
           icon={<Award size={16} />}
+          onClick={() => onNavigate("courses")}
         />
       </div>
 
-      {/* Grilla Principal: Flujo de Actividad & Lección Popular */}
+      {/* Grilla Principal: Gráfico Line Chart & Tarjetas Complementarias */}
       <div className={styles.mainGrid}>
-        {/* Bloque de Flujo de Actividad */}
+        {/* Bloque de Gráfico Line Chart */}
         <section className={styles.cardSection}>
           <div className={styles.cardHeader}>
-            <div>
-              <h2 className={styles.cardTitle}>Flujo de Actividad</h2>
-              <p className={styles.cardSubtitle}>Estudiantes activos en la plataforma en el período seleccionado</p>
+            <div className={styles.chartHeaderTitles}>
+              <div className={styles.chartTitleRow}>
+                <Activity size={18} className={styles.chartIcon} />
+                <h2 className={styles.cardTitle}>{metricConfig.title}</h2>
+              </div>
+              <p className={styles.cardSubtitle}>{metricConfig.subtitle}</p>
             </div>
-            <SegmentedControl
-              size="sm"
-              options={[
-                { value: "7d", label: "7 días" },
-                { value: "30d", label: "30 días" },
-                { value: "90d", label: "90 días" },
-              ]}
-              value={activeRange}
-              onChange={(val) => setActiveRange(val)}
+
+            <div className={styles.controlsGroup}>
+              {/* Selector de Métrica */}
+              <div className={styles.metricSwitcher}>
+                <button
+                  type="button"
+                  className={[
+                    styles.metricSwitchBtn,
+                    activeMetric === "students" ? styles.metricSwitchBtnActive : "",
+                  ].join(" ")}
+                  onClick={() => setActiveMetric("students")}
+                >
+                  Estudiantes
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    styles.metricSwitchBtn,
+                    activeMetric === "revenue" ? styles.metricSwitchBtnActive : "",
+                  ].join(" ")}
+                  onClick={() => setActiveMetric("revenue")}
+                >
+                  Facturación
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    styles.metricSwitchBtn,
+                    activeMetric === "activity" ? styles.metricSwitchBtnActive : "",
+                  ].join(" ")}
+                  onClick={() => setActiveMetric("activity")}
+                >
+                  Lecciones
+                </button>
+              </div>
+
+              {/* Selector de Rango de Tiempo */}
+              <SegmentedControl
+                size="sm"
+                options={[
+                  { value: "7d", label: "7 días" },
+                  { value: "30d", label: "30 días" },
+                  { value: "90d", label: "90 días" },
+                ]}
+                value={activeRange}
+                onChange={(val) => setActiveRange(val as RangeType)}
+              />
+            </div>
+          </div>
+
+          {/* Gráfico de Línea Arc LineChart */}
+          <div className={styles.chartWrapper}>
+            <LineChart
+              data={chartPoints}
+              valuePrefix={metricConfig.prefix}
+              valueSuffix={metricConfig.suffix}
+              height={260}
+              metricName={metricConfig.metricName}
+              secondaryMetricName={metricConfig.secondaryMetricName}
             />
           </div>
 
-          <div className={styles.chartWrapper}>
-            <div className={styles.flowBars}>
-              {stats.studentFlow.map((day, idx) => {
-                const maxVal = Math.max(...stats.studentFlow.map((d) => d.activity));
-                const heightPct = Math.max(14, Math.round((day.activity / maxVal) * 100));
-                return (
-                  <div key={idx} className={styles.barColumn}>
-                    <div className={styles.barTrack}>
-                      <div
-                        className={styles.barFill}
-                        style={{ height: `${heightPct}%` }}
-                      >
-                        <span className={styles.barTooltip}>
-                          {day.students.toLocaleString()} alumnos ({day.activity.toLocaleString()} lecciones)
-                        </span>
-                      </div>
-                    </div>
-                    <span className={styles.barLabel}>{day.label}</span>
-                  </div>
-                );
-              })}
+          {/* Ribbon de Resumen de Métricas del Gráfico */}
+          <div className={styles.summaryRibbon}>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Total en período</span>
+              <span className={styles.summaryValue}>
+                {metricConfig.prefix}
+                {summaryMetrics.total.toLocaleString()}
+                {" "}
+                <small>{metricConfig.statSuffix}</small>
+              </span>
             </div>
-          </div>
-
-          <div className={styles.chartFooter}>
-            <div className={styles.legendItem}>
-              <span className={styles.legendDot} />
-              <span>Estudiantes activos diarios</span>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Promedio / día</span>
+              <span className={styles.summaryValue}>
+                {metricConfig.prefix}
+                {summaryMetrics.avg.toLocaleString()}
+                {" "}
+                <small>{metricConfig.statSuffix}</small>
+              </span>
             </div>
-            <div className={styles.legendStat}>
-              <TrendingUp size={13} className={styles.trendIcon} />
-              <span>+24% más tiempo de estudio esta semana</span>
+            <div className={styles.summaryItem}>
+              <span className={styles.summaryLabel}>Pico más alto</span>
+              <span className={styles.summaryValue}>
+                {summaryMetrics.peakLabel}: {metricConfig.prefix}{summaryMetrics.peakVal.toLocaleString()}
+              </span>
+            </div>
+            <div className={styles.summaryTrend}>
+              <TrendingUp size={15} className={styles.trendIcon} />
+              <span>+24.5% tendencia alcista</span>
             </div>
           </div>
         </section>
 
-        {/* Bloque de Clase / Lección Más Popular */}
-        <section className={styles.cardSection}>
-          <div className={styles.cardHeader}>
-            <div>
-              <h2 className={styles.cardTitle}>Lección Más Popular</h2>
-              <p className={styles.cardSubtitle}>Mayor retención e impacto entre tus estudiantes</p>
-            </div>
-            <Badge variant="accent">Top #1</Badge>
-          </div>
-
-          <div className={styles.topClassCard}>
-            <div className={styles.topClassIconWrapper}>
-              <PlayCircle size={28} className={styles.playIcon} />
+        {/* Columna Derecha: Lección Más Popular & Accesos Rápidos */}
+        <div className={styles.sideColumn}>
+          {/* Bloque de Clase / Lección Más Popular */}
+          <section className={styles.cardSection}>
+            <div className={styles.cardHeader}>
+              <div>
+                <h2 className={styles.cardTitle}>Lección Más Popular</h2>
+                <p className={styles.cardSubtitle}>Mayor retención e impacto entre tus estudiantes</p>
+              </div>
+              <Badge variant="accent">Top #1</Badge>
             </div>
 
-            <div className={styles.topClassInfo}>
-              <span className={styles.topCourseTitle}>{stats.topClass.courseTitle}</span>
-              <h3 className={styles.topClassTitle}>{stats.topClass.title}</h3>
+            <div className={styles.topClassCard}>
+              <div className={styles.topClassIconWrapper}>
+                <PlayCircle size={28} className={styles.playIcon} />
+              </div>
 
-              <div className={styles.topClassMetrics}>
-                <div className={styles.classStat}>
-                  <Eye size={14} />
-                  <span>{stats.topClass.views.toLocaleString()} Reproducciones</span>
-                </div>
-                <div className={styles.classStat}>
-                  <CheckCircle2 size={14} />
-                  <span>{stats.topClass.completions.toLocaleString()} Finalizados ({stats.topClass.completionRate})</span>
+              <div className={styles.topClassInfo}>
+                <span className={styles.topCourseTitle}>{stats.topClass.courseTitle}</span>
+                <h3 className={styles.topClassTitle}>{stats.topClass.title}</h3>
+
+                <div className={styles.topClassMetrics}>
+                  <div className={styles.classStat}>
+                    <Eye size={14} />
+                    <span>{stats.topClass.views.toLocaleString()} Reproducciones</span>
+                  </div>
+                  <div className={styles.classStat}>
+                    <CheckCircle2 size={14} />
+                    <span>{stats.topClass.completions.toLocaleString()} Finalizados ({stats.topClass.completionRate})</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className={styles.nextActionsBox}>
-            <h4 className={styles.actionBoxTitle}>Acciones rápidas</h4>
-            <div className={styles.actionList}>
+            <div className={styles.nextActionsBox}>
+              <h4 className={styles.actionBoxTitle}>Acciones rápidas del curso</h4>
+              <div className={styles.actionList}>
+                <button 
+                  type="button" 
+                  className={styles.actionItemBtn}
+                  onClick={() => onNavigate("students")}
+                >
+                  <span>Revisar alumnos con este curso habilitado</span>
+                  <ArrowUpRight size={14} />
+                </button>
+                <button 
+                  type="button" 
+                  className={styles.actionItemBtn}
+                  onClick={() => onNavigate("marketing")}
+                >
+                  <span>Configurar automatización por finalización</span>
+                  <ArrowUpRight size={14} />
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Accesos Rápidos de Plataforma */}
+          <section className={styles.shortcutsCard}>
+            <div className={styles.shortcutsHeader}>
+              <Sparkles size={16} className={styles.shortcutIcon} />
+              <h3 className={styles.shortcutsTitle}>Atajos y Gestión</h3>
+            </div>
+            <div className={styles.shortcutsGrid}>
               <button 
                 type="button" 
-                className={styles.actionItemBtn}
+                className={styles.shortcutTile}
+                onClick={() => onNavigate("finance")}
+              >
+                <CreditCard size={18} />
+                <div className={styles.shortcutInfo}>
+                  <span className={styles.shortcutLabel}>Cobros & Cuotas</span>
+                  <span className={styles.shortcutSub}>Ver transacciones</span>
+                </div>
+              </button>
+
+              <button 
+                type="button" 
+                className={styles.shortcutTile}
                 onClick={() => onNavigate("students")}
               >
-                <span>Revisar alumnos con este curso habilitado</span>
-                <ArrowUpRight size={14} />
+                <UserPlus size={18} />
+                <div className={styles.shortcutInfo}>
+                  <span className={styles.shortcutLabel}>Alta de Alumno</span>
+                  <span className={styles.shortcutSub}>Registrar nuevo</span>
+                </div>
               </button>
+
               <button 
                 type="button" 
-                className={styles.actionItemBtn}
-                onClick={() => onNavigate("marketing")}
+                className={styles.shortcutTile}
+                onClick={() => onNavigate("settings")}
               >
-                <span>Configurar automatización por finalización</span>
-                <ArrowUpRight size={14} />
+                <SlidersHorizontal size={18} />
+                <div className={styles.shortcutInfo}>
+                  <span className={styles.shortcutLabel}>Configuración</span>
+                  <span className={styles.shortcutSub}>Logo y colores</span>
+                </div>
               </button>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </div>
   );

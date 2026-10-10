@@ -1,5 +1,13 @@
 // Cliente API para comunicar con los endpoints REST de WordPress de Alezux Members
 
+export interface FlowDataPoint {
+  label: string;
+  students: number;
+  activity: number;
+  revenue?: number;
+  detail?: string;
+}
+
 export interface DashboardStats {
   totalStudents: number;
   totalStudentsChange: string;
@@ -15,11 +23,12 @@ export interface DashboardStats {
     completions: number;
     completionRate: string;
   };
-  studentFlow: {
-    label: string;
-    students: number;
-    activity: number;
-  }[];
+  studentFlow: FlowDataPoint[];
+  flowRanges?: {
+    "7d": FlowDataPoint[];
+    "30d": FlowDataPoint[];
+    "90d": FlowDataPoint[];
+  };
 }
 
 export interface Student {
@@ -194,7 +203,29 @@ export interface EmailLogItem {
   openedAt?: string | null;
 }
 
-// Datos Mock de respaldo (usados en Vite local dev o si la API de WP aún no tiene datos)
+const MOCK_FLOW_7D: FlowDataPoint[] = [
+  { label: "Lun", students: 780, activity: 1240, revenue: 1650, detail: "Lunes (Inicio de semana)" },
+  { label: "Mar", students: 890, activity: 1420, revenue: 1980, detail: "Martes" },
+  { label: "Mié", students: 1040, activity: 1890, revenue: 2340, detail: "Miércoles (Pico de estudio)" },
+  { label: "Jue", students: 1120, activity: 2010, revenue: 2510, detail: "Jueves" },
+  { label: "Vie", students: 990, activity: 1750, revenue: 2100, detail: "Viernes" },
+  { label: "Sáb", students: 1250, activity: 2400, revenue: 3100, detail: "Sábado (Fin de semana)" },
+  { label: "Dom", students: 1420, activity: 2850, revenue: 3750, detail: "Domingo (Máxima actividad)" },
+];
+
+const MOCK_FLOW_30D: FlowDataPoint[] = [
+  { label: "Sem 1", students: 2400, activity: 4800, revenue: 4200, detail: "Días 1 - 7" },
+  { label: "Sem 2", students: 2950, activity: 5600, revenue: 4900, detail: "Días 8 - 14" },
+  { label: "Sem 3", students: 3400, activity: 6200, revenue: 5350, detail: "Días 15 - 21" },
+  { label: "Sem 4", students: 4120, activity: 7900, revenue: 6100, detail: "Días 22 - 30" },
+];
+
+const MOCK_FLOW_90D: FlowDataPoint[] = [
+  { label: "Mes 1", students: 8200, activity: 16400, revenue: 14500, detail: "Primer mes del trimestre" },
+  { label: "Mes 2", students: 10500, activity: 21800, revenue: 17200, detail: "Segundo mes" },
+  { label: "Mes 3", students: 13900, activity: 28900, revenue: 21800, detail: "Tercer mes (Actual)" },
+];
+
 const MOCK_STATS: DashboardStats = {
   totalStudents: 1420,
   totalStudentsChange: "+12.4%",
@@ -210,15 +241,12 @@ const MOCK_STATS: DashboardStats = {
     completions: 3410,
     completionRate: "69.7%",
   },
-  studentFlow: [
-    { label: "Lun", students: 780, activity: 1240 },
-    { label: "Mar", students: 890, activity: 1420 },
-    { label: "Mié", students: 1040, activity: 1890 },
-    { label: "Jue", students: 1120, activity: 2010 },
-    { label: "Vie", students: 990, activity: 1750 },
-    { label: "Sáb", students: 1250, activity: 2400 },
-    { label: "Dom", students: 1420, activity: 2850 },
-  ],
+  studentFlow: MOCK_FLOW_7D,
+  flowRanges: {
+    "7d": MOCK_FLOW_7D,
+    "30d": MOCK_FLOW_30D,
+    "90d": MOCK_FLOW_90D,
+  },
 };
 
 const MOCK_COURSES: Course[] = [

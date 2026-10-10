@@ -16,6 +16,8 @@ export interface MetricCardProps {
   context?: string;
   change?: string;
   icon?: ReactNode;
+  onClick?: () => void;
+  className?: string;
 }
 
 export function MetricCard({
@@ -28,13 +30,20 @@ export function MetricCard({
   context,
   change,
   icon,
+  onClick,
+  className,
 }: MetricCardProps) {
   const isUp = change && /^[+]/.test(change);
   const isDown = change && /^[-−]/.test(change);
 
   return (
     <motion.article 
-      className={styles.card}
+      className={[
+        styles.card,
+        onClick ? styles.clickable : "",
+        className,
+      ].filter(Boolean).join(" ")}
+      onClick={onClick}
       whileHover={{ y: -3, transition: motionTokens.spring.snappy }}
     >
       <div className={styles.top}>

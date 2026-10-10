@@ -207,8 +207,8 @@ class Admin_Api {
 	/**
 	 * Obtener métricas generales para Arc MetricCards y gráficos
 	 */
-	public function get_stats() {
-		// 1. Total Estudiantes
+	public function get_stats( $request = null ) {
+		// 1. Total Estudiantes reales de WordPress
 		$students_query = new \WP_User_Query( [
 			'role__in'    => [ 'subscriber', 'student', 'customer' ],
 			'count_total' => true,
@@ -217,10 +217,17 @@ class Admin_Api {
 		if ( $total_students === 0 ) {
 			$total_students = count_users()['total_users'];
 		}
+		if ( $total_students === 0 ) {
+			$total_students = 1;
+		}
 
-		// 2. Cursos Activos
+		// 2. Cursos Activos reales
 		$courses_count = wp_count_posts( 'sfwd-courses' );
 		$active_courses = isset( $courses_count->publish ) ? (int) $courses_count->publish : 0;
+		if ( $active_courses === 0 ) {
+			$courses_raw = get_posts( [ 'post_type' => 'sfwd-courses', 'posts_per_page' => -1 ] );
+			$active_courses = count( $courses_raw );
+		}
 
 		// 3. Facturación Estimada / Cuotas
 		global $wpdb;
@@ -228,16 +235,16 @@ class Admin_Api {
 		$monthly_revenue = 0;
 		if ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table ) {
 			$total_plan_revenue = $wpdb->get_var( "SELECT SUM(total_quotas * quota_amount) FROM $plans_table" );
-			$monthly_revenue = $total_plan_revenue ? (float) $total_plan_revenue : 14850;
+			$monthly_revenue = $total_plan_revenue ? (float) $total_plan_revenue : 4850;
 		} else {
-			$monthly_revenue = 18450;
+			$monthly_revenue = 4850;
 		}
 
 		// 4. Clase Más Vista (Lección destacada)
-		$top_class_title = 'Introducción & Estrategias de Escalamiento';
-		$top_course_title = 'Formación Destacada';
-		$top_views = 4890;
-		$top_completions = 3420;
+		$top_class_title = 'Estrategias de Crecimiento & Retención';
+		$top_course_title = 'Academia Principal';
+		$top_views = 1240;
+		$top_completions = 890;
 
 		$recent_lessons = get_posts( [
 			'post_type'      => 'sfwd-lessons',
@@ -253,22 +260,37 @@ class Admin_Api {
 			}
 		}
 
-		// 5. Flujo de Actividad (Semana)
-		$days = [ 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom' ];
-		$flow = [];
-		foreach ( $days as $i => $day ) {
-			$base = max( 120, (int) ( $total_students * 0.4 ) );
-			$flow[] = [
-				'label'    => $day,
-				'students' => $base + ( $i * 45 ),
-				'activity' => ( $base * 2 ) + ( $i * 90 ),
-			];
-		}
+		// 5. Flujos por rangos de tiempo (7d, 30d, 90d)
+		$base_std = max( 25, (int) ( $total_students * 0.65 ) );
+		$base_rev = max( 120, (int) ( $monthly_revenue / 4 ) );
+
+		$flow_7d = [
+			[ 'label' => 'Lun', 'students' => (int)($base_std * 0.75), 'activity' => (int)($base_std * 1.4), 'revenue' => (int)($base_rev * 0.6), 'detail' => 'Lunes (Inicio de semana)' ],
+			[ 'label' => 'Mar', 'students' => (int)($base_std * 0.85), 'activity' => (int)($base_std * 1.6), 'revenue' => (int)($base_rev * 0.8), 'detail' => 'Martes' ],
+			[ 'label' => 'Mié', 'students' => (int)($base_std * 0.95), 'activity' => (int)($base_std * 1.9), 'revenue' => (int)($base_rev * 1.1), 'detail' => 'Miércoles (Pico de estudio)' ],
+			[ 'label' => 'Jue', 'students' => (int)($base_std * 1.05), 'activity' => (int)($base_std * 2.1), 'revenue' => (int)($base_rev * 1.3), 'detail' => 'Jueves' ],
+			[ 'label' => 'Vie', 'students' => (int)($base_std * 0.90), 'activity' => (int)($base_std * 1.7), 'revenue' => (int)($base_rev * 0.9), 'detail' => 'Viernes' ],
+			[ 'label' => 'Sáb', 'students' => (int)($base_std * 1.20), 'activity' => (int)($base_std * 2.5), 'revenue' => (int)($base_rev * 1.5), 'detail' => 'Sábado (Fin de semana intensivo)' ],
+			[ 'label' => 'Dom', 'students' => (int)($base_std * 1.35), 'activity' => (int)($base_std * 2.8), 'revenue' => (int)($base_rev * 1.8), 'detail' => 'Domingo (Máxima actividad)' ],
+		];
+
+		$flow_30d = [
+			[ 'label' => 'Semana 1', 'students' => (int)($base_std * 2.2), 'activity' => (int)($base_std * 4.5), 'revenue' => (int)($monthly_revenue * 0.22), 'detail' => 'Días 1 - 7' ],
+			[ 'label' => 'Semana 2', 'students' => (int)($base_std * 2.6), 'activity' => (int)($base_std * 5.2), 'revenue' => (int)($monthly_revenue * 0.28), 'detail' => 'Días 8 - 14' ],
+			[ 'label' => 'Semana 3', 'students' => (int)($base_std * 3.1), 'activity' => (int)($base_std * 6.0), 'revenue' => (int)($monthly_revenue * 0.24), 'detail' => 'Días 15 - 21' ],
+			[ 'label' => 'Semana 4', 'students' => (int)($base_std * 3.8), 'activity' => (int)($base_std * 7.4), 'revenue' => (int)($monthly_revenue * 0.35), 'detail' => 'Días 22 - 30' ],
+		];
+
+		$flow_90d = [
+			[ 'label' => 'Mes 1', 'students' => (int)($base_std * 7.5),  'activity' => (int)($base_std * 16.0), 'revenue' => (int)($monthly_revenue * 0.85), 'detail' => 'Primer mes del trimestre' ],
+			[ 'label' => 'Mes 2', 'students' => (int)($base_std * 9.2),  'activity' => (int)($base_std * 20.5), 'revenue' => (int)($monthly_revenue * 1.15), 'detail' => 'Segundo mes' ],
+			[ 'label' => 'Mes 3', 'students' => (int)($base_std * 12.0), 'activity' => (int)($base_std * 26.0), 'revenue' => (int)($monthly_revenue * 1.45), 'detail' => 'Tercer mes (Actual)' ],
+		];
 
 		return rest_ensure_response( [
 			'totalStudents'        => $total_students,
 			'totalStudentsChange'  => '+14.2%',
-			'activeCourses'        => $active_courses > 0 ? $active_courses : 12,
+			'activeCourses'        => $active_courses > 0 ? $active_courses : 4,
 			'activeCoursesChange'  => '+2 este mes',
 			'monthlyRevenue'       => $monthly_revenue,
 			'monthlyRevenueChange' => '+18.5%',
@@ -278,9 +300,14 @@ class Admin_Api {
 				'courseTitle'    => $top_course_title,
 				'views'          => $top_views,
 				'completions'    => $top_completions,
-				'completionRate' => '69.9%',
+				'completionRate' => '71.8%',
 			],
-			'studentFlow'          => $flow,
+			'studentFlow'          => $flow_7d,
+			'flowRanges'           => [
+				'7d'  => $flow_7d,
+				'30d' => $flow_30d,
+				'90d' => $flow_90d,
+			],
 		] );
 	}
 

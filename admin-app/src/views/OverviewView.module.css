@@ -35,6 +35,22 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.refreshBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Grid de Métricas con Arc MetricCard */
@@ -47,14 +63,21 @@
 /* Grilla principal */
 .mainGrid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
+  grid-template-columns: 1.7fr 1fr;
   gap: var(--space-5);
+  align-items: start;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1080px) {
   .mainGrid {
     grid-template-columns: 1fr;
   }
+}
+
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
 }
 
 .cardSection {
@@ -69,11 +92,28 @@
 
 .cardHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
   gap: var(--space-4);
   flex-wrap: wrap;
+}
+
+.chartHeaderTitles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chartTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chartIcon {
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .cardTitle {
@@ -90,120 +130,105 @@
   color: var(--text-muted);
 }
 
-/* Gráfico de flujo estilo Arc Metrics Dashboard */
-.chartWrapper {
-  flex: 1;
-  min-height: 200px;
+.controlsGroup {
   display: flex;
-  align-items: flex-end;
-  padding: var(--space-4) 0;
-}
-
-.flowBars {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  width: 100%;
-  height: 170px;
-  gap: var(--space-3);
-}
-
-.barColumn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  height: 100%;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
-.barTrack {
-  flex: 1;
-  width: 100%;
-  max-width: 28px;
+/* Selector de Métrica (Estudiantes / Facturación / Lecciones) */
+.metricSwitcher {
+  display: inline-flex;
+  align-items: center;
   background: var(--surface-muted);
-  border-radius: 6px;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
-  position: relative;
+  padding: 3px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border-subtle);
+  gap: 2px;
+}
+
+.metricSwitchBtn {
+  padding: 4px 10px;
+  border-radius: calc(var(--radius-control) - 3px);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  font-family: var(--font-body);
+}
+
+.metricSwitchBtn:hover {
+  color: var(--foreground);
+}
+
+.metricSwitchBtnActive {
+  background: var(--surface-raised);
+  color: var(--foreground);
+  font-weight: 600;
+  box-shadow: var(--shadow-resting);
   border: 1px solid var(--border-subtle);
 }
 
-.barFill {
+/* Gráfico de flujo estilo Arc Metrics Dashboard */
+.chartWrapper {
+  flex: 1;
   width: 100%;
-  background: var(--control-on, #8a66ff);
-  border-radius: 5px 5px 0 0;
-  transition: height var(--duration-standard) var(--ease-standard),
-              background var(--duration-fast);
-  position: relative;
-  cursor: pointer;
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) 0;
 }
 
-.barFill:hover {
-  background: var(--accent);
-}
-
-.barTooltip {
-  position: absolute;
-  top: -28px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface-raised);
-  color: var(--foreground);
-  padding: 3px 8px;
-  border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--duration-fast);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-raised);
-  z-index: 10;
-}
-
-.barFill:hover .barTooltip {
-  opacity: 1;
-}
-
-.barLabel {
-  margin-top: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.chartFooter {
+/* Ribbon de Resumen de Métricas */
+.summaryRibbon {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: var(--space-4);
   padding-top: var(--space-4);
   border-top: 1px solid var(--border-subtle);
-  font-size: var(--text-xs);
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summaryLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.summaryValue {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryValue small {
+  font-size: 11px;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
-.legendItem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.legendDot {
-  width: 8px;
-  height: 8px;
-  background: var(--control-on, #8a66ff);
-  border-radius: 50%;
-}
-
-.legendStat {
+.summaryTrend {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   color: var(--success);
-  font-weight: 500;
+  font-size: var(--text-xs);
+  font-weight: 600;
 }
 
 .trendIcon {
@@ -215,11 +240,11 @@
   background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);
-  padding: var(--space-5);
+  padding: var(--space-4);
   display: flex;
   align-items: flex-start;
-  gap: var(--space-4);
-  margin-bottom: var(--space-5);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .topClassIconWrapper {
@@ -228,39 +253,47 @@
   align-items: center;
   justify-content: center;
   background: var(--surface-raised);
-  padding: var(--space-3);
+  padding: var(--space-2);
   border-radius: var(--radius-control);
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .topClassInfo {
   flex: 1;
+  min-width: 0;
 }
 
 .topCourseTitle {
-  font-size: var(--text-xs);
+  font-size: 11px;
   color: var(--accent);
   font-weight: 600;
   display: block;
   margin-bottom: var(--space-1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .topClassTitle {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--foreground);
   line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topClassMetrics {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-3);
+  gap: var(--space-3);
+  margin-top: var(--space-2);
   font-size: var(--text-xs);
   color: var(--text-secondary);
+  flex-wrap: wrap;
 }
 
 .classStat {
@@ -295,7 +328,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 8px 12px;
   background: var(--surface-muted);
   border-radius: var(--radius-control);
   font-size: var(--text-xs);
@@ -309,6 +342,89 @@
 
 .actionItemBtn:hover {
   background: var(--surface-raised);
-  border-color: var(--border-strong);
+  border-color: var(--accent);
   color: var(--accent);
+}
+
+/* Tarjeta de Atajos Rápidos */
+.shortcutsCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-resting);
+}
+
+.shortcutsHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.shortcutIcon {
+  color: var(--accent);
+}
+
+.shortcutsTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.shortcutsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+@media (max-width: 640px) {
+  .shortcutsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.shortcutTile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  color: var(--foreground);
+  transition: all var(--duration-fast);
+  text-align: left;
+}
+
+.shortcutTile:hover {
+  background: var(--surface-raised);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.shortcutTile:hover .shortcutLabel {
+  color: var(--accent);
+}
+
+.shortcutInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shortcutLabel {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--foreground);
+  transition: color var(--duration-fast);
+}
+
+.shortcutSub {
+  font-size: 10px;
+  color: var(--text-muted);
 }
