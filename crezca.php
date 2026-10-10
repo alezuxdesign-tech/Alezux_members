@@ -201,10 +201,10 @@ add_action( 'elementor/elements/categories_registered', function( $elements_mana
  * Ocultar la barra de administración de WordPress en páginas de Crezca / Alezux y para estudiantes
  */
 add_filter( 'show_admin_bar', function( $show ) {
-    if ( is_admin() && isset( $_GET['page'] ) && in_array( $_GET['page'], [ 'crezca', 'alezux-members' ], true ) ) {
+    if ( function_exists( 'is_admin' ) && is_admin() && isset( $_GET['page'] ) && in_array( $_GET['page'], [ 'crezca', 'alezux-members' ], true ) ) {
         return false;
     }
-    if ( ! current_user_can( 'edit_posts' ) ) {
+    if ( function_exists( 'current_user_can' ) && ! current_user_can( 'edit_posts' ) ) {
         return false;
     }
     return $show;
