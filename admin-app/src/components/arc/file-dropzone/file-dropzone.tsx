@@ -27,6 +27,7 @@ export type FileDropzoneProps = {
   dropLabel?: string;
   compactAt?: number;
   className?: string;
+  showList?: boolean;
 };
 
 const MB = 1024 * 1024;
@@ -366,6 +367,7 @@ export function FileDropzone({
   dropLabel,
   compactAt,
   className,
+  showList = true,
 }: FileDropzoneProps) {
   const [items, setItems] = useState<FileDropzoneItem[]>(() => defaultItems ?? []);
   const [dragging, setDragging] = useState(false);
@@ -569,8 +571,13 @@ export function FileDropzone({
     const next = [...kept, ...added];
     setFreshIds((current) => new Set([...current, ...added.map((item) => item.id)]));
     setBatchStart(kept.length);
-    setItems((current) => (multiple ? [...current, ...added] : added));
-    onFilesChange?.(filesOf(next));
+    if (showList) {
+      setItems((current) => (multiple ? [...current, ...added] : added));
+      onFilesChange?.(filesOf(next));
+    } else {
+      setItems([]);
+      onFilesChange?.(filesOf(added));
+    }
     const failed = added.filter((item) => item.status === "failed");
     setAnnouncement(
       `${added.length} ${added.length === 1 ? "file" : "files"} added.${
@@ -774,7 +781,7 @@ export function FileDropzone({
             )}
           </AnimatePresence>
         </motion.button>
-        {inside && list}
+        {inside && showList && list}
       </div>
       <input
         ref={inputRef}
@@ -790,7 +797,7 @@ export function FileDropzone({
         }}
       />
       <AnimatePresence initial={false}>{error ? <ErrorRow key="error" text={error} /> : null}</AnimatePresence>
-      {!inside && list}
+      {!inside && showList && list}
       <span className={styles.srOnly} role="status" aria-live="polite">
         {announcement}
       </span>

@@ -361,6 +361,21 @@ export function CoursesView() {
     });
   };
 
+  const handleUpdateFileName = (fileIndex: number, newName: string) => {
+    if (!editingTopicState) return;
+    const updatedFiles = [...(editingTopicState.topic.files || [])];
+    if (updatedFiles[fileIndex]) {
+      updatedFiles[fileIndex] = { ...updatedFiles[fileIndex], name: newName };
+      setEditingTopicState({
+        ...editingTopicState,
+        topic: {
+          ...editingTopicState.topic,
+          files: updatedFiles,
+        },
+      });
+    }
+  };
+
   // --- DRAG AND DROP HANDLERS ---
   const handleDragStart = (sectionId: string, lessonIndex: number) => {
     setDraggedLesson({ sectionId, lessonIndex });
@@ -1056,6 +1071,7 @@ export function CoursesView() {
                 accept="image/*"
                 multiple={false}
                 maxFiles={1}
+                showList={false}
                 label={editingModuleCover.cover ? "Arrastra otra imagen para reemplazarla" : "Arrastra la imagen de portada aquí"}
                 description="o haz clic para buscar en tu equipo"
                 note="Recomendado: 1280x720 (16:9) - PNG, JPG, JPEG, WebP"
@@ -1176,10 +1192,11 @@ export function CoursesView() {
                 </div>
               </div>
 
-              {/* FileDropzone para subir recursos complementarios */}
+              {/* FileDropzone para subir recursos complementarios (sin lista interna duplicada) */}
               <FileDropzone
                 multiple={true}
                 maxFiles={10}
+                showList={false}
                 label="Arrastra archivos complementarios aquí"
                 description="o haz clic para buscarlos en tu equipo"
                 note="PDF, ZIP, DOCX, XLSX, plantillas, etc. (Máx. 50MB)"
@@ -1231,69 +1248,85 @@ export function CoursesView() {
                 }}
               />
 
-              {/* Lista de archivos actuales */}
+              {/* Lista única de archivos actuales con nombre editable */}
               {editingTopicState.topic.files && editingTopicState.topic.files.length > 0 && (
                 <div className={styles.filesList}>
                   {editingTopicState.topic.files.map((file, fIdx) => (
                     <div key={file.id || fIdx} className={styles.fileItem}>
                       <div className={styles.fileItemLeft}>
-                        <Paperclip size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
-                        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                          <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {file.name}
-                          </span>
-                          {file.size && (
-                            <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                              {file.size}
-                            </span>
-                          )}
+                        <div className={styles.fileIconWrap}>
+                          <Paperclip size={16} />
                         </div>
+                        <div className={styles.fileNameInputWrap}>
+                          <span className={styles.fileNameLabel}>Nombre para los alumnos:</span>
+                          <input
+                            type="text"
+                            className={styles.fileNameInput}
+                            value={file.name}
+                            onChange={(e) => handleUpdateFileName(fIdx, e.target.value)}
+                            placeholder="Nombre visible del archivo..."
+                            title="Haz clic para editar el nombre de este archivo"
+                          />
+                        </div>
+                      </div>
+
+                      <div className={styles.fileItemRight}>
+                        {file.size && (
+                          <span className={styles.fileSizeBadge}>
+                            {file.size}
+                          </span>
+                        )}
                         {file.url && (
                           <a
                             href={file.url}
                             target="_blank"
                             download={file.name}
                             rel="noopener noreferrer"
-                            className={styles.fileItemLink}
+                            className={styles.filePreviewBtn}
                             title="Descargar o previsualizar recurso"
                           >
-                            <ExternalLink size={13} />
+                            <ExternalLink size={13} /> Ver
                           </a>
                         )}
+                        <button
+                          type="button"
+                          className={styles.deleteBtn}
+                          onClick={() => handleRemoveFileFromTopic(fIdx)}
+                          title="Eliminar este archivo"
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        className={styles.deleteBtn}
-                        onClick={() => handleRemoveFileFromTopic(fIdx)}
-                        title="Eliminar este archivo"
-                      >
-                        <Trash2 size={14} />
-                      </button>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Opción para añadir recurso por enlace web */}
-              <div className={styles.addFileBox}>
-                <Input
-                  placeholder="Nombre: Ej: Guía PDF o Enlace Drive"
-                  value={newFileName}
-                  onChange={(e) => setNewFileName(e.target.value)}
-                />
-                <Input
-                  placeholder="URL: https://drive.google.com/..."
-                  value={newFileUrl}
-                  onChange={(e) => setNewFileUrl(e.target.value)}
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleAddFileToTopic}
-                  disabled={!newFileName.trim() || !newFileUrl.trim()}
-                >
-                  <Plus size={14} /> Añadir
-                </Button>
+              {/* Opción para añadir recurso por enlace externo (Drive, Dropbox, etc.) */}
+              <div className={styles.addFileSection}>
+                <div className={styles.addFileSectionHeader}>
+                  O vincula un recurso externo (Google Drive, Notion, Dropbox, OneDrive):
+                </div>
+                <div className={styles.addFileBox}>
+                  <Input
+                    placeholder="Nombre: Ej: Guía PDF en Drive"
+                    value={newFileName}
+                    onChange={(e) => setNewFileName(e.target.value)}
+                  />
+                  <Input
+                    placeholder="URL: https://drive.google.com/..."
+                    value={newFileUrl}
+                    onChange={(e) => setNewFileUrl(e.target.value)}
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleAddFileToTopic}
+                    disabled={!newFileName.trim() || !newFileUrl.trim()}
+                  >
+                    <Plus size={14} /> Añadir Enlace
+                  </Button>
+                </div>
               </div>
             </div>
           </Modal>
