@@ -44,15 +44,36 @@ if ( $course_id > 0 ) {
 	$course_post = get_post( $course_id );
 	if ( $course_post ) {
 		$course_title = get_the_title( $course_id );
-		$course_image = get_the_post_thumbnail_url( $course_id, 'full' );
+		
+		// 1. Meta _course_thumbnail (formato nativo de cursos Alezux)
+		$course_image = get_post_meta( $course_id, '_course_thumbnail', true );
+
+		// 2. Meta _course_banner
 		if ( empty( $course_image ) ) {
-			$course_image = get_the_post_thumbnail_url( $course_id, 'large' );
+			$course_image = get_post_meta( $course_id, '_course_banner', true );
 		}
+
+		// 3. Featured Image estándar de WordPress
+		if ( empty( $course_image ) ) {
+			$course_image = get_the_post_thumbnail_url( $course_id, 'full' );
+		}
+		if ( empty( $course_image ) ) {
+			$thumb_id = get_post_thumbnail_id( $course_id );
+			if ( $thumb_id ) {
+				$course_image = wp_get_attachment_image_url( $thumb_id, 'large' );
+			}
+		}
+
 		$excerpt = wp_strip_all_tags( get_the_excerpt( $course_id ) );
 		if ( ! empty( $excerpt ) ) {
 			$course_desc = $excerpt;
 		}
 	}
+}
+
+// Portada por defecto de alta calidad si no se ha subido una o es membresía completa
+if ( empty( $course_image ) ) {
+	$course_image = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1000&auto=format&fit=crop&q=80';
 }
 
 // 3. Cálculos y Modalidad del Plan
