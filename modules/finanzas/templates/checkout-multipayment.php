@@ -1,9 +1,13 @@
 <?php
 /**
- * Plantilla de Checkout Multipasarela - Alezux Members (Estilo Arc UI)
+ * Plantilla de Checkout Multipasarela - Alezux Members (Estilo Landing / Sales Checkout)
  *
- * Basado en la interfaz moderna de pago con radio cards interactivas,
- * resumen lateral de compra, iconos oficiales Lucide y tokens Arc UI.
+ * Página independiente de alta conversión para checkout directo desde landing pages:
+ * - Muestra el logo y nombre oficial de la academia.
+ * - Sin botones de retorno que provoquen fuga de alumnos.
+ * - Portada del curso destacada estilo ficha de ventas (hero mockup).
+ * - Radio cards interactivas con tokens de diseño Arc UI.
+ * - Iconos oficiales de la librería Lucide.
  *
  * @var object $plan
  * @var array  $settings
@@ -13,28 +17,45 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$site_name = get_bloginfo( 'name' );
-$site_logo = get_site_icon_url( 64 );
+// 1. Identidad de la Academia
+$academy_name = get_option( 'alezux_academy_name', '' );
+if ( empty( $academy_name ) ) {
+	$academy_name = get_bloginfo( 'name' );
+}
 
-// 1. Información del curso
-$course_id = (int) ( $plan->course_id ?? 0 );
+$academy_logo = get_option( 'alezux_academy_logo', '' );
+if ( empty( $academy_logo ) ) {
+	$custom_logo_id = get_theme_mod( 'custom_logo' );
+	if ( $custom_logo_id ) {
+		$academy_logo = wp_get_attachment_image_url( $custom_logo_id, 'full' );
+	}
+}
+if ( empty( $academy_logo ) ) {
+	$academy_logo = get_site_icon_url( 128 );
+}
+
+// 2. Información del Curso (Estilo Página de Ventas)
+$course_id    = (int) ( $plan->course_id ?? 0 );
 $course_title = 'Membresía All-Access (Todos los Cursos)';
 $course_image = '';
-$course_desc  = 'Acceso completo a todos los cursos y lecciones formativas de la academia.';
+$course_desc  = 'Acceso completo a todos los cursos, herramientas y contenidos formativos de la academia.';
 
 if ( $course_id > 0 ) {
 	$course_post = get_post( $course_id );
 	if ( $course_post ) {
 		$course_title = get_the_title( $course_id );
-		$course_image = get_the_post_thumbnail_url( $course_id, 'medium_large' );
-		$excerpt      = wp_strip_all_tags( get_the_excerpt( $course_id ) );
+		$course_image = get_the_post_thumbnail_url( $course_id, 'full' );
+		if ( empty( $course_image ) ) {
+			$course_image = get_the_post_thumbnail_url( $course_id, 'large' );
+		}
+		$excerpt = wp_strip_all_tags( get_the_excerpt( $course_id ) );
 		if ( ! empty( $excerpt ) ) {
 			$course_desc = $excerpt;
 		}
 	}
 }
 
-// 2. Datos y cálculos del plan
+// 3. Cálculos y Modalidad del Plan
 $plan_name        = esc_html( $plan->name );
 $quota_amount     = (float) $plan->quota_amount;
 $amount_formatted = number_format( $quota_amount, 2, '.', ',' );
@@ -46,32 +67,32 @@ if ( $total_quotas === 0 ) {
 	$price_badge     = '$' . $amount_formatted . ' USD / mes';
 	$total_pay_today = '$' . $amount_formatted . ' USD';
 } elseif ( $total_quotas === 1 ) {
-	$plan_type_label = 'Pago Único Completo';
+	$plan_type_label = 'Acceso Completo (Pago Único)';
 	$billing_summary = 'Acceso de por vida · Pago único';
 	$price_badge     = '$' . $amount_formatted . ' USD';
 	$total_pay_today = '$' . $amount_formatted . ' USD';
 } else {
 	$total_plan_calc = number_format( $total_quotas * $quota_amount, 2, '.', ',' );
 	$plan_type_label = 'Financiación en ' . $total_quotas . ' Cuotas';
-	$billing_summary = 'Cuota 1 de ' . $total_quotas . ' (Total: $' . $total_plan_calc . ' USD)';
+	$billing_summary = 'Cuota 1 de ' . $total_quotas . ' (Total del plan: $' . $total_plan_calc . ' USD)';
 	$price_badge     = '$' . $amount_formatted . ' USD / cuota';
 	$total_pay_today = '$' . $amount_formatted . ' USD';
 }
 
-// 3. WhatsApp para comprobantes
+// 4. WhatsApp para Comprobantes
 $whatsapp_raw   = ! empty( $plan->whatsapp_number ) ? $plan->whatsapp_number : ( $settings['whatsapp_number'] ?? '' );
 $whatsapp_clean = preg_replace( '/[^0-9]/', '', $whatsapp_raw );
-$whatsapp_msg   = '¡Hola! Acabo de realizar el pago de $' . $amount_formatted . ' USD para el plan "' . $plan->name . '" (' . $course_title . '). Adjunto mi comprobante para activar mi acceso a la academia. Mi correo es: ';
+$whatsapp_msg   = '¡Hola! Acabo de realizar el pago de $' . $amount_formatted . ' USD para el plan "' . $plan->name . '" (' . $course_title . '). Adjunto mi comprobante para que activen mi acceso a la academia. Mi correo es: ';
 $whatsapp_url   = ! empty( $whatsapp_clean ) ? 'https://wa.me/' . $whatsapp_clean . '?text=' . rawurlencode( $whatsapp_msg ) : '#';
 
 $instructions = ! empty( $settings['manual_payment_instructions'] )
 	? $settings['manual_payment_instructions']
-	: 'Transfiere el monto exacto y luego confirma tu comprobante por WhatsApp para activar tu acceso.';
+	: 'Transfiere el monto exacto y luego confirma tu comprobante por WhatsApp para activar tu acceso de inmediato.';
 
-// 4. Métodos de Pago Activos
+// 5. Pasarelas y Métodos Activos
 $methods = [];
 
-// Stripe (Tarjeta)
+// Stripe (Tarjetas)
 $stripe_sec = $settings['stripe_secret_key'] ?? get_option( 'alezux_stripe_secret_key', '' );
 if ( ! empty( $settings['stripe_enabled'] ) && ! empty( $stripe_sec ) && ! empty( $plan->stripe_price_id ) ) {
 	$methods['stripe'] = [
@@ -82,7 +103,7 @@ if ( ! empty( $settings['stripe_enabled'] ) && ! empty( $stripe_sec ) && ! empty
 		'is_stripe'   => true,
 		'cta_text'    => 'Pagar $' . $amount_formatted . ' USD con Tarjeta',
 		'action_url'  => add_query_arg( [ 'gateway' => 'stripe' ] ),
-		'description' => 'Pago 100% cifrado y seguro a través de Stripe Checkout. Tu acceso a las lecciones y módulos se activará de forma instantánea al completar la transacción.',
+		'description' => 'Pago 100% cifrado y seguro a través de Stripe Checkout. Tu acceso a las lecciones y módulos se activará de forma instantánea al procesar la compra.',
 	];
 }
 
@@ -111,7 +132,7 @@ if ( ! empty( $settings['pagomovil_enabled'] ) ) {
 			'Titular'      => $pm_holder,
 			'Monto Ref.'   => '$' . $amount_formatted . ' USD (a tasa oficial BCV del día)',
 		],
-		'notice'     => 'Realiza el pago móvil por el monto equivalente en bolívares a la tasa oficial del BCV.',
+		'notice'     => 'Realiza el pago móvil en bolívares a la tasa oficial del BCV del día.',
 	];
 }
 
@@ -135,7 +156,7 @@ if ( ! empty( $settings['zelle_enabled'] ) ) {
 			'Titular'      => $zelle_holder,
 			'Monto Exacto' => '$' . $amount_formatted . ' USD',
 		],
-		'notice'     => 'En el concepto o nota de Zelle coloca únicamente tu nombre o tu correo electrónico.',
+		'notice'     => 'En el concepto o nota de Zelle, coloca únicamente tu nombre o tu correo electrónico.',
 	];
 }
 
@@ -147,10 +168,12 @@ if ( ! empty( $settings['bank_transfer_enabled'] ) ) {
 	$bt_holder = $settings['bank_holder_name'] ?? '';
 	$bt_id     = $settings['bank_holder_id'] ?? '';
 
+	$bt_copy = "Transferencia Bancaria:\nBanco: {$bt_bank}\nCuenta: {$bt_acc}\nTipo: {$bt_type}\nTitular: {$bt_holder}\nID/RIF: {$bt_id}";
+
 	$methods['bank_transfer'] = [
 		'id'         => 'bank_transfer',
 		'title'      => 'Transferencia Bancaria',
-		'subtitle'   => $bt_bank ? $bt_bank : 'Cuenta Bancaria Local',
+		'subtitle'   => $bt_bank ? $bt_bank : 'Cuenta Bancaria',
 		'badge_type' => 'bank',
 		'is_manual'  => true,
 		'cta_text'   => 'Confirmar Pago por WhatsApp ($' . $amount_formatted . ' USD)',
@@ -219,7 +242,7 @@ if ( ! empty( $settings['paypal_enabled'] ) ) {
 	];
 }
 
-// Método seleccionado por defecto (el primero de la lista)
+// Método activo inicial
 $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 ?>
 <!DOCTYPE html>
@@ -227,9 +250,9 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Checkout — <?php echo esc_html( $plan->name ); ?> | <?php echo esc_html( $site_name ); ?></title>
-	<?php if ( $site_logo ) : ?>
-		<link rel="icon" href="<?php echo esc_url( $site_logo ); ?>" type="image/x-icon">
+	<title>Checkout Oficial — <?php echo esc_html( $plan->name ); ?> | <?php echo esc_html( $academy_name ); ?></title>
+	<?php if ( $academy_logo ) : ?>
+		<link rel="icon" href="<?php echo esc_url( $academy_logo ); ?>" type="image/x-icon">
 	<?php endif; ?>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -237,7 +260,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 	
 	<style>
 		/* ========================================================
-		   TOKENS DE DISEÑO ARC UI (Dark Fintech Edition)
+		   TOKENS DE DISEÑO ARC UI (Standalone Landing Checkout)
 		   ======================================================== */
 		:root {
 			color-scheme: dark;
@@ -249,7 +272,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			--arc-border-strong: rgba(255, 255, 255, 0.16);
 			--arc-border-input: #27272a;
 			
-			/* Acento vibrante estilo fintech (verde lima/neón como en la referencia) */
+			/* Acento vibrante estilo fintech (verde lima/neón de referencia) */
 			--arc-accent: #bef264;
 			--arc-accent-dim: rgba(190, 242, 100, 0.12);
 			--arc-accent-border: #a3e635;
@@ -258,9 +281,6 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			--arc-text-primary: #f4f4f5;
 			--arc-text-secondary: #a1a1aa;
 			--arc-text-muted: #71717a;
-			
-			--arc-whatsapp: #25D366;
-			--arc-whatsapp-hover: #22c05b;
 
 			--radius-control: 12px;
 			--radius-card: 20px;
@@ -287,10 +307,62 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			line-height: 1.45;
 		}
 
-		.checkout-layout {
-			max-width: 1080px;
+		/* ========================================================
+		   CABECERA OFICIAL DE LA ACADEMIA (Sin fugas de navegación)
+		   ======================================================== */
+		.checkout-brand-header {
+			width: 100%;
+			max-width: 1120px;
 			margin: 0 auto;
-			padding: 40px 24px 80px;
+			padding: 32px 24px 20px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			border-bottom: 1px solid var(--arc-border);
+		}
+
+		.brand-identity {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+		}
+
+		.academy-logo-img {
+			height: 38px;
+			max-width: 180px;
+			object-fit: contain;
+			border-radius: 8px;
+		}
+
+		.academy-name-text {
+			font-size: 1.15rem;
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			color: #fff;
+		}
+
+		.secure-badge-pill {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			padding: 6px 14px;
+			border-radius: var(--radius-pill);
+			background: rgba(163, 230, 53, 0.08);
+			border: 1px solid rgba(163, 230, 53, 0.25);
+			color: var(--arc-accent);
+			font-size: 0.78rem;
+			font-weight: 600;
+		}
+
+		.secure-badge-pill svg {
+			flex-shrink: 0;
+		}
+
+		/* Layout Contenedor */
+		.checkout-layout {
+			max-width: 1120px;
+			margin: 0 auto;
+			padding: 36px 24px 80px;
 			width: 100%;
 			flex: 1;
 		}
@@ -303,7 +375,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			align-items: start;
 		}
 
-		@media (max-width: 920px) {
+		@media (max-width: 960px) {
 			.checkout-grid {
 				grid-template-columns: 1fr;
 				gap: 36px;
@@ -311,44 +383,12 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 		}
 
 		/* ========================================================
-		   COLUMNA IZQUIERDA: MÉTODOS DE PAGO
+		   COLUMNA IZQUIERDA: SELECCIÓN DE MÉTODO DE PAGO
 		   ======================================================== */
 		.payment-column {
 			display: flex;
 			flex-direction: column;
-			gap: 24px;
-		}
-
-		.checkout-top-nav {
-			display: flex;
-			align-items: center;
-			gap: 14px;
-		}
-
-		.arc-back-btn {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			width: 36px;
-			height: 36px;
-			border-radius: 10px;
-			background: var(--arc-surface);
-			border: 1px solid var(--arc-border);
-			color: var(--arc-text-secondary);
-			text-decoration: none;
-			transition: var(--transition);
-		}
-
-		.arc-back-btn:hover {
-			color: var(--arc-text-primary);
-			border-color: var(--arc-border-strong);
-			background: var(--arc-surface-subtle);
-		}
-
-		.checkout-heading {
-			font-size: 1.75rem;
-			font-weight: 700;
-			letter-spacing: -0.03em;
+			gap: 22px;
 		}
 
 		.section-header {
@@ -358,17 +398,17 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 		}
 
 		.section-title {
-			font-size: 1.125rem;
-			font-weight: 600;
-			letter-spacing: -0.01em;
+			font-size: 1.5rem;
+			font-weight: 700;
+			letter-spacing: -0.02em;
 		}
 
 		.section-subtitle {
-			font-size: 0.875rem;
+			font-size: 0.88rem;
 			color: var(--arc-text-muted);
 		}
 
-		/* Radio Cards List */
+		/* Lista de Tarjetas de Pago */
 		.methods-list {
 			display: flex;
 			flex-direction: column;
@@ -389,11 +429,11 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			background: #151519;
 		}
 
-		/* Estado Seleccionado: Borde de Acento Lime / Arc UI */
+		/* Estado Activo: Borde Verde Lima / Arc UI */
 		.method-card.is-active {
 			border-color: var(--arc-accent-border);
 			background: var(--arc-surface);
-			box-shadow: 0 0 0 1px var(--arc-accent-border), 0 8px 24px rgba(0, 0, 0, 0.35);
+			box-shadow: 0 0 0 1px var(--arc-accent-border), 0 8px 24px rgba(0, 0, 0, 0.4);
 		}
 
 		.card-header-row {
@@ -410,7 +450,6 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			gap: 14px;
 		}
 
-		/* Radio Custom Circle */
 		.arc-radio {
 			width: 20px;
 			height: 20px;
@@ -486,10 +525,10 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 		.brand-pill.visa { background: #00579f; color: #fff; border: none; }
 		.brand-pill.mc { background: #eb001b; color: #fff; border: none; }
 		.brand-pill.amex { background: #007bc1; color: #fff; border: none; }
-		.brand-pill.pp { background: #003087; color: #0079C1; font-weight: 900; background: #fff; border: none; }
+		.brand-pill.pp { background: #fff; color: #003087; font-weight: 900; border: none; }
 		.brand-pill.crypto { background: #f59e0b; color: #000; border: none; }
 
-		/* Contenido Desplegado del Card Seleccionado */
+		/* Contenido Desplegado del Card Activo */
 		.card-expanded-body {
 			display: none;
 			padding: 0 20px 20px;
@@ -639,125 +678,191 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 		}
 
 		/* ========================================================
-		   COLUMNA DERECHA: RESUMEN DE COMPRA (SUMMARY)
+		   COLUMNA DERECHA: RESUMEN DEL CURSO (Sales Page Style)
 		   ======================================================== */
 		.summary-column {
 			background: var(--arc-surface);
 			border: 1px solid var(--arc-border);
 			border-radius: 24px;
-			padding: 28px;
+			padding: 24px;
 			display: flex;
 			flex-direction: column;
-			gap: 24px;
+			gap: 20px;
 			position: sticky;
 			top: 24px;
 		}
 
+		.summary-header-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
 		.summary-title {
-			font-size: 1.25rem;
+			font-size: 1.15rem;
 			font-weight: 700;
 			letter-spacing: -0.02em;
 		}
 
-		/* Tarjeta interna del producto */
-		.product-card {
-			background: var(--arc-surface-subtle);
-			border: 1px solid var(--arc-border);
-			border-radius: 16px;
-			padding: 14px;
-			display: flex;
-			flex-direction: column;
-			gap: 14px;
+		.summary-pill {
+			font-size: 0.72rem;
+			font-weight: 600;
+			padding: 4px 10px;
+			border-radius: var(--radius-pill);
+			background: rgba(255, 255, 255, 0.06);
+			color: var(--arc-text-secondary);
 		}
 
-		.product-thumb {
+		/* Tarjeta Hero / Portada del Curso */
+		.sales-product-card {
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+		}
+
+		.course-hero-cover {
+			position: relative;
 			width: 100%;
-			height: 180px;
+			height: 200px;
+			border-radius: 14px;
+			overflow: hidden;
+			border: 1px solid var(--arc-border);
+			background: linear-gradient(135deg, #18181c 0%, #27272a 100%);
+		}
+
+		.course-cover-img {
+			width: 100%;
+			height: 100%;
 			object-fit: cover;
+			transition: transform 0.3s ease;
+		}
+
+		.course-cover-wrap:hover .course-cover-img {
+			transform: scale(1.02);
+		}
+
+		.course-cover-placeholder {
+			width: 100%;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			color: var(--arc-text-muted);
+			padding: 20px;
+			text-align: center;
+		}
+
+		.course-cover-placeholder svg {
+			color: var(--arc-accent);
+		}
+
+		.sales-cover-badge {
+			position: absolute;
+			top: 12px;
+			left: 12px;
+			background: rgba(9, 9, 11, 0.85);
+			backdrop-filter: blur(8px);
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			color: #fff;
+			padding: 4px 10px;
+			border-radius: 6px;
+			font-size: 0.72rem;
+			font-weight: 700;
+			letter-spacing: 0.03em;
+			text-transform: uppercase;
+		}
+
+		.sales-product-info {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.sales-category-tag {
+			font-size: 0.75rem;
+			font-weight: 600;
+			color: var(--arc-accent);
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+		}
+
+		.sales-course-title {
+			font-size: 1.15rem;
+			font-weight: 800;
+			color: #fff;
+			line-height: 1.35;
+			letter-spacing: -0.02em;
+		}
+
+		.sales-plan-name {
+			font-size: 0.88rem;
+			color: var(--arc-text-secondary);
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			flex-wrap: wrap;
+		}
+
+		.highlight-badge {
+			background: var(--arc-surface-raised);
+			border: 1px solid var(--arc-border);
+			padding: 2px 8px;
+			border-radius: 6px;
+			font-size: 0.75rem;
+			color: #fff;
+			font-weight: 600;
+		}
+
+		.sales-course-desc {
+			font-size: 0.84rem;
+			color: var(--arc-text-muted);
+			line-height: 1.5;
+			margin-top: 4px;
+		}
+
+		/* Value Stack / Beneficios */
+		.sales-features-list {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			background: var(--arc-surface-subtle);
+			padding: 14px;
 			border-radius: 12px;
 			border: 1px solid var(--arc-border);
 		}
 
-		.product-info-row {
-			display: flex;
-			justify-content: space-between;
-			align-items: flex-start;
-			gap: 12px;
-		}
-
-		.product-meta {
-			display: flex;
-			flex-direction: column;
-			gap: 4px;
-		}
-
-		.product-title {
-			font-size: 1rem;
-			font-weight: 700;
-			color: var(--arc-text-primary);
-			line-height: 1.35;
-		}
-
-		.product-badge {
-			display: inline-flex;
-			align-items: center;
-			gap: 6px;
-			font-size: 0.78rem;
-			color: var(--arc-text-secondary);
-		}
-
-		.product-badge::before {
-			content: "";
-			width: 6px;
-			height: 6px;
-			border-radius: 50%;
-			background: var(--arc-accent);
-		}
-
-		.product-price {
-			font-size: 1.05rem;
-			font-weight: 700;
-			color: var(--arc-text-primary);
-			white-space: nowrap;
-		}
-
-		/* Features List (Estilo Referencia) */
-		.summary-features {
-			display: flex;
-			flex-direction: column;
-			gap: 12px;
-		}
-
-		.feature-item {
+		.sales-feature-item {
 			display: flex;
 			align-items: center;
 			gap: 10px;
-			font-size: 0.85rem;
+			font-size: 0.82rem;
 			color: var(--arc-text-secondary);
 		}
 
-		.feature-item svg {
+		.sales-feature-item svg {
 			color: var(--arc-accent);
 			flex-shrink: 0;
 		}
 
-		.summary-divider {
+		.sales-divider {
 			height: 1px;
 			background: var(--arc-border);
 		}
 
-		/* Desglose de Precios */
+		/* Tabla de Desglose */
 		.breakdown-table {
 			display: flex;
 			flex-direction: column;
-			gap: 10px;
+			gap: 8px;
 		}
 
 		.breakdown-row {
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
-			font-size: 0.875rem;
+			font-size: 0.85rem;
 		}
 
 		.breakdown-label {
@@ -771,82 +876,91 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 		}
 
 		.total-row {
-			margin-top: 6px;
-			padding-top: 14px;
+			margin-top: 4px;
+			padding-top: 12px;
 			border-top: 1px solid var(--arc-border);
 		}
 
 		.total-label {
-			font-size: 1rem;
-			font-weight: 600;
-			color: var(--arc-text-primary);
+			font-size: 0.95rem;
+			font-weight: 700;
+			color: #fff;
 		}
 
 		.total-amount {
-			font-size: 1.6rem;
+			font-size: 1.5rem;
 			font-weight: 800;
 			letter-spacing: -0.03em;
 			color: #fff;
 			font-variant-numeric: tabular-nums;
 		}
 
-		/* Instrucciones Generales */
+		/* Instrucciones */
 		.instructions-card {
 			background: var(--arc-surface-subtle);
 			border: 1px solid var(--arc-border);
 			border-radius: 12px;
 			padding: 12px 14px;
-			font-size: 0.82rem;
+			font-size: 0.8rem;
 			color: var(--arc-text-secondary);
 			line-height: 1.45;
+		}
+
+		.instructions-title {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			font-weight: 600;
+			color: var(--arc-text-primary);
+			margin-bottom: 4px;
 		}
 
 		/* Footer */
 		.checkout-page-footer {
 			margin-top: 60px;
 			text-align: center;
-			font-size: 0.82rem;
+			font-size: 0.8rem;
 			color: var(--arc-text-muted);
 			display: flex;
 			flex-direction: column;
-			gap: 8px;
+			gap: 6px;
 			align-items: center;
-		}
-
-		.footer-back-link {
-			color: var(--arc-text-secondary);
-			text-decoration: none;
-			transition: var(--transition);
-		}
-
-		.footer-back-link:hover {
-			color: var(--arc-text-primary);
 		}
 	</style>
 </head>
 <body>
+
+	<!-- ========================================================
+	     CABECERA OFICIAL DE LA ACADEMIA (Landing Checkout)
+	     ======================================================== -->
+	<header class="checkout-brand-header">
+		<div class="brand-identity">
+			<?php if ( ! empty( $academy_logo ) ) : ?>
+				<img src="<?php echo esc_url( $academy_logo ); ?>" alt="<?php echo esc_attr( $academy_name ); ?>" class="academy-logo-img">
+			<?php else : ?>
+				<span class="academy-name-text"><?php echo esc_html( $academy_name ); ?></span>
+			<?php endif; ?>
+		</div>
+
+		<div class="secure-badge-pill">
+			<!-- Lucide ShieldCheck -->
+			<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+			<span>Checkout Seguro · SSL 256-bit</span>
+		</div>
+	</header>
 
 	<div class="checkout-layout">
 		
 		<div class="checkout-grid">
 
 			<!-- ========================================================
-			     COLUMNA IZQUIERDA: SELECCIÓN DE MÉTODO DE PAGO
+			     COLUMNA IZQUIERDA: FORMULARIO Y MÉTODOS DE PAGO
 			     ======================================================== -->
 			<div class="payment-column">
 				
-				<!-- Navegación y Título de Cabecera -->
-				<div class="checkout-top-nav">
-					<a href="<?php echo esc_url( home_url() ); ?>" class="arc-back-btn" title="Volver a la academia">
-						<!-- Lucide ArrowLeft -->
-						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-					</a>
-					<h1 class="checkout-heading">Checkout</h1>
-				</div>
-
 				<div class="section-header">
-					<h2 class="section-title">Método de pago</h2>
-					<p class="section-subtitle">Elige tu forma de pago preferida para formalizar tu inscripción.</p>
+					<h1 class="section-title">Completar Inscripción</h1>
+					<p class="section-subtitle">Selecciona tu método de pago preferido para formalizar tu acceso.</p>
 				</div>
 
 				<!-- Lista de Radio Cards de Pago -->
@@ -939,7 +1053,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 
 					</div>
 
-					<!-- Botón de Acción Principal Dinámico (Lime / Accent Button) -->
+					<!-- Botón de Acción Principal Dinámico (Lime Button) -->
 					<div class="arc-cta-container">
 						<a 
 							href="<?php echo esc_url( $methods[$active_method_id]['action_url'] ?? '#' ); ?>" 
@@ -953,12 +1067,12 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 						<div class="secure-footer-badge">
 							<!-- Lucide Lock -->
 							<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-							<span>Pago Seguro · Encriptado SSL · Verificado</span>
+							<span>Transacción Segura y Privada · Activación Inmediata</span>
 						</div>
 					</div>
 
 				<?php else : ?>
-					<div class="product-card" style="text-align: center; padding: 32px 20px;">
+					<div class="sales-product-card" style="text-align: center; padding: 32px 20px;">
 						<p style="color: var(--arc-text-secondary); margin-bottom: 12px;">Actualmente no hay pasarelas de pago configuradas.</p>
 						<a href="<?php echo esc_url( $whatsapp_url ); ?>" class="arc-btn-primary" target="_blank" rel="noopener noreferrer">
 							<span>Contactar vía WhatsApp</span>
@@ -969,113 +1083,130 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : null;
 			</div>
 
 			<!-- ========================================================
-			     COLUMNA DERECHA: RESUMEN DE COMPRA (SUMMARY)
+			     COLUMNA DERECHA: FICHA DEL CURSO (Sales Page Style)
 			     ======================================================== -->
 			<aside class="summary-column">
 				
-				<h2 class="summary-title">Resumen de compra</h2>
+				<div class="summary-header-row">
+					<h2 class="summary-title">Resumen de compra</h2>
+					<span class="summary-pill">Acceso Inmediato</span>
+				</div>
 
-				<!-- Tarjeta interna del curso / producto -->
-				<div class="product-card">
-					<?php if ( $course_image ) : ?>
-						<img src="<?php echo esc_url( $course_image ); ?>" alt="<?php echo esc_attr( $course_title ); ?>" class="product-thumb">
+				<div class="sales-product-card">
+					<!-- Portada del Curso como Hero Mockup -->
+					<div class="course-hero-cover">
+						<?php if ( ! empty( $course_image ) ) : ?>
+							<img src="<?php echo esc_url( $course_image ); ?>" alt="<?php echo esc_attr( $course_title ); ?>" class="course-cover-img">
+						<?php else : ?>
+							<div class="course-cover-placeholder">
+								<!-- Lucide GraduationCap -->
+								<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
+								<span style="font-weight: 600; font-size: 0.9rem; color: #fff;"><?php echo esc_html( $course_title ); ?></span>
+							</div>
+						<?php endif; ?>
+						<span class="sales-cover-badge">Formación Certificada</span>
+					</div>
+
+					<!-- Datos del Producto -->
+					<div class="sales-product-info">
+						<span class="sales-category-tag">Programa Formativo Oficial</span>
+						<h3 class="sales-course-title"><?php echo esc_html( $course_title ); ?></h3>
+						<div class="sales-plan-name">
+							<span><?php echo esc_html( $plan->name ); ?></span>
+							<span class="highlight-badge"><?php echo esc_html( $plan_type_label ); ?></span>
+						</div>
+						
+						<?php if ( ! empty( $course_desc ) ) : ?>
+							<p class="sales-course-desc"><?php echo esc_html( $course_desc ); ?></p>
+						<?php endif; ?>
+					</div>
+
+					<!-- Value Stack (Lo que incluye el acceso) con Iconos Lucide -->
+					<div class="sales-features-list">
+						<div class="sales-feature-item">
+							<!-- Lucide GraduationCap -->
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
+							<span>Acceso inmediato a la plataforma educativa</span>
+						</div>
+
+						<div class="sales-feature-item">
+							<!-- Lucide Zap -->
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+							<span>Módulos y lecciones en video HD actualizadas</span>
+						</div>
+
+						<div class="sales-feature-item">
+							<!-- Lucide MessageCircle -->
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+							<span>Canal de soporte y atención a consultas</span>
+						</div>
+
+						<div class="sales-feature-item">
+							<!-- Lucide ShieldCheck -->
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+							<span>Garantía de activación y soporte 100% oficial</span>
+						</div>
+					</div>
+
+					<div class="sales-divider"></div>
+
+					<!-- Desglose de Precios -->
+					<div class="breakdown-table">
+						<div class="breakdown-row">
+							<span class="breakdown-label">Plan seleccionado</span>
+							<span class="breakdown-value"><?php echo esc_html( $plan->name ); ?></span>
+						</div>
+
+						<div class="breakdown-row">
+							<span class="breakdown-label">Modalidad</span>
+							<span class="breakdown-value"><?php echo esc_html( $billing_summary ); ?></span>
+						</div>
+
+						<div class="breakdown-row total-row">
+							<span class="total-label">Total a pagar hoy</span>
+							<span class="total-amount"><?php echo esc_html( $total_pay_today ); ?></span>
+						</div>
+					</div>
+
+					<?php if ( ! empty( $instructions ) ) : ?>
+						<div class="instructions-card">
+							<div class="instructions-title">
+								<!-- Lucide Info -->
+								<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+								<span>Instrucciones de activación</span>
+							</div>
+							<p><?php echo nl2br( esc_html( $instructions ) ); ?></p>
+						</div>
 					<?php endif; ?>
-					
-					<div class="product-info-row">
-						<div class="product-meta">
-							<span class="product-title"><?php echo esc_html( $course_title ); ?></span>
-							<span class="product-badge"><?php echo esc_html( $plan_type_label ); ?></span>
-						</div>
-						<div class="product-price">
-							<?php echo $price_badge; ?>
-						</div>
-					</div>
-				</div>
 
-				<!-- Beneficios incluidos con Iconos Lucide -->
-				<div class="summary-features">
-					<div class="feature-item">
-						<!-- Lucide GraduationCap -->
-						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
-						<span>Acceso inmediato al aula virtual</span>
-					</div>
-
-					<div class="feature-item">
-						<!-- Lucide Zap -->
-						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-						<span>Módulos y lecciones en video HD</span>
-					</div>
-
-					<div class="feature-item">
-						<!-- Lucide MessageCircle -->
-						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
-						<span>Soporte directo por WhatsApp</span>
-					</div>
-
-					<div class="feature-item">
-						<!-- Lucide ShieldCheck -->
-						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
-						<span>Garantía de activación inmediata</span>
-					</div>
-				</div>
-
-				<div class="summary-divider"></div>
-
-				<!-- Desglose de Precios -->
-				<div class="breakdown-table">
-					<div class="breakdown-row">
-						<span class="breakdown-label">Plan seleccionado</span>
-						<span class="breakdown-value"><?php echo esc_html( $plan->name ); ?></span>
-					</div>
-
-					<div class="breakdown-row">
-						<span class="breakdown-label">Modalidad</span>
-						<span class="breakdown-value"><?php echo esc_html( $billing_summary ); ?></span>
-					</div>
-
-					<div class="breakdown-row total-row">
-						<span class="total-label">Total a pagar hoy</span>
-						<span class="total-amount"><?php echo esc_html( $total_pay_today ); ?></span>
-					</div>
-				</div>
-
-				<!-- Instrucciones de Confirmación -->
-				<div class="instructions-card">
-					<p><?php echo nl2br( esc_html( $instructions ) ); ?></p>
 				</div>
 
 			</aside>
 
 		</div>
 
-		<!-- Footer -->
+		<!-- Footer sin fugas de enlace -->
 		<footer class="checkout-page-footer">
-			<a href="<?php echo esc_url( home_url() ); ?>" class="footer-back-link">← Volver a <?php echo esc_html( $site_name ); ?></a>
-			<span>&copy; <?php echo date( 'Y' ); ?> <?php echo esc_html( $site_name ); ?>. Todos los derechos reservados.</span>
+			<span>&copy; <?php echo date( 'Y' ); ?> <?php echo esc_html( $academy_name ); ?>. Todos los derechos reservados.</span>
+			<span style="opacity: 0.6;">Plataforma de pagos segura y encriptada para estudiantes.</span>
 		</footer>
 
 	</div>
 
-	<!-- ========================================================
-	     SCRIPT INTERACTIVO CON RADIO ACCORDION & COPIADO
-	     ======================================================== -->
+	<!-- Script Interactivo de Selección y Copiado -->
 	<script>
-		// Datos dinámicos de los métodos para actualizar el botón principal
 		var methodsData = <?php echo json_encode( $methods ); ?>;
 
 		function selectMethod(methodKey) {
-			// Remover clase activa de todos los cards
 			document.querySelectorAll('.method-card').forEach(function(card) {
 				card.classList.remove('is-active');
 			});
 
-			// Activar card seleccionado
 			var activeCard = document.getElementById('card-' + methodKey);
 			if (activeCard) {
 				activeCard.classList.add('is-active');
 			}
 
-			// Actualizar botón principal CTA
 			var data = methodsData[methodKey];
 			if (data) {
 				var btn = document.getElementById('arc-main-cta');
