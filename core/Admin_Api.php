@@ -1518,6 +1518,23 @@ class Admin_Api {
 			$is_membership = ( (int) $row->total_quotas === 0 );
 			$plan_type = $is_membership ? 'subscription' : ( (int) $row->total_quotas === 1 ? 'one_time' : 'installments' );
 
+			// Auto-reparar fecha de próximo cobro si la suscripción está activa y tiene cuotas pendientes o es membresía
+			if ( $row->status === 'active' && empty( $row->next_payment_date ) ) {
+				$has_pending_quotas = ( $is_membership || (int) $row->total_quotas > (int) $row->quotas_paid );
+				if ( $has_pending_quotas ) {
+					$base_time = ! empty( $row->last_payment_date ) ? strtotime( $row->last_payment_date ) : strtotime( $row->created_at );
+					if ( ! $base_time ) {
+						$base_time = time();
+					}
+					$freq = ! empty( $row->frequency ) ? $row->frequency : 'month';
+					$interval = ( $freq === 'year' ) ? '+1 year' : ( ( $freq === 'week' ) ? '+1 week' : '+1 month' );
+					$calc_date = date( 'Y-m-d H:i:s', strtotime( $interval, $base_time ) );
+
+					$wpdb->update( $t_subs, [ 'next_payment_date' => $calc_date ], [ 'id' => $row->id ] );
+					$row->next_payment_date = $calc_date;
+				}
+			}
+
 			$next_payment = '—';
 			if ( $row->status === 'active' && $row->next_payment_date ) {
 				$next_payment = date_i18n( get_option( 'date_format' ), strtotime( $row->next_payment_date ) );

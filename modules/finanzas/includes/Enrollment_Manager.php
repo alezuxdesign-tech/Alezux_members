@@ -164,9 +164,18 @@ class Enrollment_Manager {
             $status = $is_one_time ? 'completed' : 'active';
             $quotas_paid = $is_one_time ? ( $plan->total_quotas ?? 1 ) : 1; 
 
-            // Si es manual y no one_time, igual lo marcamos activo.
-            // Ojo: Si es manual recurrente, la lógica de next_payment_date manual es compleja.
-            // Por ahora asumimos manual = pagó esta cuota.
+            // Calcular fecha de próximo cobro para cuotas pendientes o membresías
+            $next_payment_date = null;
+            if ( ! $is_one_time && $status === 'active' ) {
+                $freq = ( $plan && ! empty( $plan->frequency ) ) ? $plan->frequency : 'month';
+                $interval = '+1 month';
+                if ( $freq === 'year' ) {
+                    $interval = '+1 year';
+                } elseif ( $freq === 'week' ) {
+                    $interval = '+1 week';
+                }
+                $next_payment_date = date( 'Y-m-d H:i:s', strtotime( $interval, current_time( 'timestamp' ) ) );
+            }
 
             $wpdb->insert( $subs_table, [
                 'user_id' => $user_id,
@@ -175,7 +184,7 @@ class Enrollment_Manager {
                 'status' => $status,
                 'quotas_paid' => $quotas_paid,
                 'last_payment_date' => current_time( 'mysql' ),
-                'next_payment_date' => ( $stripe_sub_id && ! $is_one_time ) ? date( 'Y-m-d H:i:s', strtotime( '+1 month' ) ) : null
+                'next_payment_date' => $next_payment_date
             ] );
             $subscription_id = $wpdb->insert_id;
         } else {
