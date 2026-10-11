@@ -121,7 +121,7 @@ class Marketing extends Module_Base {
 		$table_name = $wpdb->prefix . 'alezux_marketing_templates';
 		
 		$installed_ver = get_option( 'alezux_marketing_db_version' );
-		$version = '1.0.2'; // Actualizado para plantillas UI Arc
+		$version = '1.0.3'; // Actualizado para sincronización dinámica de acento y contraste
 
 		if ( $installed_ver !== $version ) {
 			$charset_collate = $wpdb->get_charset_collate();
@@ -156,28 +156,11 @@ class Marketing extends Module_Base {
 			dbDelta( $sql_templates );
 			dbDelta( $sql_logs );
 
-			// Migración automática: Si existen plantillas antiguas con el diseño previo (#0073aa), actualizarlas al diseño Arc
+			// Sincronización automática de todas las plantillas al acento y tema activos con regla de contraste
 			require_once __DIR__ . '/includes/Default_Templates.php';
-			$rows = $wpdb->get_results( "SELECT id, type, content FROM $table_name" );
-			if ( ! empty( $rows ) ) {
-				$theme = get_option( 'alezux_marketing_email_theme', 'clean' );
-				$accent = get_option( 'alezux_accent', 'violet' );
-				foreach ( $rows as $row ) {
-					if ( strpos( $row->content, '#0073aa' ) !== false || strpos( $row->content, 'font-family: sans-serif;' ) !== false ) {
-						$new_tpl = \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $row->type, $theme, $accent );
-						if ( ! empty( $new_tpl['content'] ) ) {
-							$wpdb->update(
-								$table_name,
-								[
-									'content' => $new_tpl['content'],
-									'subject' => $new_tpl['subject']
-								],
-								[ 'id' => $row->id ]
-							);
-						}
-					}
-				}
-			}
+			$theme = get_option( 'alezux_marketing_email_theme', 'clean' );
+			$accent = get_option( 'alezux_accent', 'violet' );
+			\Alezux_Members\Modules\Marketing\Includes\Default_Templates::sync_database_templates( $accent, $theme, false );
 
 			update_option( 'alezux_marketing_db_version', $version );
 		}
@@ -368,6 +351,8 @@ class Marketing extends Module_Base {
 		if ( isset( $_POST['email_theme'] ) ) {
 			$theme = in_array( $_POST['email_theme'], [ 'clean', 'dark' ], true ) ? $_POST['email_theme'] : 'clean';
 			update_option( 'alezux_marketing_email_theme', $theme );
+			require_once __DIR__ . '/includes/Default_Templates.php';
+			\Alezux_Members\Modules\Marketing\Includes\Default_Templates::sync_database_templates( null, $theme, false );
 		}
 
 		// Nuevas opciones SMTP

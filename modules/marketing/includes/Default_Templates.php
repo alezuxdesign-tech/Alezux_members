@@ -92,6 +92,20 @@ class Default_Templates {
 				'badge_bd_dark'  => 'rgba(241, 95, 85, 0.32)',
 				'shadow'         => 'rgba(224, 72, 61, 0.35)',
 			],
+			'neutral' => [
+				'accent'         => '#3f3f46',
+				'accent_dark'    => '#27272a',
+				'accent_light'   => '#a1a1aa',
+				'button_bg'      => '#3f3f46',
+				'button_text'    => '#ffffff',
+				'badge_bg_light' => '#f4f4f5',
+				'badge_tx_light' => '#27272a',
+				'badge_bd_light' => '#e4e4e7',
+				'badge_bg_dark'  => 'rgba(113, 113, 122, 0.18)',
+				'badge_tx_dark'  => '#d4d4d8',
+				'badge_bd_dark'  => 'rgba(113, 113, 122, 0.32)',
+				'shadow'         => 'rgba(63, 63, 70, 0.35)',
+			],
 		];
 
 		if ( isset( $palettes[ $accent ] ) ) {
@@ -568,5 +582,195 @@ class Default_Templates {
 						$footer
 				];
 		}
+	}
+
+	/**
+	 * Reemplaza de forma segura la paleta de acento en un código HTML existente.
+	 * Preserva los textos personalizados del usuario mientras actualiza los colores de botones,
+	 * insignias, iconos Lucide y sombras al acento calibrado con WCAG.
+	 *
+	 * @param string $html       Contenido HTML del correo.
+	 * @param string $new_accent Identificador del preset o código HEX.
+	 * @param bool   $is_dark    Si el modo oscuro está activo.
+	 * @return string HTML con los estilos de acento actualizados.
+	 */
+	public static function replace_accent_in_html( $html, $new_accent, $is_dark = false ) {
+		if ( empty( $html ) ) {
+			return $html;
+		}
+
+		$palette = self::get_accent_palette( $new_accent, $is_dark );
+
+		// Lista de colores de botón anteriores que deben actualizarse
+		$old_button_bgs = [
+			'#7747ff', '#6366f1', '#5b2bd9', '#4f46e5', '#4338ca',
+			'#0562ef', '#0345b5', '#2563eb', '#1d4ed8',
+			'#059669', '#0db879', '#047857', '#10b981',
+			'#d97706', '#f3ad20', '#b45309', '#f59e0b',
+			'#e0483d', '#f15f55', '#b91c1c', '#ef4444',
+			'#3f3f46', '#71717a', '#27272a',
+			'#0073aa',
+		];
+
+		// Fondos de badge a reemplazar
+		$old_badge_bgs = [
+			'#f3f0ff', '#eef2ff', 'rgba(119, 71, 255, 0.18)', 'rgba(99, 102, 241, 0.18)', 'rgba(119,71,255,0.18)',
+			'#eff6ff', 'rgba(5, 98, 239, 0.18)', 'rgba(37, 99, 235, 0.18)', 'rgba(5,98,239,0.18)',
+			'#ecfdf5', 'rgba(16, 185, 129, 0.18)', 'rgba(5, 150, 105, 0.18)', 'rgba(16,185,129,0.18)',
+			'#fffbeb', 'rgba(245, 158, 11, 0.18)', 'rgba(217, 119, 6, 0.18)', 'rgba(245,158,11,0.18)',
+			'#fef2f2', 'rgba(241, 95, 85, 0.18)', 'rgba(224, 72, 61, 0.18)', 'rgba(241,95,85,0.18)',
+			'#f4f4f5', 'rgba(113, 113, 122, 0.18)', 'rgba(113,113,122,0.18)',
+		];
+
+		// Bordes de badge a reemplazar
+		$old_badge_bds = [
+			'#ddd6fe', '#c7d2fe', 'rgba(119, 71, 255, 0.32)', 'rgba(99, 102, 241, 0.32)', 'rgba(119,71,255,0.32)',
+			'#bfdbfe', 'rgba(5, 98, 239, 0.32)', 'rgba(37, 99, 235, 0.32)', 'rgba(5,98,239,0.32)',
+			'#a7f3d0', 'rgba(16, 185, 129, 0.32)', 'rgba(5, 150, 105, 0.32)', 'rgba(16,185,129,0.32)',
+			'#fde68a', 'rgba(245, 158, 11, 0.32)', 'rgba(217, 119, 6, 0.32)', 'rgba(245,158,11,0.32)',
+			'#fecaca', 'rgba(241, 95, 85, 0.32)', 'rgba(224, 72, 61, 0.32)', 'rgba(241,95,85,0.32)',
+			'#e4e4e7', 'rgba(113, 113, 122, 0.32)', 'rgba(113,113,122,0.32)',
+		];
+
+		// Textos de badge / trazos de iconos anteriores
+		$old_badge_txs = [
+			'#5825d6', '#4338ca', '#c7b7ff', '#818cf8',
+			'#0345b5', '#93c5fd', '#1d4ed8',
+			'#065f46', '#6ee7b7', '#047857',
+			'#92400e', '#fcd34d', '#b45309',
+			'#991b1b', '#fca5a5', '#b91c1c',
+			'#27272a', '#d4d4d8', '#3f3f46',
+		];
+
+		// Sombras de botones anteriores
+		$old_shadows = [
+			'rgba(119, 71, 255, 0.35)', 'rgba(99, 102, 241, 0.35)', 'rgba(119,71,255,0.35)',
+			'rgba(5, 98, 239, 0.35)', 'rgba(37, 99, 235, 0.35)', 'rgba(5,98,239,0.35)',
+			'rgba(5, 150, 105, 0.35)', 'rgba(16, 185, 129, 0.35)', 'rgba(5,150,105,0.35)',
+			'rgba(217, 119, 6, 0.35)', 'rgba(245, 158, 11, 0.35)', 'rgba(217,119,6,0.35)',
+			'rgba(224, 72, 61, 0.35)', 'rgba(241, 95, 85, 0.35)', 'rgba(224,72,61,0.35)',
+			'rgba(63, 63, 70, 0.35)', 'rgba(63,63,70,0.35)',
+		];
+
+		// 1. Reemplazar botones
+		foreach ( $old_button_bgs as $old_bg ) {
+			if ( strtolower( $old_bg ) !== strtolower( $palette['button_bg'] ) ) {
+				$html = str_ireplace( 'background-color: ' . $old_bg, 'background-color: ' . $palette['button_bg'], $html );
+				$html = str_ireplace( 'background:' . $old_bg, 'background:' . $palette['button_bg'], $html );
+				$html = str_ireplace( 'background: ' . $old_bg, 'background: ' . $palette['button_bg'], $html );
+			}
+		}
+
+		// 2. Reemplazar fondos de badge
+		foreach ( $old_badge_bgs as $old_bg ) {
+			if ( strtolower( $old_bg ) !== strtolower( $palette['badge_bg'] ) ) {
+				$html = str_ireplace( 'background-color: ' . $old_bg, 'background-color: ' . $palette['badge_bg'], $html );
+				$html = str_ireplace( 'background:' . $old_bg, 'background:' . $palette['badge_bg'], $html );
+			}
+		}
+
+		// 3. Reemplazar bordes de badge
+		foreach ( $old_badge_bds as $old_bd ) {
+			if ( strtolower( $old_bd ) !== strtolower( $palette['badge_border'] ) ) {
+				$html = str_ireplace( 'border: 1px solid ' . $old_bd, 'border: 1px solid ' . $palette['badge_border'], $html );
+				$html = str_ireplace( 'border:1px solid ' . $old_bd, 'border:1px solid ' . $palette['badge_border'], $html );
+			}
+		}
+
+		// 4. Reemplazar textos de badge e iconos SVG
+		foreach ( $old_badge_txs as $old_tx ) {
+			if ( strtolower( $old_tx ) !== strtolower( $palette['badge_text'] ) ) {
+				$html = str_ireplace( 'color: ' . $old_tx, 'color: ' . $palette['badge_text'], $html );
+				$html = str_ireplace( 'stroke="' . $old_tx . '"', 'stroke="' . $palette['badge_text'] . '"', $html );
+			}
+		}
+
+		// 5. Reemplazar sombras de botones
+		foreach ( $old_shadows as $old_sh ) {
+			if ( strtolower( $old_sh ) !== strtolower( $palette['shadow'] ) ) {
+				$html = str_ireplace( 'box-shadow: 0 4px 14px ' . $old_sh, 'box-shadow: 0 4px 14px ' . $palette['shadow'], $html );
+				$html = str_ireplace( 'box-shadow:0 4px 14px ' . $old_sh, 'box-shadow: 0 4px 14px ' . $palette['shadow'], $html );
+			}
+		}
+
+		return $html;
+	}
+
+	/**
+	 * Sincroniza y actualiza todas las plantillas en la base de datos con el acento y tema activos.
+	 *
+	 * @param string|null $accent           Acento a aplicar (o null para leer el de la opción).
+	 * @param string|null $theme            Tema 'clean' o 'dark' (o null para leer el de la opción).
+	 * @param bool        $force_regenerate Si es true, sobrescribe el contenido completo con el canonical de Default_Templates.
+	 * @return bool
+	 */
+	public static function sync_database_templates( $accent = null, $theme = null, $force_regenerate = false ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'alezux_marketing_templates';
+
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) !== $table_name ) {
+			return false;
+		}
+
+		if ( empty( $accent ) ) {
+			$accent = get_option( 'alezux_accent', 'violet' );
+		}
+		if ( empty( $theme ) ) {
+			$theme = get_option( 'alezux_marketing_email_theme', 'clean' );
+		}
+
+		if ( ! class_exists( '\Alezux_Members\Modules\Marketing\Includes\Email_Engine' ) && file_exists( dirname( __FILE__ ) . '/Email_Engine.php' ) ) {
+			require_once dirname( __FILE__ ) . '/Email_Engine.php';
+		}
+
+		$engine = new \Alezux_Members\Modules\Marketing\Includes\Email_Engine();
+		$registered_types = $engine->get_registered_types();
+
+		$existing_rows = $wpdb->get_results( "SELECT id, type, subject, content FROM $table_name", OBJECT_K );
+		$is_dark = ( 'dark' === $theme );
+
+		foreach ( $registered_types as $type_key => $info ) {
+			$canonical = self::get( $type_key, $theme, $accent );
+			if ( empty( $canonical['content'] ) ) {
+				continue;
+			}
+
+			if ( isset( $existing_rows[ $type_key ] ) ) {
+				$row = $existing_rows[ $type_key ];
+				$subject = ! empty( $row->subject ) ? $row->subject : $canonical['subject'];
+
+				// Si el contenido actual no tiene la estructura Arc o iconos Lucide, o se fuerza:
+				if ( $force_regenerate || strpos( $row->content, 'arc-wrapper' ) === false || strpos( $row->content, '<svg' ) === false ) {
+					$new_content = $canonical['content'];
+				} else {
+					// Actualizar la paleta de acento en el HTML existente respetando textos personalizados
+					$new_content = self::replace_accent_in_html( $row->content, $accent, $is_dark );
+				}
+
+				$wpdb->update(
+					$table_name,
+					[
+						'content' => $new_content,
+						'subject' => $subject,
+					],
+					[ 'id' => $row->id ]
+				);
+			} else {
+				$wpdb->insert(
+					$table_name,
+					[
+						'type'      => $type_key,
+						'subject'   => $canonical['subject'],
+						'content'   => $canonical['content'],
+						'is_active' => 1,
+					]
+				);
+			}
+		}
+
+		update_option( 'alezux_marketing_templates_accent', $accent );
+		update_option( 'alezux_marketing_templates_theme', $theme );
+
+		return true;
 	}
 }

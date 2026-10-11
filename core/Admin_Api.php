@@ -1866,6 +1866,19 @@ class Admin_Api {
 
 		$email_theme = get_option( 'alezux_marketing_email_theme', 'clean' );
 		$accent = get_option( 'alezux_accent', 'violet' );
+
+		// Sincronizar automáticamente la base de datos si el acento o tema cambió
+		$synced_accent = get_option( 'alezux_marketing_templates_accent', '' );
+		$synced_theme  = get_option( 'alezux_marketing_templates_theme', '' );
+		if ( $synced_accent !== $accent || $synced_theme !== $email_theme ) {
+			if ( class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' ) ) {
+				\Alezux_Members\Modules\Marketing\Includes\Default_Templates::sync_database_templates( $accent, $email_theme, false );
+				if ( $wpdb->get_var( "SHOW TABLES LIKE '$table'" ) === $table ) {
+					$saved_templates = $wpdb->get_results( "SELECT * FROM $table", OBJECT_K );
+				}
+			}
+		}
+
 		$result = [];
 		foreach ( $registered_types as $type_key => $info ) {
 			$saved = isset( $saved_templates[ $type_key ] ) ? $saved_templates[ $type_key ] : null;
@@ -2163,6 +2176,11 @@ class Admin_Api {
 		if ( isset( $params['email_theme'] ) ) {
 			$theme = in_array( $params['email_theme'], [ 'clean', 'dark' ], true ) ? $params['email_theme'] : 'clean';
 			update_option( 'alezux_marketing_email_theme', $theme );
+
+			if ( file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php' ) ) {
+				require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php';
+				\Alezux_Members\Modules\Marketing\Includes\Default_Templates::sync_database_templates( null, $theme, false );
+			}
 		}
 		if ( isset( $params['smtp_enabled'] ) ) {
 			update_option( 'alezux_marketing_smtp_enabled', ! empty( $params['smtp_enabled'] ) ? '1' : '0' );
@@ -2251,7 +2269,13 @@ class Admin_Api {
 			update_option( 'alezux_theme', sanitize_text_field( $params['theme'] ) );
 		}
 		if ( isset( $params['accent'] ) ) {
-			update_option( 'alezux_accent', sanitize_text_field( $params['accent'] ) );
+			$new_accent = sanitize_text_field( $params['accent'] );
+			update_option( 'alezux_accent', $new_accent );
+
+			if ( file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php' ) ) {
+				require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php';
+				\Alezux_Members\Modules\Marketing\Includes\Default_Templates::sync_database_templates( $new_accent, null, false );
+			}
 		}
 		return rest_ensure_response( [
 			'success'  => true,

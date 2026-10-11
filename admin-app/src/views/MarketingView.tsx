@@ -113,9 +113,141 @@ function getAccentPalette(accent: string = "violet", isDark: boolean = false) {
       badgeBorder: isDark ? "rgba(241,95,85,0.32)" : "#fecaca",
       shadow: "rgba(224,72,61,0.35)",
     },
+    neutral: {
+      accent: isDark ? "#d4d4d8" : "#3f3f46",
+      buttonBg: "#3f3f46",
+      badgeBg: isDark ? "rgba(113,113,122,0.18)" : "#f4f4f5",
+      badgeText: isDark ? "#d4d4d8" : "#27272a",
+      badgeBorder: isDark ? "rgba(113,113,122,0.32)" : "#e4e4e7",
+      shadow: "rgba(63,63,70,0.35)",
+    },
   };
 
-  return presets[normalized] || presets.violet;
+  if (presets[normalized]) {
+    return presets[normalized];
+  }
+
+  // Soporte para HEX personalizado con cálculo de luminancia WCAG
+  let cleanHex = normalized.replace("#", "");
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex.split("").map((c) => c + c).join("");
+  }
+  if (/^[0-9a-f]{6}$/i.test(cleanHex)) {
+    const r = parseInt(cleanHex.substring(0, 2), 16);
+    const g = parseInt(cleanHex.substring(2, 4), 16);
+    const b = parseInt(cleanHex.substring(4, 6), 16);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    const btnR = lum > 0.55 ? Math.round(r * 0.72) : r;
+    const btnG = lum > 0.55 ? Math.round(g * 0.72) : g;
+    const btnB = lum > 0.55 ? Math.round(b * 0.72) : b;
+    const btnHex = `#${btnR.toString(16).padStart(2, "0")}${btnG.toString(16).padStart(2, "0")}${btnB.toString(16).padStart(2, "0")}`;
+    return {
+      accent: `#${cleanHex}`,
+      buttonBg: btnHex,
+      badgeBg: isDark ? `rgba(${r},${g},${b},0.18)` : `rgba(${r},${g},${b},0.1)`,
+      badgeText: isDark ? "#ffffff" : btnHex,
+      badgeBorder: isDark ? `rgba(${r},${g},${b},0.32)` : `rgba(${r},${g},${b},0.22)`,
+      shadow: `rgba(${r},${g},${b},0.35)`,
+    };
+  }
+
+  return presets.violet;
+}
+
+function replaceAccentColorsInHtml(
+  html: string,
+  palette: ReturnType<typeof getAccentPalette>
+): string {
+  if (!html) return html;
+
+  const oldButtonBgs = [
+    "#7747ff", "#6366f1", "#5b2bd9", "#4f46e5", "#4338ca",
+    "#0562ef", "#0345b5", "#2563eb", "#1d4ed8",
+    "#059669", "#0db879", "#047857", "#10b981",
+    "#d97706", "#f3ad20", "#b45309", "#f59e0b",
+    "#e0483d", "#f15f55", "#b91c1c", "#ef4444",
+    "#3f3f46", "#71717a", "#27272a",
+    "#0073aa"
+  ];
+
+  const oldBadgeBgs = [
+    "#f3f0ff", "#eef2ff", "rgba(119, 71, 255, 0.18)", "rgba(119,71,255,0.18)",
+    "#eff6ff", "rgba(5, 98, 239, 0.18)", "rgba(37, 99, 235, 0.18)", "rgba(5,98,239,0.18)",
+    "#ecfdf5", "rgba(16, 185, 129, 0.18)", "rgba(5, 150, 105, 0.18)", "rgba(16,185,129,0.18)",
+    "#fffbeb", "rgba(245, 158, 11, 0.18)", "rgba(217, 119, 6, 0.18)", "rgba(245,158,11,0.18)",
+    "#fef2f2", "rgba(241, 95, 85, 0.18)", "rgba(224, 72, 61, 0.18)", "rgba(241,95,85,0.18)",
+    "#f4f4f5", "rgba(113, 113, 122, 0.18)", "rgba(113,113,122,0.18)",
+  ];
+
+  const oldBadgeBds = [
+    "#ddd6fe", "#c7d2fe", "rgba(119, 71, 255, 0.32)", "rgba(119,71,255,0.32)",
+    "#bfdbfe", "rgba(5, 98, 239, 0.32)", "rgba(37, 99, 235, 0.32)", "rgba(5,98,239,0.32)",
+    "#a7f3d0", "rgba(16, 185, 129, 0.32)", "rgba(5, 150, 105, 0.32)", "rgba(16,185,129,0.32)",
+    "#fde68a", "rgba(245, 158, 11, 0.32)", "rgba(217, 119, 6, 0.32)", "rgba(245,158,11,0.32)",
+    "#fecaca", "rgba(241, 95, 85, 0.32)", "rgba(224, 72, 61, 0.32)", "rgba(241,95,85,0.32)",
+    "#e4e4e7", "rgba(113, 113, 122, 0.32)", "rgba(113,113,122,0.32)",
+  ];
+
+  const oldBadgeTxs = [
+    "#5825d6", "#4338ca", "#c7b7ff", "#818cf8",
+    "#0345b5", "#93c5fd", "#1d4ed8",
+    "#065f46", "#6ee7b7", "#047857",
+    "#92400e", "#fcd34d", "#b45309",
+    "#991b1b", "#fca5a5", "#b91c1c",
+    "#27272a", "#d4d4d8", "#3f3f46",
+  ];
+
+  const oldShadows = [
+    "rgba(119, 71, 255, 0.35)", "rgba(119,71,255,0.35)",
+    "rgba(5, 98, 239, 0.35)", "rgba(5,98,239,0.35)",
+    "rgba(5, 150, 105, 0.35)", "rgba(16, 185, 129, 0.35)",
+    "rgba(217, 119, 6, 0.35)", "rgba(245, 158, 11, 0.35)",
+    "rgba(224, 72, 61, 0.35)", "rgba(241, 95, 85, 0.35)",
+    "rgba(63, 63, 70, 0.35)", "rgba(63,63,70,0.35)",
+  ];
+
+  let res = html;
+
+  for (const oldBg of oldButtonBgs) {
+    if (oldBg.toLowerCase() !== palette.buttonBg.toLowerCase()) {
+      res = res.split(`background-color: ${oldBg}`).join(`background-color: ${palette.buttonBg}`);
+      res = res.split(`background-color:${oldBg}`).join(`background-color: ${palette.buttonBg}`);
+      res = res.split(`background:${oldBg}`).join(`background:${palette.buttonBg}`);
+      res = res.split(`background: ${oldBg}`).join(`background: ${palette.buttonBg}`);
+    }
+  }
+
+  for (const oldBg of oldBadgeBgs) {
+    if (oldBg.toLowerCase() !== palette.badgeBg.toLowerCase()) {
+      res = res.split(`background-color: ${oldBg}`).join(`background-color: ${palette.badgeBg}`);
+      res = res.split(`background-color:${oldBg}`).join(`background-color: ${palette.badgeBg}`);
+      res = res.split(`background:${oldBg}`).join(`background:${palette.badgeBg}`);
+      res = res.split(`background: ${oldBg}`).join(`background: ${palette.badgeBg}`);
+    }
+  }
+
+  for (const oldBd of oldBadgeBds) {
+    if (oldBd.toLowerCase() !== palette.badgeBorder.toLowerCase()) {
+      res = res.split(`border: 1px solid ${oldBd}`).join(`border: 1px solid ${palette.badgeBorder}`);
+      res = res.split(`border:1px solid ${oldBd}`).join(`border:1px solid ${palette.badgeBorder}`);
+    }
+  }
+
+  for (const oldTx of oldBadgeTxs) {
+    if (oldTx.toLowerCase() !== palette.badgeText.toLowerCase()) {
+      res = res.split(`color: ${oldTx}`).join(`color: ${palette.badgeText}`);
+      res = res.split(`stroke="${oldTx}"`).join(`stroke="${palette.badgeText}"`);
+    }
+  }
+
+  for (const oldSh of oldShadows) {
+    if (oldSh.toLowerCase() !== palette.shadow.toLowerCase()) {
+      res = res.split(`box-shadow: 0 4px 14px ${oldSh}`).join(`box-shadow: 0 4px 14px ${palette.shadow}`);
+      res = res.split(`box-shadow:0 4px 14px ${oldSh}`).join(`box-shadow: 0 4px 14px ${palette.shadow}`);
+    }
+  }
+
+  return res;
 }
 
 function renderSampleEmail(
@@ -181,10 +313,8 @@ function renderSampleEmail(
     rendered = rendered.split(key).join(value);
   }
 
-  // Si el tema tiene un acento diferente al violeta base, sincronizarlo en la previsualización
-  if (palette.buttonBg !== "#7747ff") {
-    rendered = rendered.split("#7747ff").join(palette.buttonBg);
-  }
+  // Sincronizar dinámicamente todos los elementos de acento con la paleta activa
+  rendered = replaceAccentColorsInHtml(rendered, palette);
 
   if (!rendered.includes("<html") && !rendered.includes("<body")) {
     const colors = {

@@ -212,6 +212,16 @@ class Email_Engine {
 	public function send_email( $type, $recipient_email, $data = [], $is_test = false ) {
 		if ( ! is_email( $recipient_email ) ) return false;
 
+		$accent = get_option( 'alezux_accent', 'violet' );
+		$theme = get_option( 'alezux_marketing_email_theme', 'clean' );
+		$synced_accent = get_option( 'alezux_marketing_templates_accent', '' );
+		$synced_theme  = get_option( 'alezux_marketing_templates_theme', '' );
+
+		if ( $synced_accent !== $accent || $synced_theme !== $theme ) {
+			require_once __DIR__ . '/Default_Templates.php';
+			Default_Templates::sync_database_templates( $accent, $theme, false );
+		}
+
 		// 1. Get Template (DB or Default)
 		$template = $this->get_template( $type );
 
