@@ -1667,3 +1667,177 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* --- SUBTOPICS ANIDADOS --- */
+.subtopicsToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subtopicsToggleBtn:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+}
+
+.subtopicsWrapper {
+  margin-top: 8px;
+  margin-left: 28px;
+  padding-left: 14px;
+  border-left: 2px dashed var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subtopicRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  padding: 8px 12px;
+  transition: all 0.15s ease;
+}
+
+.subtopicRow:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+
+.subtopicInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.subtopicIndex {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.subtopicTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.subtopicActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- PREGUNTAS Y QUIZZES --- */
+.questionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.questionCard {
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-surface);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.questionCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.questionIndexBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.optionsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.optionItemRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.optionRadio {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* --- DOCENTES / INSTRUCTORES --- */
+.instructorsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.instructorCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-surface);
+  padding: 12px;
+  position: relative;
+}
+
+.instructorAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+}
+
+.instructorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.instructorName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.instructorRole {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+

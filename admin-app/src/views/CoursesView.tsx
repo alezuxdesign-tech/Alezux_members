@@ -28,6 +28,9 @@ import {
   ArrowUp,
   ArrowDown,
   AlertTriangle,
+  HelpCircle,
+  UserPlus,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -42,6 +45,9 @@ import {
   CourseSection, 
   CourseLesson, 
   CourseTopic, 
+  CourseSubtopic,
+  CourseQuestion,
+  CourseInstructor,
   CourseFileAttachment,
   FinancePlan
 } from "../services/api";
@@ -54,6 +60,14 @@ interface EditingTopicState {
   topicIndex: number;
   isNew: boolean;
   topic: CourseTopic;
+}
+
+interface EditingSubtopicState {
+  sectionId: string;
+  topicId: string;
+  subtopicIndex: number;
+  isNew: boolean;
+  subtopic: CourseSubtopic;
 }
 
 interface EditingModuleCoverState {
@@ -127,11 +141,23 @@ export function CoursesView() {
   const [courseStatus, setCourseStatus] = useState<"publish" | "draft">("publish");
   const [courseLinkedPlanId, setCourseLinkedPlanId] = useState<number | null>(null);
 
+  // Docentes / Mentores del Curso
+  const [instructors, setInstructors] = useState<CourseInstructor[]>([]);
+  const [newInstructorName, setNewInstructorName] = useState("");
+  const [newInstructorRole, setNewInstructorRole] = useState("");
+  const [newInstructorAvatar, setNewInstructorAvatar] = useState("");
+  const [newInstructorBio, setNewInstructorBio] = useState("");
+  const [isAddingInstructor, setIsAddingInstructor] = useState(false);
+
   // Estado del Constructor del Curso Activo (Builder)
   const [sections, setSections] = useState<CourseSection[]>([]);
   const [isSavingCurriculum, setIsSavingCurriculum] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  // Subtopics expandidos y modal de edición de subtopic
+  const [expandedSubtopics, setExpandedSubtopics] = useState<Record<string, boolean>>({});
+  const [editingSubtopicState, setEditingSubtopicState] = useState<EditingSubtopicState | null>(null);
 
   // Drag and Drop state
   const [draggedLesson, setDraggedLesson] = useState<{ sectionId: string; lessonIndex: number } | null>(null);
@@ -173,6 +199,7 @@ export function CoursesView() {
     );
     setCourseStatus(course.status || "publish");
     setCourseLinkedPlanId(course.linkedPlanId ?? null);
+    setInstructors(course.instructors || []);
     setSections(course.sections || []);
     setBuilderTab("curriculum");
     setSavedSuccess(false);
@@ -240,6 +267,7 @@ export function CoursesView() {
                 price: Number(coursePrice) || 0,
                 status: courseStatus,
                 linkedPlanId: courseLinkedPlanId,
+                instructors,
                 sections,
               }
             : c
@@ -264,6 +292,7 @@ export function CoursesView() {
         price: finalPrice,
         status: courseStatus,
         linkedPlanId: null,
+        instructors,
         sections,
       };
 
@@ -374,6 +403,8 @@ export function CoursesView() {
         description: "",
         video_url: "",
         files: [],
+        questions: [],
+        subtopics: [],
       },
     });
     setNewFileName("");
@@ -393,10 +424,141 @@ export function CoursesView() {
         description: topic.description || "",
         video_url: topic.video_url || "",
         files: topic.files ? [...topic.files] : [],
+        questions: topic.questions ? [...topic.questions] : [],
+        subtopics: topic.subtopics ? [...topic.subtopics] : [],
       },
     });
     setNewFileName("");
     setNewFileUrl("");
+  };
+
+  // --- GESTIÓN DE SUBTOPICS (SUB-CLASES CORTAS) ---
+  const handleOpenAddSubtopic = (sectionId: string, topicId: string) => {
+    const sec = sections.find((s) => s.id === sectionId);
+    const les = sec?.lessons.find((l) => l.id === topicId);
+    const count = les?.subtopics ? les.subtopics.length + 1 : 1;
+
+    setEditingSubtopicState({
+      sectionId,
+      topicId,
+      subtopicIndex: count - 1,
+      isNew: true,
+      subtopic: {
+        id: `sub-${Date.now()}`,
+        title: `Parte ${count}: Nueva Sub-clase`,
+        duration: "10m",
+        video_url: "",
+        description: "",
+        files: [],
+        questions: [],
+      },
+    });
+    setExpandedSubtopics((prev) => ({ ...prev, [topicId]: true }));
+  };
+
+  const handleOpenEditSubtopic = (
+    sectionId: string,
+    topicId: string,
+    sub: CourseSubtopic,
+    index: number
+  ) => {
+    setEditingSubtopicState({
+      sectionId,
+      topicId,
+      subtopicIndex: index,
+      isNew: false,
+      subtopic: {
+        ...sub,
+        files: sub.files ? [...sub.files] : [],
+        questions: sub.questions ? [...sub.questions] : [],
+      },
+    });
+  };
+
+  const handleDeleteSubtopic = (sectionId: string, topicId: string, subtopicId: string) => {
+    setDeleteConfirm({
+      title: "Eliminar Sub-clase",
+      message: "¿Estás seguro de que deseas eliminar esta sub-clase?",
+      onConfirm: () => {
+        setSections((prev) =>
+          prev.map((s) => {
+            if (s.id !== sectionId) return s;
+            return {
+              ...s,
+              lessons: s.lessons.map((l) => {
+                if (l.id !== topicId) return l;
+                return {
+                  ...l,
+                  subtopics: (l.subtopics || []).filter((sub) => sub.id !== subtopicId),
+                };
+              }),
+            };
+          })
+        );
+        setDeleteConfirm(null);
+        showToast("info", "Sub-clase eliminada", "Se ha removido la sub-clase.");
+      },
+    });
+  };
+
+  const handleSaveSubtopicFromModal = () => {
+    if (!editingSubtopicState) return;
+    const { sectionId, topicId, subtopicIndex, isNew, subtopic } = editingSubtopicState;
+
+    if (!subtopic.title.trim()) {
+      showToast("warning", "Campo requerido", "El título de la sub-clase no puede estar vacío.");
+      return;
+    }
+
+    setSections((prev) =>
+      prev.map((s) => {
+        if (s.id !== sectionId) return s;
+        return {
+          ...s,
+          lessons: s.lessons.map((l) => {
+            if (l.id !== topicId) return l;
+            const currentSubs = [...(l.subtopics || [])];
+            if (isNew) {
+              currentSubs.push(subtopic);
+            } else {
+              currentSubs[subtopicIndex] = subtopic;
+            }
+            return { ...l, subtopics: currentSubs };
+          }),
+        };
+      })
+    );
+
+    setEditingSubtopicState(null);
+    showToast("success", isNew ? "Sub-clase añadida" : "Sub-clase actualizada", `"${subtopic.title}" guardada.`);
+  };
+
+  // --- GESTIÓN DE DOCENTES / MENTORES ---
+  const handleAddInstructor = () => {
+    if (!newInstructorName.trim()) {
+      showToast("warning", "Nombre requerido", "Ingresa el nombre del docente.");
+      return;
+    }
+    const newInst: CourseInstructor = {
+      id: `inst-${Date.now()}`,
+      name: newInstructorName.trim(),
+      role: newInstructorRole.trim() || "Docente Principal",
+      avatar: newInstructorAvatar.trim() || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      bio: newInstructorBio.trim(),
+    };
+    setInstructors([...instructors, newInst]);
+    setNewInstructorName("");
+    setNewInstructorRole("");
+    setNewInstructorAvatar("");
+    setNewInstructorBio("");
+    setIsAddingInstructor(false);
+    showToast("success", "Docente añadido", `"${newInst.name}" asignado al curso.`);
+  };
+
+  const handleDeleteInstructor = (index: number) => {
+    const target = instructors[index];
+    setInstructors(instructors.filter((_, idx) => idx !== index));
+    showToast("info", "Docente removido", `Se quitó a "${target?.name || "el docente"}" del curso.`);
   };
 
   const handleDeleteTopic = (sectionId: string, topicId: string) => {
@@ -903,6 +1065,101 @@ export function CoursesView() {
               </div>
             </div>
 
+            {/* 4. SECCIÓN DE DOCENTES / MENTORES DEL CURSO */}
+            <div className={styles.settingsGroup}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                <h4 className={styles.settingsGroupTitle}>
+                  <Users size={18} /> Docentes & Mentores del Curso ({instructors.length})
+                </h4>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsAddingInstructor(true)}
+                >
+                  <UserPlus size={14} /> Asignar Docente
+                </Button>
+              </div>
+
+              {isAddingInstructor && (
+                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <span className={styles.miniLabel}>Nuevo Docente / Mentor:</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <Input
+                      label="Nombre del Docente *"
+                      placeholder="Ej: Lic. Carlos Gómez"
+                      value={newInstructorName}
+                      onChange={(e) => setNewInstructorName(e.target.value)}
+                    />
+                    <Input
+                      label="Especialidad / Rol"
+                      placeholder="Ej: Especialista en Performance & Growth"
+                      value={newInstructorRole}
+                      onChange={(e) => setNewInstructorRole(e.target.value)}
+                    />
+                  </div>
+                  <Input
+                    label="URL de Foto de Perfil / Avatar"
+                    placeholder="https://... (o deja en blanco para avatar predeterminado)"
+                    value={newInstructorAvatar}
+                    onChange={(e) => setNewInstructorAvatar(e.target.value)}
+                  />
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Breve Biografía / Presentación</label>
+                    <textarea
+                      placeholder="Resumen de experiencia profesional o logros del docente..."
+                      value={newInstructorBio}
+                      onChange={(e) => setNewInstructorBio(e.target.value)}
+                      className={styles.textarea}
+                      rows={2}
+                    />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                    <Button variant="ghost" size="sm" onClick={() => setIsAddingInstructor(false)}>
+                      Cancelar
+                    </Button>
+                    <Button variant="primary" size="sm" onClick={handleAddInstructor}>
+                      <UserCheck size={14} /> Guardar Docente
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {instructors.length > 0 ? (
+                <div className={styles.instructorsList}>
+                  {instructors.map((inst, idx) => (
+                    <div key={inst.id || idx} className={styles.instructorCard}>
+                      <img
+                        src={inst.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80"}
+                        alt={inst.name}
+                        className={styles.instructorAvatar}
+                      />
+                      <div className={styles.instructorInfo}>
+                        <span className={styles.instructorName}>{inst.name}</span>
+                        <span className={styles.instructorRole}>{inst.role || "Docente"}</span>
+                        {inst.bio && (
+                          <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                            {inst.bio}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.deleteBtn}
+                        onClick={() => handleDeleteInstructor(idx)}
+                        title="Quitar docente"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.switchSubtext}>
+                  No hay docentes asignados a este curso todavía. Haz clic en "Asignar Docente" para añadir al profesor principal.
+                </p>
+              )}
+            </div>
+
             {/* Footer con botón de guardado */}
             <div className={styles.settingsFooter}>
               <Button variant="secondary" onClick={() => setBuilderTab("curriculum")}>
@@ -1063,10 +1320,10 @@ export function CoursesView() {
                     <div className={styles.topicsContainer}>
                       {section.lessons && section.lessons.length > 0 ? (
                         section.lessons.map((lesson, lIdx) => (
-                          <div
-                            key={lesson.id}
-                            className={styles.topicRow}
-                            draggable
+                          <div key={lesson.id} className={styles.topicItemGroup}>
+                            <div
+                              className={styles.topicRow}
+                              draggable
                             onDragStart={() => handleDragStart(section.id, lIdx)}
                             onDragOver={handleDragOver}
                             onDrop={() => handleDrop(section.id, lIdx)}
@@ -1109,6 +1366,14 @@ export function CoursesView() {
                                   </span>
                                 )}
 
+                                {lesson.questions && lesson.questions.length > 0 && (
+                                  <span
+                                    className={[styles.topicBadge, styles.topicBadgeDesc].join(" ")}
+                                  >
+                                    <HelpCircle size={12} /> {lesson.questions.length} Preguntas
+                                  </span>
+                                )}
+
                                 {lesson.description && (
                                   <span
                                     className={[styles.topicBadge, styles.topicBadgeDesc].join(" ")}
@@ -1127,6 +1392,31 @@ export function CoursesView() {
 
                             {/* Acciones del Topic */}
                             <div className={styles.topicActions}>
+                              <button
+                                type="button"
+                                className={styles.subtopicsToggleBtn}
+                                onClick={() =>
+                                  setExpandedSubtopics((prev) => ({
+                                    ...prev,
+                                    [lesson.id]: !prev[lesson.id],
+                                  }))
+                                }
+                                title="Dividir esta clase en varias sub-clases cortas"
+                              >
+                                {lesson.subtopics && lesson.subtopics.length > 0 ? (
+                                  <>
+                                    <Layers size={12} />
+                                    <span>{lesson.subtopics.length} Sub-clases</span>
+                                    {expandedSubtopics[lesson.id] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus size={12} />
+                                    <span>Sub-clases</span>
+                                  </>
+                                )}
+                              </button>
+
                               <Button
                                 variant="secondary"
                                 size="sm"
@@ -1144,8 +1434,71 @@ export function CoursesView() {
                               </button>
                             </div>
                           </div>
-                        ))
-                      ) : (
+
+                          {/* Subtopics anidados si está expandido */}
+                          {expandedSubtopics[lesson.id] && (
+                            <div className={styles.subtopicsWrapper}>
+                              {lesson.subtopics && lesson.subtopics.length > 0 ? (
+                                lesson.subtopics.map((sub, subIdx) => (
+                                  <div key={sub.id || subIdx} className={styles.subtopicRow}>
+                                    <div className={styles.subtopicInfo}>
+                                      <span className={styles.subtopicIndex}>Parte {subIdx + 1}</span>
+                                      <span className={styles.subtopicTitle}>{sub.title}</span>
+                                      {sub.video_url && (
+                                        <span className={[styles.topicBadge, styles.topicBadgeVideo].join(" ")}>
+                                          <Video size={11} /> Video
+                                        </span>
+                                      )}
+                                      {sub.duration && (
+                                        <span className={styles.topicBadge}>
+                                          <Clock size={10} /> {sub.duration}
+                                        </span>
+                                      )}
+                                      {sub.files && sub.files.length > 0 && (
+                                        <span className={[styles.topicBadge, styles.topicBadgeFiles].join(" ")}>
+                                          <Paperclip size={10} /> {sub.files.length}
+                                        </span>
+                                      )}
+                                      {sub.questions && sub.questions.length > 0 && (
+                                        <span className={[styles.topicBadge, styles.topicBadgeDesc].join(" ")}>
+                                          <HelpCircle size={10} /> {sub.questions.length} Preguntas
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className={styles.subtopicActions}>
+                                      <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => handleOpenEditSubtopic(section.id, lesson.id, sub, subIdx)}
+                                      >
+                                        <Edit3 size={13} /> Editar
+                                      </Button>
+                                      <button
+                                        type="button"
+                                        className={styles.deleteBtn}
+                                        onClick={() => handleDeleteSubtopic(section.id, lesson.id, sub.id)}
+                                        title="Eliminar sub-clase"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : null}
+                              <div style={{ marginTop: 4 }}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenAddSubtopic(section.id, lesson.id)}
+                                >
+                                  <Plus size={13} /> Añadir Sub-clase a {lesson.title}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
                         <div
                           className={styles.emptyTopicsNotice}
                           onDragOver={handleDragOver}
@@ -1510,6 +1863,435 @@ export function CoursesView() {
                   </Button>
                 </div>
               </div>
+            </div>
+
+            {/* PREGUNTAS Y QUIZZES DE AUTOEVALUACIÓN DEL TOPIC */}
+            <div className={styles.filesSection}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div>
+                  <span className={styles.filesTitle}>
+                    Preguntas / Quizzes de la Clase ({editingTopicState.topic.questions?.length || 0})
+                  </span>
+                  <p className={styles.pageSubtitle} style={{ margin: "2px 0 0" }}>
+                    Preguntas interactivas para comprobar el aprendizaje de esta lección
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const newQ: CourseQuestion = {
+                      id: `q-${Date.now()}`,
+                      question: "",
+                      options: ["Opción A", "Opción B"],
+                      correctIndex: 0,
+                    };
+                    setEditingTopicState((prev) => {
+                      if (!prev) return null;
+                      return {
+                        ...prev,
+                        topic: {
+                          ...prev.topic,
+                          questions: [...(prev.topic.questions || []), newQ],
+                        },
+                      };
+                    });
+                  }}
+                >
+                  <Plus size={14} /> Añadir Pregunta
+                </Button>
+              </div>
+
+              {editingTopicState.topic.questions && editingTopicState.topic.questions.map((q, qIdx) => (
+                <div key={q.id || qIdx} className={styles.questionCard}>
+                  <div className={styles.questionCardHeader}>
+                    <span className={styles.questionIndexBadge}>Pregunta {qIdx + 1}</span>
+                    <button
+                      type="button"
+                      className={styles.deleteBtn}
+                      onClick={() => {
+                        setEditingTopicState((prev) => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            topic: {
+                              ...prev.topic,
+                              questions: (prev.topic.questions || []).filter((_, idx) => idx !== qIdx),
+                            },
+                          };
+                        });
+                      }}
+                      title="Eliminar pregunta"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <Input
+                    label="Enunciado de la Pregunta"
+                    placeholder="Ej: ¿Cuál es el concepto clave explicado en este video?"
+                    value={q.question}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditingTopicState((prev) => {
+                        if (!prev) return null;
+                        const nextQs = [...(prev.topic.questions || [])];
+                        nextQs[qIdx] = { ...nextQs[qIdx], question: val };
+                        return { ...prev, topic: { ...prev.topic, questions: nextQs } };
+                      });
+                    }}
+                  />
+                  <div className={styles.optionsGrid}>
+                    <label className={styles.miniLabel}>Opciones de Respuesta (marca la correcta):</label>
+                    {q.options.map((opt, oIdx) => (
+                      <div key={oIdx} className={styles.optionItemRow}>
+                        <input
+                          type="radio"
+                          name={`top-q-opt-${q.id || qIdx}`}
+                          checked={q.correctIndex === oIdx}
+                          onChange={() => {
+                            setEditingTopicState((prev) => {
+                              if (!prev) return null;
+                              const nextQs = [...(prev.topic.questions || [])];
+                              nextQs[qIdx] = { ...nextQs[qIdx], correctIndex: oIdx };
+                              return { ...prev, topic: { ...prev.topic, questions: nextQs } };
+                            });
+                          }}
+                          className={styles.optionRadio}
+                          title="Marcar como respuesta correcta"
+                        />
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditingTopicState((prev) => {
+                              if (!prev) return null;
+                              const nextQs = [...(prev.topic.questions || [])];
+                              const nextOpts = [...nextQs[qIdx].options];
+                              nextOpts[oIdx] = val;
+                              nextQs[qIdx] = { ...nextQs[qIdx], options: nextOpts };
+                              return { ...prev, topic: { ...prev.topic, questions: nextQs } };
+                            });
+                          }}
+                          className={styles.fileNameInput}
+                          placeholder={`Opción ${oIdx + 1}...`}
+                        />
+                      </div>
+                    ))}
+                    {q.options.length < 4 && (
+                      <button
+                        type="button"
+                        className={styles.subtopicsToggleBtn}
+                        style={{ width: "fit-content", marginTop: 4 }}
+                        onClick={() => {
+                          setEditingTopicState((prev) => {
+                            if (!prev) return null;
+                            const nextQs = [...(prev.topic.questions || [])];
+                            nextQs[qIdx] = {
+                              ...nextQs[qIdx],
+                              options: [...nextQs[qIdx].options, `Opción ${nextQs[qIdx].options.length + 1}`],
+                            };
+                            return { ...prev, topic: { ...prev.topic, questions: nextQs } };
+                          });
+                        }}
+                      >
+                        + Añadir opción de respuesta
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Modal>
+        )}
+
+        {/* MODAL PARA EDITAR SUBTOPIC (SUB-CLASE CORTA) */}
+        {editingSubtopicState && (
+          <Modal
+            isOpen={true}
+            onClose={() => setEditingSubtopicState(null)}
+            title={
+              editingSubtopicState.isNew
+                ? "Nueva Sub-clase"
+                : `Editar Sub-clase: ${editingSubtopicState.subtopic.title}`
+            }
+            description="Configura la clase corta: video, duración, notas, descargables y preguntas."
+            maxWidth="740px"
+            footer={
+              <>
+                <Button variant="ghost" onClick={() => setEditingSubtopicState(null)}>
+                  Cancelar
+                </Button>
+                <Button variant="primary" onClick={handleSaveSubtopicFromModal}>
+                  Guardar Sub-clase
+                </Button>
+              </>
+            }
+          >
+            <div className={styles.formGroup}>
+              <Input
+                label="Título de la Sub-clase *"
+                placeholder="Ej: Parte 1: Introducción a la herramienta..."
+                value={editingSubtopicState.subtopic.title}
+                onChange={(e) =>
+                  setEditingSubtopicState({
+                    ...editingSubtopicState,
+                    subtopic: { ...editingSubtopicState.subtopic, title: e.target.value },
+                  })
+                }
+              />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" }}>
+              <div className={styles.formGroup}>
+                <Input
+                  label="Enlace del Video (YouTube, Vimeo, BunnyCDN, MP4)"
+                  placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
+                  value={editingSubtopicState.subtopic.video_url || ""}
+                  onChange={(e) =>
+                    setEditingSubtopicState({
+                      ...editingSubtopicState,
+                      subtopic: { ...editingSubtopicState.subtopic, video_url: e.target.value },
+                    })
+                  }
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <Input
+                  label="Duración Estimada"
+                  placeholder="Ej: 10m"
+                  value={editingSubtopicState.subtopic.duration || "10m"}
+                  onChange={(e) =>
+                    setEditingSubtopicState({
+                      ...editingSubtopicState,
+                      subtopic: { ...editingSubtopicState.subtopic, duration: e.target.value },
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Descripción o Notas de la Sub-clase</label>
+              <textarea
+                placeholder="Resumen o conceptos clave de esta parte corta..."
+                value={editingSubtopicState.subtopic.description || ""}
+                onChange={(e) =>
+                  setEditingSubtopicState({
+                    ...editingSubtopicState,
+                    subtopic: { ...editingSubtopicState.subtopic, description: e.target.value },
+                  })
+                }
+                className={styles.textarea}
+                rows={3}
+              />
+            </div>
+
+            {/* Archivos Descargables del Subtopic */}
+            <div className={styles.filesSection}>
+              <div className={styles.filesHeader}>
+                <div>
+                  <span className={styles.filesTitle}>
+                    Archivos Complementarios ({editingSubtopicState.subtopic.files?.length || 0})
+                  </span>
+                  <p className={styles.pageSubtitle} style={{ margin: "2px 0 0" }}>
+                    Recursos y materiales descargables para esta sub-clase
+                  </p>
+                </div>
+              </div>
+
+              <FileDropzone
+                multiple={true}
+                maxFiles={5}
+                showList={false}
+                label="Arrastra archivos para esta sub-clase"
+                description="PDF, ZIP, DOCX, XLSX (Máx. 50MB)"
+                onFilesChange={(files: File[]) => {
+                  if (files && files.length > 0) {
+                    files.forEach((file) => {
+                      const newAttachment: CourseFileAttachment = {
+                        id: `f-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                        name: file.name,
+                        size: formatFileSize(file.size),
+                        url: URL.createObjectURL(file),
+                      };
+                      setEditingSubtopicState((prev) => {
+                        if (!prev) return null;
+                        return {
+                          ...prev,
+                          subtopic: {
+                            ...prev.subtopic,
+                            files: [...(prev.subtopic.files || []), newAttachment],
+                          },
+                        };
+                      });
+                    });
+                  }
+                }}
+              />
+
+              {editingSubtopicState.subtopic.files && editingSubtopicState.subtopic.files.length > 0 && (
+                <div className={styles.filesList}>
+                  {editingSubtopicState.subtopic.files.map((file, fIdx) => (
+                    <div key={file.id || fIdx} className={styles.fileItem}>
+                      <div className={styles.fileItemLeft}>
+                        <div className={styles.fileIconWrap}><Paperclip size={16} /></div>
+                        <input
+                          type="text"
+                          className={styles.fileNameInput}
+                          value={file.name}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditingSubtopicState((prev) => {
+                              if (!prev) return null;
+                              const nextFiles = [...(prev.subtopic.files || [])];
+                              nextFiles[fIdx] = { ...nextFiles[fIdx], name: val };
+                              return { ...prev, subtopic: { ...prev.subtopic, files: nextFiles } };
+                            });
+                          }}
+                        />
+                      </div>
+                      <div className={styles.fileItemRight}>
+                        {file.size && <span className={styles.fileSizeBadge}>{file.size}</span>}
+                        <button
+                          type="button"
+                          className={styles.deleteBtn}
+                          onClick={() => {
+                            setEditingSubtopicState((prev) => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                subtopic: {
+                                  ...prev.subtopic,
+                                  files: (prev.subtopic.files || []).filter((_, idx) => idx !== fIdx),
+                                },
+                              };
+                            });
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Preguntas de Autoevaluación del Subtopic */}
+            <div className={styles.filesSection}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div>
+                  <span className={styles.filesTitle}>
+                    Preguntas / Quiz ({editingSubtopicState.subtopic.questions?.length || 0})
+                  </span>
+                  <p className={styles.pageSubtitle} style={{ margin: "2px 0 0" }}>
+                    Preguntas de autoevaluación para esta sub-clase
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const newQ: CourseQuestion = {
+                      id: `q-${Date.now()}`,
+                      question: "",
+                      options: ["Opción A", "Opción B"],
+                      correctIndex: 0,
+                    };
+                    setEditingSubtopicState((prev) => {
+                      if (!prev) return null;
+                      return {
+                        ...prev,
+                        subtopic: {
+                          ...prev.subtopic,
+                          questions: [...(prev.subtopic.questions || []), newQ],
+                        },
+                      };
+                    });
+                  }}
+                >
+                  <Plus size={14} /> Añadir Pregunta
+                </Button>
+              </div>
+
+              {editingSubtopicState.subtopic.questions && editingSubtopicState.subtopic.questions.map((q, qIdx) => (
+                <div key={q.id || qIdx} className={styles.questionCard}>
+                  <div className={styles.questionCardHeader}>
+                    <span className={styles.questionIndexBadge}>Pregunta {qIdx + 1}</span>
+                    <button
+                      type="button"
+                      className={styles.deleteBtn}
+                      onClick={() => {
+                        setEditingSubtopicState((prev) => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            subtopic: {
+                              ...prev.subtopic,
+                              questions: (prev.subtopic.questions || []).filter((_, idx) => idx !== qIdx),
+                            },
+                          };
+                        });
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <Input
+                    label="Enunciado"
+                    placeholder="Escribe la pregunta..."
+                    value={q.question}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditingSubtopicState((prev) => {
+                        if (!prev) return null;
+                        const nextQs = [...(prev.subtopic.questions || [])];
+                        nextQs[qIdx] = { ...nextQs[qIdx], question: val };
+                        return { ...prev, subtopic: { ...prev.subtopic, questions: nextQs } };
+                      });
+                    }}
+                  />
+                  <div className={styles.optionsGrid}>
+                    <label className={styles.miniLabel}>Opciones (marca la correcta):</label>
+                    {q.options.map((opt, oIdx) => (
+                      <div key={oIdx} className={styles.optionItemRow}>
+                        <input
+                          type="radio"
+                          name={`sub-q-opt-${q.id || qIdx}`}
+                          checked={q.correctIndex === oIdx}
+                          onChange={() => {
+                            setEditingSubtopicState((prev) => {
+                              if (!prev) return null;
+                              const nextQs = [...(prev.subtopic.questions || [])];
+                              nextQs[qIdx] = { ...nextQs[qIdx], correctIndex: oIdx };
+                              return { ...prev, subtopic: { ...prev.subtopic, questions: nextQs } };
+                            });
+                          }}
+                          className={styles.optionRadio}
+                        />
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditingSubtopicState((prev) => {
+                              if (!prev) return null;
+                              const nextQs = [...(prev.subtopic.questions || [])];
+                              const nextOpts = [...nextQs[qIdx].options];
+                              nextOpts[oIdx] = val;
+                              nextQs[qIdx] = { ...nextQs[qIdx], options: nextOpts };
+                              return { ...prev, subtopic: { ...prev.subtopic, questions: nextQs } };
+                            });
+                          }}
+                          className={styles.fileNameInput}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </Modal>
         )}

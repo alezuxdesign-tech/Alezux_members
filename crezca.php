@@ -74,6 +74,13 @@ function crezca_init() {
 		$loader = new \Alezux_Members\Core\Plugin_Loader();
 		$loader->run();
 	}
+
+	// 4. Inicializar el motor LMS propio (Dual-Engine / Abstraction Layer)
+	if ( class_exists( 'Crezca\\Core\\LMS_Engine' ) ) {
+		\Crezca\Core\LMS_Engine::get_instance()->init();
+	} elseif ( class_exists( 'Alezux_Members\\Core\\LMS_Engine' ) ) {
+		\Alezux_Members\Core\LMS_Engine::get_instance()->init();
+	}
 }
 add_action( 'plugins_loaded', 'crezca_init' );
 

@@ -412,8 +412,12 @@ class Admin_Api {
 	 * Obtener cursos con su estructura de secciones y lecciones para el Builder
 	 */
 	public function get_courses() {
+		$course_types = class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) 
+			? \Alezux_Members\Core\LMS_Engine::get_course_post_types() 
+			: [ 'crezca_course', 'sfwd-courses' ];
+
 		$courses_posts = get_posts( [
-			'post_type'      => 'sfwd-courses',
+			'post_type'      => $course_types,
 			'post_status'    => [ 'publish', 'draft' ],
 			'posts_per_page' => 50,
 		] );
@@ -467,6 +471,8 @@ class Admin_Api {
 								'cover'       => $cover_url,
 								'duration'    => $duration,
 								'files'       => is_array( $files ) ? $files : [],
+								'questions'   => [],
+								'subtopics'   => [],
 							];
 						}
 
@@ -484,6 +490,8 @@ class Admin_Api {
 								'cover'       => $cover_url,
 								'duration'    => '15m',
 								'files'       => is_array( $files ) ? $files : [],
+								'questions'   => [],
+								'subtopics'   => [],
 							];
 						}
 
@@ -507,6 +515,8 @@ class Admin_Api {
 									'description' => 'Bienvenida a la formación.',
 									'video_url'   => '',
 									'files'       => [],
+									'questions'   => [],
+									'subtopics'   => [],
 								],
 							],
 						],
@@ -521,6 +531,7 @@ class Admin_Api {
 			$banner_url = get_post_meta( $post->ID, '_course_banner', true ) ?: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80';
 			$price = get_post_meta( $post->ID, '_course_price', true );
 			$linked_plan_id = get_post_meta( $post->ID, '_course_linked_plan_id', true );
+			$instructors = get_post_meta( $post->ID, '_alezux_course_mentors', true );
 
 			$whatsapp_url = get_post_meta( $post->ID, '_alezux_course_whatsapp', true ) ?: '';
 			$slack_url    = get_post_meta( $post->ID, '_alezux_course_slack', true ) ?: '';
@@ -550,6 +561,7 @@ class Admin_Api {
 				'status'       => $post->post_status,
 				'studentCount' => (int) get_post_meta( $post->ID, '_student_count', true ) ?: 120,
 				'sections'     => $sections,
+				'instructors'  => is_array( $instructors ) ? $instructors : [],
 				'whatsapp_url' => $whatsapp_url,
 				'slack_url'    => $slack_url,
 				'zoom_url'     => $zoom_url,
@@ -606,6 +618,9 @@ class Admin_Api {
 			$val = ! empty( $params['linkedPlanId'] ) ? (int) $params['linkedPlanId'] : null;
 			update_post_meta( $course_id, '_course_linked_plan_id', $val );
 		}
+		if ( isset( $params['instructors'] ) && is_array( $params['instructors'] ) ) {
+			update_post_meta( $course_id, '_alezux_course_mentors', $params['instructors'] );
+		}
 
 		return rest_ensure_response( [
 			'success' => true,
@@ -622,8 +637,12 @@ class Admin_Api {
 		$desc  = ! empty( $params['description'] ) ? wp_kses_post( $params['description'] ) : '';
 		$thumb = ! empty( $params['thumbnail'] ) ? esc_url_raw( $params['thumbnail'] ) : '';
 
+		$post_type = class_exists( '\\Alezux_Members\\Core\\LMS_Engine' )
+			? \Alezux_Members\Core\LMS_Engine::get_default_course_post_type()
+			: 'crezca_course';
+
 		$course_id = wp_insert_post( [
-			'post_type'    => 'sfwd-courses',
+			'post_type'    => $post_type,
 			'post_title'   => $title,
 			'post_content' => $desc,
 			'post_status'  => 'publish',
@@ -646,6 +665,8 @@ class Admin_Api {
 						'description' => 'Bienvenida al curso y objetivos principales de aprendizaje.',
 						'video_url'   => '',
 						'files'       => [],
+						'questions'   => [],
+						'subtopics'   => [],
 					],
 				],
 			],
@@ -662,6 +683,7 @@ class Admin_Api {
 			'status'       => 'publish',
 			'studentCount' => 0,
 			'sections'     => $initial_sections,
+			'instructors'  => [],
 		] );
 	}
 
@@ -671,6 +693,18 @@ class Admin_Api {
 	public function get_course_modules( $request ) {
 		$course_id = (int) $request->get_param( 'id' );
 		$modules = [];
+
+		// 1. Si tiene currículum guardado en Crezca, extraer módulos directamente
+		$saved_curriculum = get_post_meta( $course_id, '_alezux_curriculum_structure', true );
+		if ( ! empty( $saved_curriculum ) && is_array( $saved_curriculum ) ) {
+			foreach ( $saved_curriculum as $sec ) {
+				$modules[] = [
+					'id'    => $sec['id'],
+					'title' => $sec['title'],
+				];
+			}
+			return rest_ensure_response( $modules );
+		}
 
 		if ( function_exists( 'learndash_get_course_steps' ) ) {
 			$steps = learndash_get_course_steps( $course_id );
@@ -770,22 +804,30 @@ class Admin_Api {
 		$course_id = isset( $params['courseId'] ) ? (int) $params['courseId'] : 0;
 		$enable = ! empty( $params['enable'] );
 
-		if ( function_exists( 'ld_update_course_access' ) ) {
-			ld_update_course_access( $student_id, $course_id, ! $enable );
-		}
-
-		$current = get_user_meta( $student_id, '_alezux_enabled_courses', true );
-		$current = is_array( $current ) ? $current : [];
-
-		if ( $enable ) {
-			if ( ! in_array( $course_id, $current, true ) ) {
-				$current[] = $course_id;
+		if ( class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+			if ( $enable ) {
+				\Alezux_Members\Core\LMS_Engine::enroll_student( $student_id, $course_id );
+			} else {
+				\Alezux_Members\Core\LMS_Engine::unenroll_student( $student_id, $course_id );
 			}
 		} else {
-			$current = array_values( array_diff( $current, [ $course_id ] ) );
-		}
+			if ( function_exists( 'ld_update_course_access' ) ) {
+				ld_update_course_access( $student_id, $course_id, ! $enable );
+			}
 
-		update_user_meta( $student_id, '_alezux_enabled_courses', $current );
+			$current = get_user_meta( $student_id, '_alezux_enabled_courses', true );
+			$current = is_array( $current ) ? $current : [];
+
+			if ( $enable ) {
+				if ( ! in_array( $course_id, $current, true ) ) {
+					$current[] = $course_id;
+				}
+			} else {
+				$current = array_values( array_diff( $current, [ $course_id ] ) );
+			}
+
+			update_user_meta( $student_id, '_alezux_enabled_courses', $current );
+		}
 
 		return rest_ensure_response( [
 			'success' => true,
@@ -2325,7 +2367,10 @@ class Admin_Api {
 		$enrolled_ids = [];
 		if ( current_user_can( 'administrator' ) ) {
 			// Los administradores tienen acceso a todos los cursos en modo preview
-			$all = get_posts( [ 'post_type' => 'sfwd-courses', 'posts_per_page' => -1, 'fields' => 'ids' ] );
+			$course_types = class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) 
+				? \Alezux_Members\Core\LMS_Engine::get_course_post_types() 
+				: [ 'crezca_course', 'sfwd-courses' ];
+			$all = get_posts( [ 'post_type' => $course_types, 'posts_per_page' => -1, 'fields' => 'ids' ] );
 			$enrolled_ids = array_map( 'intval', $all );
 		} else {
 			$saved = get_user_meta( $user->ID, '_alezux_enabled_courses', true );
@@ -2342,7 +2387,23 @@ class Admin_Api {
 
 		$custom_avatar = get_user_meta( $user->ID, '_crezca_custom_avatar', true );
 		$avatar = $custom_avatar ?: get_avatar_url( $user->ID, [ 'size' => 120 ] );
-		$completed = get_user_meta( $user->ID, '_crezca_completed_topics', true ) ?: [];
+
+		// Obtener topics y subtopics completados desde la tabla de progreso y el meta
+		global $wpdb;
+		$table_progress = $wpdb->prefix . 'crezca_topic_progress';
+		$completed_from_db = [];
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_progress'" ) === $table_progress ) {
+			$completed_from_db = $wpdb->get_col( $wpdb->prepare(
+				"SELECT topic_id FROM $table_progress WHERE user_id = %d AND is_completed = 1",
+				$user->ID
+			) );
+		}
+
+		$completed_meta = get_user_meta( $user->ID, '_crezca_completed_topics', true ) ?: [];
+		$completed = array_values( array_unique( array_merge(
+			is_array( $completed_from_db ) ? $completed_from_db : [],
+			is_array( $completed_meta ) ? $completed_meta : []
+		) ) );
 
 		return rest_ensure_response( [
 			'id'                => $user->ID,
@@ -2353,7 +2414,7 @@ class Admin_Api {
 			'joinedDate'        => date( 'd M Y', strtotime( $user->user_registered ) ),
 			'planName'          => get_user_meta( $user->ID, '_alezux_plan_name', true ) ?: ( current_user_can( 'administrator' ) ? 'Administrador' : 'Estudiante Pro' ),
 			'enrolledCourseIds' => $enrolled_ids,
-			'completedTopicIds' => is_array( $completed ) ? array_values( $completed ) : [],
+			'completedTopicIds' => array_values( array_map( 'strval', $completed ) ),
 			'isAdmin'           => current_user_can( 'administrator' ),
 		] );
 	}
@@ -2405,23 +2466,41 @@ class Admin_Api {
 		if ( ! is_wp_error( $profile_res ) ) {
 			$profile = $profile_res->get_data();
 			$enrolled_ids = $profile['enrolledCourseIds'];
-			$completed_topic_ids = $profile['completedTopicIds'];
+			$completed_topic_ids = array_map( 'strval', $profile['completedTopicIds'] );
 		}
 
-		foreach ( $courses as &$c ) {
-			$c['hasAccess'] = in_array( (int) $c['id'], $enrolled_ids, true );
+		$user_id = get_current_user_id();
 
-			// Calcular progreso de topics completados en este curso
+		foreach ( $courses as &$c ) {
+			// Comprobar acceso mediante LMS_Engine
+			$has_acc = in_array( (int) $c['id'], $enrolled_ids, true );
+			if ( ! $has_acc && class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+				$has_acc = \Alezux_Members\Core\LMS_Engine::has_access( $c['id'], $user_id );
+			}
+			$c['hasAccess'] = $has_acc;
+
+			// Calcular progreso considerando Topics y Subtopics
 			$total_topics = 0;
 			$done_topics = 0;
 			if ( ! empty( $c['sections'] ) && is_array( $c['sections'] ) ) {
 				foreach ( $c['sections'] as $sec ) {
 					$topics = ! empty( $sec['lessons'] ) ? $sec['lessons'] : ( ! empty( $sec['topics'] ) ? $sec['topics'] : [] );
 					foreach ( $topics as $top ) {
-						$total_topics++;
-						$top_id = isset( $top['id'] ) ? (string) $top['id'] : '';
-						if ( in_array( $top_id, $completed_topic_ids, true ) ) {
-							$done_topics++;
+						// Si el topic tiene subtopics, las unidades de aprendizaje son los subtopics
+						if ( ! empty( $top['subtopics'] ) && is_array( $top['subtopics'] ) ) {
+							foreach ( $top['subtopics'] as $sub ) {
+								$total_topics++;
+								$sub_id = isset( $sub['id'] ) ? (string) $sub['id'] : '';
+								if ( in_array( $sub_id, $completed_topic_ids, true ) ) {
+									$done_topics++;
+								}
+							}
+						} else {
+							$total_topics++;
+							$top_id = isset( $top['id'] ) ? (string) $top['id'] : '';
+							if ( in_array( $top_id, $completed_topic_ids, true ) ) {
+								$done_topics++;
+							}
 						}
 					}
 				}
@@ -2436,7 +2515,7 @@ class Admin_Api {
 	}
 
 	/**
-	 * Marcar / desmarcar topic como completado por el estudiante
+	 * Marcar / desmarcar topic o subtopic como completado por el estudiante
 	 */
 	public function toggle_student_complete_topic( $request ) {
 		$user_id = get_current_user_id();
@@ -2446,9 +2525,21 @@ class Admin_Api {
 
 		$params = $request->get_json_params();
 		$topic_id = isset( $params['topicId'] ) ? sanitize_text_field( $params['topicId'] ) : '';
+		$course_id = isset( $params['courseId'] ) ? (int) $params['courseId'] : 0;
+		$quiz_score = isset( $params['quizScore'] ) ? (int) $params['quizScore'] : null;
+		$quiz_answers = isset( $params['quizAnswers'] ) ? $params['quizAnswers'] : null;
 
 		if ( empty( $topic_id ) ) {
 			return new \WP_Error( 'missing_topic', 'Topic ID requerido', [ 'status' => 400 ] );
+		}
+
+		if ( class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+			$res = \Alezux_Members\Core\LMS_Engine::toggle_topic_complete( $topic_id, $user_id, $course_id, $quiz_score, $quiz_answers );
+			return rest_ensure_response( [
+				'success'           => true,
+				'isCompleted'       => $res['is_completed'],
+				'completedTopicIds' => array_values( array_map( 'strval', $res['all_completed'] ) ),
+			] );
 		}
 
 		$completed = get_user_meta( $user_id, '_crezca_completed_topics', true );
@@ -2470,7 +2561,7 @@ class Admin_Api {
 		return rest_ensure_response( [
 			'success'           => true,
 			'isCompleted'       => $is_now_completed,
-			'completedTopicIds' => $completed,
+			'completedTopicIds' => array_values( array_map( 'strval', $completed ) ),
 		] );
 	}
 

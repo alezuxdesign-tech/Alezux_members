@@ -70,6 +70,25 @@ export interface CourseFileAttachment {
   size?: string;
 }
 
+export interface CourseQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation?: string;
+}
+
+export interface CourseSubtopic {
+  id: string;
+  title: string;
+  duration?: string;
+  video_url?: string;
+  cover?: string;
+  description?: string;
+  files?: CourseFileAttachment[];
+  questions?: CourseQuestion[];
+}
+
 export interface CourseTopic {
   id: string;
   title: string;
@@ -78,6 +97,16 @@ export interface CourseTopic {
   video_url?: string;
   duration?: string;
   files?: CourseFileAttachment[];
+  questions?: CourseQuestion[];
+  subtopics?: CourseSubtopic[];
+}
+
+export interface CourseInstructor {
+  id?: string | number;
+  name: string;
+  avatar?: string;
+  role?: string;
+  bio?: string;
 }
 
 export interface CourseLesson extends CourseTopic {
@@ -105,6 +134,7 @@ export interface Course {
   status: "publish" | "draft";
   studentCount: number;
   sections: CourseSection[];
+  instructors?: CourseInstructor[];
   whatsapp_url?: string;
   slack_url?: string;
   zoom_url?: string;
