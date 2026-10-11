@@ -1731,6 +1731,9 @@ class Admin_Api {
 			// WhatsApp & Instrucciones
 			'whatsapp_number'             => $saved['whatsapp_number'] ?? '',
 			'manual_payment_instructions' => $saved['manual_payment_instructions'] ?? 'Envía tu comprobante con el número de referencia para verificar y activar tu acceso de inmediato.',
+
+			// Métodos de Pago Manuales Dinámicos (Sin restricción por país)
+			'manual_methods'              => isset( $saved['manual_methods'] ) && is_array( $saved['manual_methods'] ) ? $saved['manual_methods'] : [],
 		] );
 	}
 
@@ -1780,6 +1783,22 @@ class Admin_Api {
 					$current[ $f ] = sanitize_text_field( $params[ $f ] );
 				}
 			}
+		}
+
+		// Guardar lista de métodos manuales dinámicos
+		if ( isset( $params['manual_methods'] ) && is_array( $params['manual_methods'] ) ) {
+			$clean_manual = [];
+			foreach ( $params['manual_methods'] as $m ) {
+				if ( ! empty( $m['name'] ) || ! empty( $m['details'] ) ) {
+					$clean_manual[] = [
+						'id'      => sanitize_text_field( $m['id'] ?? uniqid( 'man_' ) ),
+						'name'    => sanitize_text_field( $m['name'] ?? 'Método de Pago' ),
+						'details' => sanitize_textarea_field( $m['details'] ?? '' ),
+						'enabled' => ! empty( $m['enabled'] ),
+					];
+				}
+			}
+			$current['manual_methods'] = $clean_manual;
 		}
 
 		update_option( 'alezux_finance_settings', $current );

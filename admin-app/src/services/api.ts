@@ -219,6 +219,13 @@ export interface SubscriptionItem {
   stripeId?: string;
 }
 
+export interface ManualPaymentMethod {
+  id: string;
+  name: string;
+  details: string;
+  enabled: boolean;
+}
+
 export interface FinanceSettings {
   // Stripe
   stripe_enabled?: boolean;
@@ -226,7 +233,10 @@ export interface FinanceSettings {
   stripe_secret_key: string;
   webhook_url?: string;
 
-  // Pago Móvil (Venezuela)
+  // Métodos de pago manuales dinámicos
+  manual_methods?: ManualPaymentMethod[];
+
+  // Pago Móvil (Venezuela - Legacy)
   pagomovil_enabled?: boolean;
   pagomovil_bank?: string;
   pagomovil_id?: string;
@@ -1404,6 +1414,7 @@ class ApiService {
       stripe_public_key: "",
       stripe_secret_key: "",
       webhook_url: `${window.location.origin}/?alezux_webhook=stripe`,
+      manual_methods: [],
       pagomovil_enabled: false,
       pagomovil_bank: "",
       pagomovil_id: "",

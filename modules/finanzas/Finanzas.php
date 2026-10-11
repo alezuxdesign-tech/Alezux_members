@@ -116,6 +116,7 @@ class Finanzas extends Module_Base {
             $stripe_active = ! empty( $settings['stripe_enabled'] ) && ! empty( $stripe_sec ) && ! empty( $plan->stripe_price_id );
 
             $has_manual_methods = (
+                ! empty( $settings['manual_methods'] ) ||
                 ! empty( $settings['pagomovil_enabled'] ) ||
                 ! empty( $settings['zelle_enabled'] ) ||
                 ! empty( $settings['bank_transfer_enabled'] ) ||

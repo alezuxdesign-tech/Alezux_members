@@ -30,6 +30,8 @@ import {
   X,
   ExternalLink,
   Loader2,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -48,23 +50,18 @@ import {
   SaleTransaction,
   SubscriptionItem,
   FinanceSettings,
+  ManualPaymentMethod,
 } from "../services/api";
 import { ModuleSkeleton } from "../components/arc/skeleton";
 import styles from "./FinanceView.module.css";
 
 type FinanceTab = "planes" | "ventas" | "suscripciones";
-type PlanModalTab = "general" | "reglas";
-type SettingsTab = "locales" | "stripe" | "binance" | "paypal" | "instrucciones";
+type SettingsTab = "manuales" | "stripe" | "binance" | "paypal";
 
 const TABS: SegmentOption<FinanceTab>[] = [
   { value: "planes", label: "Planes de Pago" },
   { value: "ventas", label: "Historial de Ventas" },
   { value: "suscripciones", label: "Suscripciones & Cuotas" },
-];
-
-const PLAN_MODAL_TABS: SegmentOption<PlanModalTab>[] = [
-  { value: "general", label: "Detalles del Plan" },
-  { value: "reglas", label: "Reglas de Liberación" },
 ];
 
 const PLAN_TYPE_OPTIONS: SegmentOption<PlanType>[] = [
@@ -74,11 +71,10 @@ const PLAN_TYPE_OPTIONS: SegmentOption<PlanType>[] = [
 ];
 
 const SETTINGS_TABS: SegmentOption<SettingsTab>[] = [
-  { value: "locales", label: "Pago Móvil & Zelle" },
+  { value: "manuales", label: "Pagos Manuales" },
   { value: "stripe", label: "Stripe" },
   { value: "binance", label: "Binance Pay" },
   { value: "paypal", label: "PayPal" },
-  { value: "instrucciones", label: "WhatsApp & Ayuda" },
 ];
 
 const formatCurrency = (amount: number, decimals: number = 2): string => {
@@ -137,13 +133,18 @@ export function FinanceView() {
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Vista de Planes: Cuadrícula vs Tabla
+  const [planViewMode, setPlanViewMode] = useState<"grid" | "table">("grid");
+
   // Configuración Pasarelas & Métodos de Pago
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>("locales");
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("manuales");
+  const [manualMethods, setManualMethods] = useState<ManualPaymentMethod[]>([]);
   const [settings, setSettings] = useState<FinanceSettings>({
     stripe_enabled: false,
     stripe_public_key: "",
     stripe_secret_key: "",
     webhook_url: "",
+    manual_methods: [],
     pagomovil_enabled: false,
     pagomovil_bank: "",
     pagomovil_id: "",
@@ -173,9 +174,9 @@ export function FinanceView() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
 
-  // Modal Crear Plan
+  // Modal Crear Plan (con Wizard por pasos)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createModalTab, setCreateModalTab] = useState<PlanModalTab>("general");
+  const [createStep, setCreateStep] = useState<"details" | "rules">("details");
   const [createPlanType, setCreatePlanType] = useState<PlanType>("installments");
   const [createName, setCreateName] = useState("");
   const [createCourseId, setCreateCourseId] = useState<number>(0);
@@ -188,9 +189,9 @@ export function FinanceView() {
   const [loadingCreateModules, setLoadingCreateModules] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Modal Configurar / Editar Plan
+  // Modal Configurar / Editar Plan (con Wizard por pasos)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editModalTab, setEditModalTab] = useState<PlanModalTab>("general");
+  const [editStep, setEditStep] = useState<"details" | "rules">("details");
   const [editPlanType, setEditPlanType] = useState<PlanType>("installments");
   const [editingPlan, setEditingPlan] = useState<FinancePlan | null>(null);
   const [editName, setEditName] = useState("");
@@ -258,6 +259,49 @@ export function FinanceView() {
         setSubscriptions(subsData.rows);
         setSubsTotal(subsData.total);
         setSettings(settingsData);
+        let initialManual = settingsData.manual_methods || [];
+        if (initialManual.length === 0) {
+          const legacy: ManualPaymentMethod[] = [];
+          if (settingsData.pagomovil_enabled || settingsData.pagomovil_phone || settingsData.pagomovil_bank) {
+            legacy.push({
+              id: "pm_1",
+              name: "Pago Móvil (Venezuela)",
+              details: `Banco: ${settingsData.pagomovil_bank || "Banesco"}\nTeléfono: ${settingsData.pagomovil_phone || ""}\nCédula/RIF: ${settingsData.pagomovil_id || ""}\nTitular: ${settingsData.pagomovil_holder || ""}`,
+              enabled: settingsData.pagomovil_enabled ?? false,
+            });
+          }
+          if (settingsData.zelle_enabled || settingsData.zelle_email) {
+            legacy.push({
+              id: "zelle_1",
+              name: "Zelle (USD)",
+              details: `Correo: ${settingsData.zelle_email || ""}\nTitular: ${settingsData.zelle_holder || ""}`,
+              enabled: settingsData.zelle_enabled ?? false,
+            });
+          }
+          if (settingsData.bank_transfer_enabled || settingsData.bank_name) {
+            legacy.push({
+              id: "bank_1",
+              name: `Transferencia Bancaria (${settingsData.bank_name || "Local"})`,
+              details: `Banco: ${settingsData.bank_name || ""}\nTipo: ${settingsData.bank_account_type || "Corriente"}\nCuenta: ${settingsData.bank_account_number || ""}\nTitular: ${settingsData.bank_holder_name || ""}`,
+              enabled: settingsData.bank_transfer_enabled ?? false,
+            });
+          }
+          initialManual = legacy.length > 0 ? legacy : [
+            {
+              id: "manual_pm",
+              name: "Pago Móvil / Transferencia Local",
+              details: "Banco: Banesco\nTeléfono: 0414-0000000\nCédula: V-00000000\nTitular: Academia",
+              enabled: false,
+            },
+            {
+              id: "manual_zelle",
+              name: "Zelle (USD)",
+              details: "Correo: pagos@tuacademia.com\nTitular: Academia",
+              enabled: false,
+            },
+          ];
+        }
+        setManualMethods(initialManual);
       })
       .finally(() => {
         setIsLoading(false);
@@ -349,7 +393,7 @@ export function FinanceView() {
 
   const handleOpenCreateModal = () => {
     setIsCreateModalOpen(true);
-    setCreateModalTab("general");
+    setCreateStep("details");
     setCreatePlanType("installments");
     const firstCourse = courses.length > 0 ? courses[0].id : 0;
     setCreateCourseId(firstCourse);
@@ -389,7 +433,7 @@ export function FinanceView() {
     setCreateQuotaAmount(97);
     setCreateWhatsapp("");
     setCreateAccessRules({});
-    setCreateModalTab("general");
+    setCreateStep("details");
   };
 
   const handleOpenEditPlan = (plan: FinancePlan) => {
@@ -404,7 +448,7 @@ export function FinanceView() {
     setEditQuotaAmount(plan.quotaAmount);
     setEditFrequency(plan.frequency && plan.frequency !== "contado" ? plan.frequency : "month");
     setEditWhatsapp(plan.whatsapp_number || "");
-    setEditModalTab("general");
+    setEditStep("details");
     setIsEditModalOpen(true);
     fetchModulesForEdit(plan.courseId, plan.access_rules);
   };
@@ -577,12 +621,37 @@ export function FinanceView() {
     }
   };
 
+  const handleAddManualMethod = () => {
+    setManualMethods((prev) => [
+      ...prev,
+      {
+        id: `man_${Date.now()}`,
+        name: "Nuevo Método de Pago Manual",
+        details: "Banco / Plataforma:\nNúmero de Cuenta / Teléfono / Correo:\nTitular:\nDocumento / Cédula / RUT:",
+        enabled: true,
+      },
+    ]);
+  };
+
+  const handleUpdateManualMethod = (id: string, field: "name" | "details" | "enabled", val: any) => {
+    setManualMethods((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, [field]: val } : m))
+    );
+  };
+
+  const handleRemoveManualMethod = (id: string) => {
+    setManualMethods((prev) => prev.filter((m) => m.id !== id));
+  };
+
   // Handlers para Configuración
   const handleSaveSettings = async () => {
     setIsSavingSettings(true);
-    await api.saveFinanceSettings(settings);
+    await api.saveFinanceSettings({
+      ...settings,
+      manual_methods: manualMethods,
+    });
     setIsSavingSettings(false);
-    setSettingsNotice("Configuración de Stripe guardada con éxito.");
+    setSettingsNotice("Métodos de pago guardados con éxito.");
     setTimeout(() => {
       setSettingsNotice(null);
       setIsSettingsModalOpen(false);
@@ -692,161 +761,303 @@ export function FinanceView() {
           value={activeTab}
           onChange={setActiveTab}
         />
+        {activeTab === "planes" && (
+          <div className={styles.viewToggleWrap}>
+            <button
+              type="button"
+              className={`${styles.viewToggleBtn} ${planViewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => setPlanViewMode("grid")}
+              title="Vista en Cuadrícula"
+              aria-label="Vista en Cuadrícula"
+            >
+              <LayoutGrid size={15} />
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewToggleBtn} ${planViewMode === "table" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => setPlanViewMode("table")}
+              title="Vista en Tabla"
+              aria-label="Vista en Tabla"
+            >
+              <List size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ============================================================== */}
       {/* PESTAÑA 1: PLANES DE PAGO */}
       {/* ============================================================== */}
       {activeTab === "planes" && (
-        <div className={styles.plansGrid}>
-          {plans.map((plan) => {
-            const isCopied = copiedToken === plan.token;
-            return (
-              <div key={plan.id} className={styles.planCard}>
-                <div className={styles.planTop}>
-                  <h3 className={styles.planName}>{plan.name}</h3>
-                  <span className={styles.quotaBadge}>
-                    {plan.totalQuotas === 0 || plan.planType === "subscription"
-                      ? "Membresía Recurrente"
-                      : plan.totalQuotas > 1
-                      ? `${plan.totalQuotas} Cuotas`
-                      : "Pago Único"}
-                  </span>
-                </div>
-
-                <div className={styles.planPriceRow}>
-                  <span className={styles.currency}>$</span>
-                  <span className={styles.priceAmount}>{formatCurrency(plan.quotaAmount)}</span>
-                  <span className={styles.pricePeriod}>
-                    {plan.totalQuotas === 0 || plan.planType === "subscription"
-                      ? `USD / ${plan.frequency === "year" ? "año" : plan.frequency === "week" ? "sem" : "mes"}`
-                      : "USD"}
-                  </span>
-                </div>
-
-                <div className={styles.courseTag}>
-                  <CreditCard size={15} />
-                  <span>{plan.courseTitle || "Todos los Cursos"}</span>
-                </div>
-
-                {plan.whatsapp_number && (
-                  <div className={styles.whatsappTag}>
-                    <MessageSquare size={13} />
-                    <span>Soporte: {plan.whatsapp_number}</span>
-                  </div>
-                )}
-
-                <div className={styles.planDetails}>
-                  <div className={styles.detailRow}>
-                    <span>
+        plans.length === 0 ? (
+          <div className={styles.emptyState}>
+            <CreditCard size={40} className={styles.emptyIcon} />
+            <h3 className={styles.emptyTitle}>No hay planes creados todavía</h3>
+            <p className={styles.emptyDesc}>
+              Crea tu primer plan en cuotas o pago único para empezar a generar enlaces directos con Stripe.
+            </p>
+            <Button
+              variant="primary"
+              style={{ marginTop: "1rem" }}
+              onClick={handleOpenCreateModal}
+            >
+              <Plus size={16} /> Crear Primer Plan
+            </Button>
+          </div>
+        ) : planViewMode === "grid" ? (
+          <div className={styles.plansGrid}>
+            {plans.map((plan) => {
+              const isCopied = copiedToken === plan.token;
+              return (
+                <div key={plan.id} className={styles.planCard}>
+                  <div className={styles.planTop}>
+                    <h3 className={styles.planName}>{plan.name}</h3>
+                    <span className={styles.quotaBadge}>
                       {plan.totalQuotas === 0 || plan.planType === "subscription"
-                        ? "Costo por período:"
-                        : "Total a pagar:"}
-                    </span>
-                    <strong className={styles.totalAmount}>
-                      $
-                      {formatCurrency(
-                        plan.totalQuotas === 0 || plan.planType === "subscription"
-                          ? plan.quotaAmount
-                          : plan.totalAmount
-                      )}{" "}
-                      USD
-                    </strong>
-                  </div>
-                  <div className={styles.detailRow}>
-                    <span>Frecuencia:</span>
-                    <span>
-                      {plan.totalQuotas === 0 || plan.planType === "subscription"
-                        ? plan.frequency === "year"
-                          ? "Anual"
-                          : plan.frequency === "week"
-                          ? "Semanal"
-                          : "Mensual"
-                        : plan.frequency === "contado"
-                        ? "Inmediato"
-                        : "Mensual"}
+                        ? "Membresía Recurrente"
+                        : plan.totalQuotas > 1
+                        ? `${plan.totalQuotas} Cuotas`
+                        : "Pago Único"}
                     </span>
                   </div>
-                  <div className={styles.detailRow}>
-                    <span>Alumnos suscritos:</span>
-                    <span>{plan.subscribersCount} alumnos</span>
+
+                  <div className={styles.planPriceRow}>
+                    <span className={styles.currency}>$</span>
+                    <span className={styles.priceAmount}>{formatCurrency(plan.quotaAmount)}</span>
+                    <span className={styles.pricePeriod}>
+                      {plan.totalQuotas === 0 || plan.planType === "subscription"
+                        ? `USD / ${plan.frequency === "year" ? "año" : plan.frequency === "week" ? "sem" : "mes"}`
+                        : "USD"}
+                    </span>
+                  </div>
+
+                  <div className={styles.courseTag}>
+                    <CreditCard size={15} />
+                    <span>{plan.courseTitle || "Todos los Cursos"}</span>
+                  </div>
+
+                  {plan.whatsapp_number && (
+                    <div className={styles.whatsappTag}>
+                      <MessageSquare size={13} />
+                      <span>Soporte: {plan.whatsapp_number}</span>
+                    </div>
+                  )}
+
+                  <div className={styles.planDetails}>
+                    <div className={styles.detailRow}>
+                      <span>
+                        {plan.totalQuotas === 0 || plan.planType === "subscription"
+                          ? "Costo por período:"
+                          : "Total a pagar:"}
+                      </span>
+                      <strong className={styles.totalAmount}>
+                        $
+                        {formatCurrency(
+                          plan.totalQuotas === 0 || plan.planType === "subscription"
+                            ? plan.quotaAmount
+                            : plan.totalAmount
+                        )}{" "}
+                        USD
+                      </strong>
+                    </div>
+                    <div className={styles.detailRow}>
+                      <span>Frecuencia:</span>
+                      <span>
+                        {plan.totalQuotas === 0 || plan.planType === "subscription"
+                          ? plan.frequency === "year"
+                            ? "Anual"
+                            : plan.frequency === "week"
+                            ? "Semanal"
+                            : "Mensual"
+                          : plan.frequency === "contado"
+                          ? "Inmediato"
+                          : "Mensual"}
+                      </span>
+                    </div>
+                    <div className={styles.detailRow}>
+                      <span>Alumnos suscritos:</span>
+                      <span>{plan.subscribersCount} alumnos</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.cardDivider} />
+
+                  <div className={styles.shareLinkBox}>
+                    <span className={styles.shareLinkUrl} title={plan.checkoutUrl}>
+                      {plan.checkoutUrl}
+                    </span>
+                    <button
+                      type="button"
+                      className={[
+                        styles.shareCopyBtn,
+                        isCopied ? styles.shareCopied : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      onClick={() => handleCopyLink(plan)}
+                      title="Copiar enlace de pago"
+                    >
+                      {isCopied ? (
+                        <>
+                          <Check size={13} className={styles.shareCheckIcon} />
+                          <span>Copiado</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={13} />
+                          <span>Copy link</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className={styles.cardBottomDivider} />
+
+                  <div className={styles.cardFooterActions}>
+                    <button
+                      type="button"
+                      className={styles.configBtn}
+                      onClick={() => handleOpenEditPlan(plan)}
+                      title="Configurar plan"
+                    >
+                      <Pencil size={14} />
+                      <span>Configurar</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.deletePlanBtn}
+                      onClick={() => handleDeletePlan(plan.id, plan.name)}
+                      title="Eliminar este plan"
+                    >
+                      <Trash2 size={14} />
+                      <span>Eliminar</span>
+                    </button>
                   </div>
                 </div>
-
-                <div className={styles.cardDivider} />
-
-                <div className={styles.shareLinkBox}>
-                  <span className={styles.shareLinkUrl} title={plan.checkoutUrl}>
-                    {plan.checkoutUrl}
-                  </span>
-                  <button
-                    type="button"
-                    className={[
-                      styles.shareCopyBtn,
-                      isCopied ? styles.shareCopied : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    onClick={() => handleCopyLink(plan)}
-                    title="Copiar enlace de pago"
-                  >
-                    {isCopied ? (
-                      <>
-                        <Check size={13} className={styles.shareCheckIcon} />
-                        <span>Copiado</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={13} />
-                        <span>Copy link</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className={styles.cardBottomDivider} />
-
-                <div className={styles.cardFooterActions}>
-                  <button
-                    type="button"
-                    className={styles.configBtn}
-                    onClick={() => handleOpenEditPlan(plan)}
-                    title="Configurar plan"
-                  >
-                    <Pencil size={14} />
-                    <span>Configurar</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.deletePlanBtn}
-                    onClick={() => handleDeletePlan(plan.id, plan.name)}
-                    title="Eliminar este plan"
-                  >
-                    <Trash2 size={14} />
-                    <span>Eliminar</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-
-          {plans.length === 0 && (
-            <div className={styles.emptyState}>
-              <CreditCard size={40} className={styles.emptyIcon} />
-              <h3 className={styles.emptyTitle}>No hay planes creados todavía</h3>
-              <p className={styles.emptyDesc}>
-                Crea tu primer plan en cuotas o pago único para empezar a generar enlaces directos con Stripe.
-              </p>
-              <Button
-                variant="primary"
-                style={{ marginTop: "1rem" }}
-                onClick={handleOpenCreateModal}
-              >
-                <Plus size={16} /> Crear Primer Plan
-              </Button>
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Plan / Tipo</th>
+                  <th>Curso</th>
+                  <th>Monto</th>
+                  <th>Frecuencia</th>
+                  <th>Alumnos</th>
+                  <th>Enlace Checkout</th>
+                  <th style={{ textAlign: "right" }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {plans.map((plan) => {
+                  const isCopied = copiedToken === plan.token;
+                  return (
+                    <tr key={plan.id}>
+                      <td>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{plan.name}</span>
+                          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                            {plan.totalQuotas === 0 || plan.planType === "subscription"
+                              ? "Membresía Recurrente"
+                              : plan.totalQuotas > 1
+                              ? `${plan.totalQuotas} Cuotas`
+                              : "Pago Único"}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-secondary)" }}>
+                          <CreditCard size={13} style={{ color: "var(--text-muted)" }} />
+                          <span>{plan.courseTitle || "Todos los Cursos"}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={styles.amountText}>
+                          ${formatCurrency(plan.quotaAmount)} USD
+                        </span>
+                        {plan.totalQuotas > 1 && (
+                          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                            Total: ${formatCurrency(plan.totalAmount)} USD
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                          {plan.totalQuotas === 0 || plan.planType === "subscription"
+                            ? plan.frequency === "year"
+                              ? "Anual"
+                              : plan.frequency === "week"
+                              ? "Semanal"
+                              : "Mensual"
+                            : plan.frequency === "contado"
+                            ? "Inmediato"
+                            : "Mensual"}
+                        </span>
+                      </td>
+                      <td>
+                        <Badge variant="neutral" size="sm">
+                          {plan.subscribersCount} alumnos
+                        </Badge>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className={[
+                            styles.shareCopyBtn,
+                            isCopied ? styles.shareCopied : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          onClick={() => handleCopyLink(plan)}
+                          title="Copiar enlace de pago"
+                          style={{ padding: "5px 12px", fontSize: "12px" }}
+                        >
+                          {isCopied ? (
+                            <>
+                              <Check size={12} className={styles.shareCheckIcon} />
+                              <span>Copiado</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={12} />
+                              <span>Copy link</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
+                          <button
+                            type="button"
+                            className={styles.configBtn}
+                            onClick={() => handleOpenEditPlan(plan)}
+                            title="Configurar plan"
+                            style={{ padding: "5px 14px", fontSize: "12px" }}
+                          >
+                            <Pencil size={13} />
+                            <span>Configurar</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.deletePlanBtn}
+                            onClick={() => handleDeletePlan(plan.id, plan.name)}
+                            title="Eliminar este plan"
+                            style={{ padding: "5px 8px" }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {/* ============================================================== */}
@@ -1261,129 +1472,97 @@ export function FinanceView() {
           />
         </div>
 
-        {/* PESTAÑA 1: COBROS LOCALES (PAGO MÓVIL, ZELLE, TRANSFERENCIAS) */}
-        {settingsTab === "locales" && (
+        {/* PESTAÑA 1: MÉTODOS DE PAGO MANUALES */}
+        {settingsTab === "manuales" && (
           <div className={styles.modalTabContent}>
-            {/* Pago Móvil */}
             <div className={styles.gatewaySection}>
               <div className={styles.gatewayHeader}>
                 <div className={styles.gatewayTitleWrap}>
-                  <Smartphone size={16} style={{ color: "var(--accent)" }} />
-                  <h4 className={styles.gatewayTitle}>Pago Móvil (Venezuela)</h4>
+                  <Wallet size={16} style={{ color: "var(--accent)" }} />
+                  <h4 className={styles.gatewayTitle}>Métodos de Pago Manuales</h4>
                 </div>
-                <Switch
+                <Button
+                  variant="secondary"
                   size="sm"
-                  checked={settings.pagomovil_enabled ?? false}
-                  onCheckedChange={(val) => setSettings({ ...settings, pagomovil_enabled: val })}
-                />
+                  type="button"
+                  onClick={handleAddManualMethod}
+                >
+                  <Plus size={14} /> Añadir Método
+                </Button>
               </div>
-              <div className={styles.formRow}>
-                <Input
-                  label="Banco"
-                  placeholder="Ej: Banesco (0134), BDV, Mercantil"
-                  value={settings.pagomovil_bank || ""}
-                  onChange={(e) => setSettings({ ...settings, pagomovil_bank: e.target.value })}
-                />
-                <Input
-                  label="Cédula o RIF"
-                  placeholder="Ej: V-19283741 o J-12345678-0"
-                  value={settings.pagomovil_id || ""}
-                  onChange={(e) => setSettings({ ...settings, pagomovil_id: e.target.value })}
-                />
-              </div>
-              <div className={styles.formRow}>
-                <Input
-                  label="Número de Teléfono"
-                  placeholder="Ej: 0414-1234567"
-                  value={settings.pagomovil_phone || ""}
-                  onChange={(e) => setSettings({ ...settings, pagomovil_phone: e.target.value })}
-                />
-                <Input
-                  label="Nombre del Titular"
-                  placeholder="Ej: Alejandro Suárez"
-                  value={settings.pagomovil_holder || ""}
-                  onChange={(e) => setSettings({ ...settings, pagomovil_holder: e.target.value })}
-                />
-              </div>
+              <p className={styles.settingsDesc} style={{ margin: 0 }}>
+                Configura los métodos de pago manuales o transferencias que desees (Pago Móvil, Zelle, Transferencia Bancaria, Bizum, etc.). Los alumnos verán los datos en el checkout para realizar su pago.
+              </p>
             </div>
 
-            {/* Zelle */}
-            <div className={styles.gatewaySection}>
-              <div className={styles.gatewayHeader}>
-                <div className={styles.gatewayTitleWrap}>
-                  <DollarSign size={16} style={{ color: "var(--accent)" }} />
-                  <h4 className={styles.gatewayTitle}>Zelle (USD)</h4>
-                </div>
-                <Switch
-                  size="sm"
-                  checked={settings.zelle_enabled ?? false}
-                  onCheckedChange={(val) => setSettings({ ...settings, zelle_enabled: val })}
-                />
-              </div>
-              <div className={styles.formRow}>
-                <Input
-                  label="Correo Electrónico de Zelle"
-                  placeholder="pagos@tuacademia.com"
-                  value={settings.zelle_email || ""}
-                  onChange={(e) => setSettings({ ...settings, zelle_email: e.target.value })}
-                />
-                <Input
-                  label="Nombre del Titular en Zelle"
-                  placeholder="Ej: Alejandro Suárez"
-                  value={settings.zelle_holder || ""}
-                  onChange={(e) => setSettings({ ...settings, zelle_holder: e.target.value })}
-                />
-              </div>
-            </div>
+            <div className={styles.manualMethodsList}>
+              {manualMethods.map((method, idx) => (
+                <div key={method.id} className={styles.manualMethodCard}>
+                  <div className={styles.manualMethodHeader}>
+                    <div className={styles.manualMethodTitleWrap}>
+                      <span className={styles.manualMethodIndex}>#{idx + 1}</span>
+                      <span style={{ fontWeight: 600, fontSize: "13px" }}>
+                        {method.name || "Nuevo Método"}
+                      </span>
+                    </div>
+                    <div className={styles.manualMethodActions}>
+                      <Switch
+                        size="sm"
+                        checked={method.enabled}
+                        onCheckedChange={(val) =>
+                          handleUpdateManualMethod(method.id, "enabled", val)
+                        }
+                      />
+                      <button
+                        type="button"
+                        className={styles.manualMethodRemoveBtn}
+                        onClick={() => handleRemoveManualMethod(method.id)}
+                        title="Eliminar método"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
 
-            {/* Transferencia Bancaria Local */}
-            <div className={styles.gatewaySection}>
-              <div className={styles.gatewayHeader}>
-                <div className={styles.gatewayTitleWrap}>
-                  <Building2 size={16} style={{ color: "var(--accent)" }} />
-                  <h4 className={styles.gatewayTitle}>Transferencia Bancaria Local</h4>
-                </div>
-                <Switch
-                  size="sm"
-                  checked={settings.bank_transfer_enabled ?? false}
-                  onCheckedChange={(val) => setSettings({ ...settings, bank_transfer_enabled: val })}
-                />
-              </div>
-              <div className={styles.formRow}>
-                <Input
-                  label="Nombre del Banco"
-                  placeholder="Ej: Bancolombia, Banesco, BBVA"
-                  value={settings.bank_name || ""}
-                  onChange={(e) => setSettings({ ...settings, bank_name: e.target.value })}
-                />
-                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                  <label className={styles.label}>Tipo de Cuenta</label>
-                  <div className={styles.selectWrap}>
-                    <select
-                      className={styles.select}
-                      value={settings.bank_account_type || "Corriente"}
-                      onChange={(e) => setSettings({ ...settings, bank_account_type: e.target.value })}
-                    >
-                      <option value="Corriente">Cuenta Corriente</option>
-                      <option value="Ahorros">Cuenta de Ahorros</option>
-                    </select>
+                  <div className={styles.twoColGrid}>
+                    <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                      <Input
+                        label="Nombre del Método"
+                        placeholder="Ej: Pago Móvil, Zelle USD, Transferencia Bancolombia..."
+                        value={method.name}
+                        onChange={(e) =>
+                          handleUpdateManualMethod(method.id, "name", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                      <label className={styles.label}>Datos e Instrucciones de la Cuenta</label>
+                      <textarea
+                        className={styles.textarea}
+                        rows={3}
+                        placeholder={"Banco:\nCuenta / Teléfono / Correo:\nTitular:\nDocumento / Cédula:"}
+                        value={method.details}
+                        onChange={(e) =>
+                          handleUpdateManualMethod(method.id, "details", e.target.value)
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className={styles.formRow}>
-                <Input
-                  label="Número de Cuenta (20 dígitos o IBAN)"
-                  placeholder="0134-XXXX-XXXX-XXXX-XXXX"
-                  value={settings.bank_account_number || ""}
-                  onChange={(e) => setSettings({ ...settings, bank_account_number: e.target.value })}
-                />
-                <Input
-                  label="Titular y Cédula / Documento"
-                  placeholder="Ej: Academia Crezca C.A. · J-50192831"
-                  value={settings.bank_holder_name || ""}
-                  onChange={(e) => setSettings({ ...settings, bank_holder_name: e.target.value })}
-                />
-              </div>
+              ))}
+
+              {manualMethods.length === 0 && (
+                <div className={styles.emptyState} style={{ padding: "var(--space-6)" }}>
+                  <p className={styles.emptyDesc}>No has configurado ningún método de pago manual.</p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleAddManualMethod}
+                  >
+                    <Plus size={14} /> Añadir Primer Método
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1543,47 +1722,6 @@ export function FinanceView() {
             </div>
           </div>
         )}
-
-        {/* PESTAÑA 5: WHATSAPP & COMPROBANTES */}
-        {settingsTab === "instrucciones" && (
-          <div className={styles.modalTabContent}>
-            <div className={styles.gatewaySection}>
-              <div className={styles.gatewayHeader}>
-                <div className={styles.gatewayTitleWrap}>
-                  <MessageSquare size={16} style={{ color: "#22c55e" }} />
-                  <h4 className={styles.gatewayTitle}>Recepción de Comprobantes</h4>
-                </div>
-              </div>
-              <p className={styles.settingsDesc} style={{ margin: 0 }}>
-                Define el número de WhatsApp oficial donde los estudiantes remitirán sus comprobantes de Pago Móvil, Zelle o Binance.
-              </p>
-            </div>
-
-            <div className={styles.formGroup}>
-              <Input
-                label="WhatsApp para Recepción de Comprobantes"
-                placeholder="+58 412 1234567 o +57 300 1234567"
-                value={settings.whatsapp_number || ""}
-                onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
-                hint="Incluye el código de país. Se generará un botón directo de WhatsApp para el alumno."
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Instrucciones de Pago para el Alumno</label>
-              <textarea
-                className={styles.textarea}
-                rows={4}
-                placeholder="Ej: Realiza el pago por el monto exacto y envía la captura de pantalla o número de referencia por WhatsApp para activar tu curso de inmediato."
-                value={settings.manual_payment_instructions || ""}
-                onChange={(e) => setSettings({ ...settings, manual_payment_instructions: e.target.value })}
-              />
-              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                Este texto aparecerá en la pantalla de checkout cuando el estudiante seleccione métodos de pago manuales.
-              </span>
-            </div>
-          </div>
-        )}
       </Modal>
 
       {/* ============================================================== */}
@@ -1592,136 +1730,173 @@ export function FinanceView() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Crear Nuevo Plan de Pago"
-        description="Configura el número de cuotas, el precio y las reglas de liberación de contenido para el alumno."
-        maxWidth="680px"
+        title={createStep === "rules" ? "Reglas de Liberación de Contenido" : "Crear Nuevo Plan de Pago"}
+        description={
+          createStep === "rules"
+            ? "Define qué módulos o lecciones se desbloquean con cada cuota para el alumno."
+            : "Configura la modalidad, precios y opciones de acceso para tus alumnos."
+        }
+        maxWidth={createStep === "rules" ? "680px" : "620px"}
         footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="primary" loading={isCreating} onClick={handleCreatePlan}>
-              Crear Plan y Generar Link
-            </Button>
-          </>
+          createPlanType === "installments" ? (
+            createStep === "details" ? (
+              <>
+                <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (!createName.trim()) {
+                      showToast("warning", "Nombre requerido", "Por favor ingresa un nombre para el plan.");
+                      return;
+                    }
+                    setCreateStep("rules");
+                  }}
+                >
+                  Configurar Reglas →
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="secondary" onClick={() => setCreateStep("details")}>
+                  ← Volver a Detalles
+                </Button>
+                <Button variant="primary" loading={isCreating} onClick={handleCreatePlan}>
+                  Crear Plan y Generar Link
+                </Button>
+              </>
+            )
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button variant="primary" loading={isCreating} onClick={handleCreatePlan}>
+                Crear Plan y Generar Link
+              </Button>
+            </>
+          )
         }
       >
-        <div className={styles.modalTabs}>
-          <SegmentedControl<PlanModalTab>
-            options={PLAN_MODAL_TABS}
-            value={createModalTab}
-            onChange={setCreateModalTab}
-          />
-        </div>
-
-        {createModalTab === "general" ? (
+        {createStep === "details" ? (
           <div className={styles.modalTabContent}>
             <div className={styles.formGroup}>
               <label className={styles.label}>Modalidad de Cobro</label>
               <SegmentedControl<PlanType>
                 options={PLAN_TYPE_OPTIONS}
                 value={createPlanType}
-                onChange={setCreatePlanType}
+                onChange={(val) => {
+                  setCreatePlanType(val);
+                  setCreateStep("details");
+                }}
               />
             </div>
 
-            <div className={styles.formGroup}>
-              <Input
-                label="Nombre del Plan *"
-                placeholder={
-                  createPlanType === "subscription"
-                    ? "Ej: Membresía VIP Mensual"
-                    : createPlanType === "one_time"
-                    ? "Ej: Master en Marketing - Pago Único"
-                    : "Ej: Master Marketing 4 Cuotas"
-                }
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Curso Asociado</label>
-              <div className={styles.selectWrap}>
-                <select
-                  value={createCourseId}
-                  onChange={(e) => {
-                    const cId = Number(e.target.value);
-                    setCreateCourseId(cId);
-                    fetchModulesForCreate(cId);
-                  }}
-                  className={styles.select}
-                >
-                  <option value={0}>Todos los Cursos (Membresía Completa)</option>
-                  {courses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {createPlanType === "installments" ? (
-              <div className={styles.formRow}>
-                <Input
-                  label="Número de Cuotas"
-                  type="number"
-                  min={2}
-                  max={24}
-                  value={createTotalQuotas}
-                  hint="Cantidad total de cuotas (2 a 24)"
-                  onChange={(e) => setCreateTotalQuotas(Math.max(2, Number(e.target.value)))}
-                />
-                <Input
-                  label="Monto por Cuota (USD)"
-                  type="number"
-                  min={1}
-                  value={createQuotaAmount}
-                  hint={`Total del plan: $${formatCurrency(createTotalQuotas * createQuotaAmount)} USD`}
-                  onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
-                />
-              </div>
-            ) : createPlanType === "one_time" ? (
-              <div className={styles.formGroup}>
-                <Input
-                  label="Precio del Curso (USD)"
-                  type="number"
-                  min={1}
-                  value={createQuotaAmount}
-                  hint="Cobro único de contado con acceso permanente"
-                  onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
-                />
-              </div>
-            ) : (
-              <div className={styles.formRow}>
-                <Input
-                  label="Precio Recurrente (USD)"
-                  type="number"
-                  min={1}
-                  value={createQuotaAmount}
-                  hint="Se cobrará en cada renovación periódica"
-                  onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
-                />
+            {createPlanType === "one_time" && (
+              <div className={styles.twoColGrid}>
                 <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                  <label className={styles.label}>Frecuencia de Cobro</label>
+                  <Input
+                    label="Nombre del Plan *"
+                    placeholder="Ej: Master en Marketing - Pago Único"
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Curso Asociado</label>
                   <div className={styles.selectWrap}>
                     <select
-                      value={createFrequency}
-                      onChange={(e) => setCreateFrequency(e.target.value)}
+                      value={createCourseId}
+                      onChange={(e) => {
+                        const cId = Number(e.target.value);
+                        setCreateCourseId(cId);
+                        fetchModulesForCreate(cId);
+                      }}
                       className={styles.select}
                     >
-                      <option value="month">Mensual (Cada 30 días)</option>
-                      <option value="week">Semanal</option>
-                      <option value="year">Anual</option>
+                      <option value={0}>Todos los Cursos (Membresía Completa)</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title}
+                        </option>
+                      ))}
                     </select>
                   </div>
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Precio del Curso (USD)"
+                    type="number"
+                    min={1}
+                    value={createQuotaAmount}
+                    hint="Cobro único de contado con acceso permanente"
+                    onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="WhatsApp de Soporte (Opcional)"
+                    placeholder="+51 987 654 321"
+                    value={createWhatsapp}
+                    onChange={(e) => setCreateWhatsapp(e.target.value)}
+                  />
                 </div>
               </div>
             )}
 
             {createPlanType === "installments" && (
-              <div className={styles.formRow}>
+              <div className={styles.twoColGrid}>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Nombre del Plan *"
+                    placeholder="Ej: Master Marketing 4 Cuotas"
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Curso Asociado</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={createCourseId}
+                      onChange={(e) => {
+                        const cId = Number(e.target.value);
+                        setCreateCourseId(cId);
+                        fetchModulesForCreate(cId);
+                      }}
+                      className={styles.select}
+                    >
+                      <option value={0}>Todos los Cursos (Membresía Completa)</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Número de Cuotas"
+                    type="number"
+                    min={2}
+                    max={24}
+                    value={createTotalQuotas}
+                    hint="Cantidad total de cuotas (2 a 24)"
+                    onChange={(e) => setCreateTotalQuotas(Math.max(2, Number(e.target.value)))}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Monto por Cuota (USD)"
+                    type="number"
+                    min={1}
+                    value={createQuotaAmount}
+                    hint={`Total del plan: $${formatCurrency(createTotalQuotas * createQuotaAmount)} USD`}
+                    onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
+                  />
+                </div>
                 <div className={styles.formGroup} style={{ marginBottom: 0 }}>
                   <label className={styles.label}>Frecuencia de Cobro</label>
                   <div className={styles.selectWrap}>
@@ -1736,24 +1911,80 @@ export function FinanceView() {
                     </select>
                   </div>
                 </div>
-
-                <Input
-                  label="WhatsApp de Soporte (Opcional)"
-                  placeholder="+51 987 654 321"
-                  value={createWhatsapp}
-                  onChange={(e) => setCreateWhatsapp(e.target.value)}
-                />
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="WhatsApp de Soporte (Opcional)"
+                    placeholder="+51 987 654 321"
+                    value={createWhatsapp}
+                    onChange={(e) => setCreateWhatsapp(e.target.value)}
+                  />
+                </div>
               </div>
             )}
 
-            {createPlanType !== "installments" && (
-              <div className={styles.formGroup}>
-                <Input
-                  label="WhatsApp de Soporte (Opcional)"
-                  placeholder="+51 987 654 321"
-                  value={createWhatsapp}
-                  onChange={(e) => setCreateWhatsapp(e.target.value)}
-                />
+            {createPlanType === "subscription" && (
+              <div className={styles.twoColGrid}>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Nombre del Plan *"
+                    placeholder="Ej: Membresía VIP Mensual"
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Curso Asociado</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={createCourseId}
+                      onChange={(e) => {
+                        const cId = Number(e.target.value);
+                        setCreateCourseId(cId);
+                        fetchModulesForCreate(cId);
+                      }}
+                      className={styles.select}
+                    >
+                      <option value={0}>Todos los Cursos (Membresía Completa)</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Precio Recurrente (USD)"
+                    type="number"
+                    min={1}
+                    value={createQuotaAmount}
+                    hint="Se cobrará en cada renovación periódica"
+                    onChange={(e) => setCreateQuotaAmount(Number(e.target.value))}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Frecuencia de Cobro</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={createFrequency}
+                      onChange={(e) => setCreateFrequency(e.target.value)}
+                      className={styles.select}
+                    >
+                      <option value="month">Mensual (Cada 30 días)</option>
+                      <option value="week">Semanal</option>
+                      <option value="year">Anual</option>
+                    </select>
+                  </div>
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0, gridColumn: "span 2" }}>
+                  <Input
+                    label="WhatsApp de Soporte (Opcional)"
+                    placeholder="+51 987 654 321"
+                    value={createWhatsapp}
+                    onChange={(e) => setCreateWhatsapp(e.target.value)}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -1879,129 +2110,168 @@ export function FinanceView() {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Configurar y Editar Plan"
-        description="Actualiza el nombre, curso vinculado, cuotas y reglas de liberación de contenido."
-        maxWidth="680px"
+        title={editStep === "rules" ? "Reglas de Liberación de Contenido" : "Configurar y Editar Plan"}
+        description={
+          editStep === "rules"
+            ? "Actualiza el desbloqueo progresivo de lecciones por cuota para el alumno."
+            : "Actualiza el nombre, curso vinculado, cuotas y precios de este plan."
+        }
+        maxWidth={editStep === "rules" ? "680px" : "620px"}
         footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="primary" loading={isSavingEdit} onClick={handleSaveEditPlan}>
-              Guardar Cambios
-            </Button>
-          </>
+          editPlanType === "installments" ? (
+            editStep === "details" ? (
+              <>
+                <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setEditStep("rules")}
+                >
+                  Configurar Reglas →
+                </Button>
+                <Button variant="primary" loading={isSavingEdit} onClick={handleSaveEditPlan}>
+                  Guardar Cambios
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="secondary" onClick={() => setEditStep("details")}>
+                  ← Volver a Detalles
+                </Button>
+                <Button variant="primary" loading={isSavingEdit} onClick={handleSaveEditPlan}>
+                  Guardar Cambios
+                </Button>
+              </>
+            )
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button variant="primary" loading={isSavingEdit} onClick={handleSaveEditPlan}>
+                Guardar Cambios
+              </Button>
+            </>
+          )
         }
       >
-        <div className={styles.modalTabs}>
-          <SegmentedControl<PlanModalTab>
-            options={PLAN_MODAL_TABS}
-            value={editModalTab}
-            onChange={setEditModalTab}
-          />
-        </div>
-
-        {editModalTab === "general" ? (
+        {editStep === "details" ? (
           <div className={styles.modalTabContent}>
             <div className={styles.formGroup}>
               <label className={styles.label}>Modalidad de Cobro</label>
               <SegmentedControl<PlanType>
                 options={PLAN_TYPE_OPTIONS}
                 value={editPlanType}
-                onChange={setEditPlanType}
+                onChange={(val) => {
+                  setEditPlanType(val);
+                  setEditStep("details");
+                }}
               />
             </div>
 
-            <div className={styles.formGroup}>
-              <Input
-                label="Nombre del Plan *"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Curso Asociado</label>
-              <div className={styles.selectWrap}>
-                <select
-                  value={editCourseId}
-                  onChange={(e) => {
-                    const cId = Number(e.target.value);
-                    setEditCourseId(cId);
-                    fetchModulesForEdit(cId, editAccessRules);
-                  }}
-                  className={styles.select}
-                >
-                  <option value={0}>Todos los Cursos (Membresía Completa)</option>
-                  {courses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {editPlanType === "installments" ? (
-              <div className={styles.formRow}>
-                <Input
-                  label="Número de Cuotas"
-                  type="number"
-                  min={2}
-                  max={24}
-                  value={editTotalQuotas}
-                  hint="Cantidad total de cuotas (2 a 24)"
-                  onChange={(e) => setEditTotalQuotas(Math.max(2, Number(e.target.value)))}
-                />
-                <Input
-                  label="Monto por Cuota (USD)"
-                  type="number"
-                  min={1}
-                  value={editQuotaAmount}
-                  hint={`Total del plan: $${formatCurrency(editTotalQuotas * editQuotaAmount)} USD`}
-                  onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
-                />
-              </div>
-            ) : editPlanType === "one_time" ? (
-              <div className={styles.formGroup}>
-                <Input
-                  label="Precio del Curso (USD)"
-                  type="number"
-                  min={1}
-                  value={editQuotaAmount}
-                  hint="Cobro único de contado con acceso permanente"
-                  onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
-                />
-              </div>
-            ) : (
-              <div className={styles.formRow}>
-                <Input
-                  label="Precio Recurrente (USD)"
-                  type="number"
-                  min={1}
-                  value={editQuotaAmount}
-                  hint="Se cobrará en cada renovación periódica"
-                  onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
-                />
+            {editPlanType === "one_time" && (
+              <div className={styles.twoColGrid}>
                 <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                  <label className={styles.label}>Frecuencia de Cobro</label>
+                  <Input
+                    label="Nombre del Plan *"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Curso Asociado</label>
                   <div className={styles.selectWrap}>
                     <select
-                      value={editFrequency}
-                      onChange={(e) => setEditFrequency(e.target.value)}
+                      value={editCourseId}
+                      onChange={(e) => {
+                        const cId = Number(e.target.value);
+                        setEditCourseId(cId);
+                        fetchModulesForEdit(cId, editAccessRules);
+                      }}
                       className={styles.select}
                     >
-                      <option value="month">Mensual (Cada 30 días)</option>
-                      <option value="week">Semanal</option>
-                      <option value="year">Anual</option>
+                      <option value={0}>Todos los Cursos (Membresía Completa)</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title}
+                        </option>
+                      ))}
                     </select>
                   </div>
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Precio del Curso (USD)"
+                    type="number"
+                    min={1}
+                    value={editQuotaAmount}
+                    hint="Cobro único de contado con acceso permanente"
+                    onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="WhatsApp de Soporte (Opcional)"
+                    placeholder="+51 987 654 321"
+                    value={editWhatsapp}
+                    onChange={(e) => setEditWhatsapp(e.target.value)}
+                  />
                 </div>
               </div>
             )}
 
             {editPlanType === "installments" && (
-              <div className={styles.formRow}>
+              <div className={styles.twoColGrid}>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Nombre del Plan *"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Curso Asociado</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={editCourseId}
+                      onChange={(e) => {
+                        const cId = Number(e.target.value);
+                        setEditCourseId(cId);
+                        fetchModulesForEdit(cId, editAccessRules);
+                      }}
+                      className={styles.select}
+                    >
+                      <option value={0}>Todos los Cursos (Membresía Completa)</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Número de Cuotas"
+                    type="number"
+                    min={2}
+                    max={24}
+                    value={editTotalQuotas}
+                    hint="Cantidad total de cuotas (2 a 24)"
+                    onChange={(e) => setEditTotalQuotas(Math.max(2, Number(e.target.value)))}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Monto por Cuota (USD)"
+                    type="number"
+                    min={1}
+                    value={editQuotaAmount}
+                    hint={`Total del plan: $${formatCurrency(editTotalQuotas * editQuotaAmount)} USD`}
+                    onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
+                  />
+                </div>
                 <div className={styles.formGroup} style={{ marginBottom: 0 }}>
                   <label className={styles.label}>Frecuencia de Cobro</label>
                   <div className={styles.selectWrap}>
@@ -2016,24 +2286,79 @@ export function FinanceView() {
                     </select>
                   </div>
                 </div>
-
-                <Input
-                  label="WhatsApp de Soporte (Opcional)"
-                  placeholder="+51 987 654 321"
-                  value={editWhatsapp}
-                  onChange={(e) => setEditWhatsapp(e.target.value)}
-                />
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="WhatsApp de Soporte (Opcional)"
+                    placeholder="+51 987 654 321"
+                    value={editWhatsapp}
+                    onChange={(e) => setEditWhatsapp(e.target.value)}
+                  />
+                </div>
               </div>
             )}
 
-            {editPlanType !== "installments" && (
-              <div className={styles.formGroup}>
-                <Input
-                  label="WhatsApp de Soporte (Opcional)"
-                  placeholder="+51 987 654 321"
-                  value={editWhatsapp}
-                  onChange={(e) => setEditWhatsapp(e.target.value)}
-                />
+            {editPlanType === "subscription" && (
+              <div className={styles.twoColGrid}>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Nombre del Plan *"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Curso Asociado</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={editCourseId}
+                      onChange={(e) => {
+                        const cId = Number(e.target.value);
+                        setEditCourseId(cId);
+                        fetchModulesForEdit(cId, editAccessRules);
+                      }}
+                      className={styles.select}
+                    >
+                      <option value={0}>Todos los Cursos (Membresía Completa)</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <Input
+                    label="Precio Recurrente (USD)"
+                    type="number"
+                    min={1}
+                    value={editQuotaAmount}
+                    hint="Se cobrará en cada renovación periódica"
+                    onChange={(e) => setEditQuotaAmount(Number(e.target.value))}
+                  />
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                  <label className={styles.label}>Frecuencia de Cobro</label>
+                  <div className={styles.selectWrap}>
+                    <select
+                      value={editFrequency}
+                      onChange={(e) => setEditFrequency(e.target.value)}
+                      className={styles.select}
+                    >
+                      <option value="month">Mensual (Cada 30 días)</option>
+                      <option value="week">Semanal</option>
+                      <option value="year">Anual</option>
+                    </select>
+                  </div>
+                </div>
+                <div className={styles.formGroup} style={{ marginBottom: 0, gridColumn: "span 2" }}>
+                  <Input
+                    label="WhatsApp de Soporte (Opcional)"
+                    placeholder="+51 987 654 321"
+                    value={editWhatsapp}
+                    onChange={(e) => setEditWhatsapp(e.target.value)}
+                  />
+                </div>
               </div>
             )}
           </div>

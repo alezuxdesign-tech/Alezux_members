@@ -134,7 +134,30 @@ if ( ! empty( $settings['stripe_enabled'] ) && ! empty( $stripe_sec ) && ! empty
 	];
 }
 
-// Pago Móvil (Venezuela)
+// Métodos de Pago Manuales Dinámicos (Sin restricción por país)
+if ( ! empty( $settings['manual_methods'] ) && is_array( $settings['manual_methods'] ) ) {
+	foreach ( $settings['manual_methods'] as $idx => $m ) {
+		if ( ! empty( $m['enabled'] ) && ! empty( $m['name'] ) ) {
+			$m_id = 'manual_' . sanitize_title( $m['name'] . '_' . ( $m['id'] ?? $idx ) );
+			$methods[ $m_id ] = [
+				'id'         => $m_id,
+				'title'      => esc_html( $m['name'] ),
+				'subtitle'   => 'Pago Manual Directo',
+				'badge_type' => 'manual',
+				'is_manual'  => true,
+				'copy_data'  => $m['details'] ?? '',
+				'copy_label' => 'Copiar Datos de Pago',
+				'fields'     => [
+					'Datos de Pago' => $m['details'] ?? '',
+					'Monto a Pagar' => '$' . $amount_formatted . ' USD',
+				],
+				'notice'     => 'Realiza tu transferencia o pago con los datos indicados y adjunta tu comprobante a continuación.',
+			];
+		}
+	}
+}
+
+// Pago Móvil (Venezuela - Compatibilidad)
 if ( ! empty( $settings['pagomovil_enabled'] ) ) {
 	$pm_bank   = $settings['pagomovil_bank'] ?? '';
 	$pm_phone  = $settings['pagomovil_phone'] ?? '';
@@ -1377,7 +1400,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : 'pagomov
 													<?php foreach ( $m['fields'] as $label => $val ) : ?>
 														<div class="arc-data-item">
 															<span class="arc-data-key"><?php echo esc_html( $label ); ?>:</span>
-															<span class="arc-data-val"><?php echo esc_html( $val ); ?></span>
+															<span class="arc-data-val"><?php echo nl2br( esc_html( $val ) ); ?></span>
 														</div>
 													<?php endforeach; ?>
 												</div>
