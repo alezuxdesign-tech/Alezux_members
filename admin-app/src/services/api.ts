@@ -222,7 +222,12 @@ export interface SubscriptionItem {
 export interface ManualPaymentMethod {
   id: string;
   name: string;
-  details: string;
+  bank?: string;
+  account_number?: string;
+  holder_name?: string;
+  holder_id?: string;
+  instructions?: string;
+  details?: string;
   enabled: boolean;
 }
 

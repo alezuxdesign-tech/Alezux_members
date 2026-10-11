@@ -1789,12 +1789,17 @@ class Admin_Api {
 		if ( isset( $params['manual_methods'] ) && is_array( $params['manual_methods'] ) ) {
 			$clean_manual = [];
 			foreach ( $params['manual_methods'] as $m ) {
-				if ( ! empty( $m['name'] ) || ! empty( $m['details'] ) ) {
+				if ( ! empty( $m['name'] ) || ! empty( $m['bank'] ) || ! empty( $m['account_number'] ) || ! empty( $m['details'] ) ) {
 					$clean_manual[] = [
-						'id'      => sanitize_text_field( $m['id'] ?? uniqid( 'man_' ) ),
-						'name'    => sanitize_text_field( $m['name'] ?? 'Método de Pago' ),
-						'details' => sanitize_textarea_field( $m['details'] ?? '' ),
-						'enabled' => ! empty( $m['enabled'] ),
+						'id'             => sanitize_text_field( $m['id'] ?? uniqid( 'man_' ) ),
+						'name'           => sanitize_text_field( $m['name'] ?? 'Método de Pago' ),
+						'bank'           => sanitize_text_field( $m['bank'] ?? '' ),
+						'account_number' => sanitize_text_field( $m['account_number'] ?? '' ),
+						'holder_name'    => sanitize_text_field( $m['holder_name'] ?? '' ),
+						'holder_id'      => sanitize_text_field( $m['holder_id'] ?? '' ),
+						'instructions'   => sanitize_text_field( $m['instructions'] ?? '' ),
+						'details'        => sanitize_textarea_field( $m['details'] ?? '' ),
+						'enabled'        => ! empty( $m['enabled'] ),
 					];
 				}
 			}

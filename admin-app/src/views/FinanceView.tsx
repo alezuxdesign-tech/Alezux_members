@@ -265,8 +265,12 @@ export function FinanceView() {
           if (settingsData.pagomovil_enabled || settingsData.pagomovil_phone || settingsData.pagomovil_bank) {
             legacy.push({
               id: "pm_1",
-              name: "Pago Móvil (Venezuela)",
-              details: `Banco: ${settingsData.pagomovil_bank || "Banesco"}\nTeléfono: ${settingsData.pagomovil_phone || ""}\nCédula/RIF: ${settingsData.pagomovil_id || ""}\nTitular: ${settingsData.pagomovil_holder || ""}`,
+              name: "Pago Móvil",
+              bank: settingsData.pagomovil_bank || "Banesco",
+              account_number: settingsData.pagomovil_phone || "",
+              holder_id: settingsData.pagomovil_id || "",
+              holder_name: settingsData.pagomovil_holder || "",
+              instructions: "A tasa oficial del BCV del día",
               enabled: settingsData.pagomovil_enabled ?? false,
             });
           }
@@ -274,7 +278,10 @@ export function FinanceView() {
             legacy.push({
               id: "zelle_1",
               name: "Zelle (USD)",
-              details: `Correo: ${settingsData.zelle_email || ""}\nTitular: ${settingsData.zelle_holder || ""}`,
+              bank: "Zelle",
+              account_number: settingsData.zelle_email || "",
+              holder_name: settingsData.zelle_holder || "",
+              instructions: "Colocar nombre del alumno en la nota",
               enabled: settingsData.zelle_enabled ?? false,
             });
           }
@@ -282,24 +289,53 @@ export function FinanceView() {
             legacy.push({
               id: "bank_1",
               name: `Transferencia Bancaria (${settingsData.bank_name || "Local"})`,
-              details: `Banco: ${settingsData.bank_name || ""}\nTipo: ${settingsData.bank_account_type || "Corriente"}\nCuenta: ${settingsData.bank_account_number || ""}\nTitular: ${settingsData.bank_holder_name || ""}`,
+              bank: settingsData.bank_name || "",
+              account_number: settingsData.bank_account_number || "",
+              holder_name: settingsData.bank_holder_name || "",
+              holder_id: settingsData.bank_holder_id || "",
+              instructions: settingsData.bank_account_type ? `Cuenta ${settingsData.bank_account_type}` : "",
               enabled: settingsData.bank_transfer_enabled ?? false,
             });
           }
-          initialManual = legacy.length > 0 ? legacy : [
-            {
-              id: "manual_pm",
-              name: "Pago Móvil / Transferencia Local",
-              details: "Banco: Banesco\nTeléfono: 0414-0000000\nCédula: V-00000000\nTitular: Academia",
-              enabled: false,
-            },
-            {
-              id: "manual_zelle",
-              name: "Zelle (USD)",
-              details: "Correo: pagos@tuacademia.com\nTitular: Academia",
-              enabled: false,
-            },
-          ];
+          initialManual = legacy;
+        } else {
+          // Parse legacy details string if fields are not separated yet
+          initialManual = initialManual.map((m) => {
+            if (!m.bank && !m.account_number && m.details) {
+              const lines = m.details.split("\n");
+              const parsed: Partial<ManualPaymentMethod> = {};
+              for (const raw of lines) {
+                const line = raw.trim();
+                if (!line) continue;
+                const lower = line.toLowerCase();
+                if (lower.startsWith("banco:")) {
+                  parsed.bank = line.replace(/^[Bb]anco:\s*/, "").trim();
+                } else if (
+                  lower.startsWith("teléfono:") ||
+                  lower.startsWith("telefono:") ||
+                  lower.startsWith("cuenta:") ||
+                  lower.startsWith("correo:") ||
+                  lower.startsWith("número:") ||
+                  lower.startsWith("numero:")
+                ) {
+                  parsed.account_number = line.replace(/^[^:]+:\s*/, "").trim();
+                } else if (lower.startsWith("titular:")) {
+                  parsed.holder_name = line.replace(/^[Tt]itular:\s*/, "").trim();
+                } else if (
+                  lower.startsWith("cédula:") ||
+                  lower.startsWith("cedula:") ||
+                  lower.startsWith("cédula/rif:") ||
+                  lower.startsWith("rif:") ||
+                  lower.startsWith("documento:") ||
+                  lower.startsWith("rut:")
+                ) {
+                  parsed.holder_id = line.replace(/^[^:]+:\s*/, "").trim();
+                }
+              }
+              return { ...m, ...parsed };
+            }
+            return m;
+          });
         }
         setManualMethods(initialManual);
       })
@@ -626,14 +662,19 @@ export function FinanceView() {
       ...prev,
       {
         id: `man_${Date.now()}`,
-        name: "Nuevo Método de Pago Manual",
-        details: "Banco / Plataforma:\nNúmero de Cuenta / Teléfono / Correo:\nTitular:\nDocumento / Cédula / RUT:",
+        name: "Nuevo Método de Pago",
+        bank: "",
+        account_number: "",
+        holder_name: "",
+        holder_id: "",
+        instructions: "",
+        details: "",
         enabled: true,
       },
     ]);
   };
 
-  const handleUpdateManualMethod = (id: string, field: "name" | "details" | "enabled", val: any) => {
+  const handleUpdateManualMethod = (id: string, field: keyof ManualPaymentMethod, val: any) => {
     setManualMethods((prev) =>
       prev.map((m) => (m.id === id ? { ...m, [field]: val } : m))
     );
@@ -646,9 +687,23 @@ export function FinanceView() {
   // Handlers para Configuración
   const handleSaveSettings = async () => {
     setIsSavingSettings(true);
+    // Compilar details string para compatibilidad hacia atrás
+    const syncedManualMethods = manualMethods.map((m) => {
+      const parts: string[] = [];
+      if (m.bank) parts.push(`Banco: ${m.bank}`);
+      if (m.account_number) parts.push(`Cuenta/Destino: ${m.account_number}`);
+      if (m.holder_name) parts.push(`Titular: ${m.holder_name}`);
+      if (m.holder_id) parts.push(`Cédula/Doc: ${m.holder_id}`);
+      if (m.instructions) parts.push(`Instrucciones: ${m.instructions}`);
+      return {
+        ...m,
+        details: parts.length > 0 ? parts.join("\n") : (m.details || ""),
+      };
+    });
+
     await api.saveFinanceSettings({
       ...settings,
-      manual_methods: manualMethods,
+      manual_methods: syncedManualMethods,
     });
     setIsSavingSettings(false);
     setSettingsNotice("Métodos de pago guardados con éxito.");
@@ -831,19 +886,13 @@ export function FinanceView() {
                     </span>
                   </div>
 
-                  <div className={styles.courseTag}>
-                    <CreditCard size={15} />
-                    <span>{plan.courseTitle || "Todos los Cursos"}</span>
-                  </div>
-
-                  {plan.whatsapp_number && (
-                    <div className={styles.whatsappTag}>
-                      <MessageSquare size={13} />
-                      <span>Soporte: {plan.whatsapp_number}</span>
-                    </div>
-                  )}
-
                   <div className={styles.planDetails}>
+                    <div className={styles.detailRow}>
+                      <span>Curso:</span>
+                      <span style={{ fontWeight: 600, color: "var(--foreground)" }}>
+                        {plan.courseTitle || "Todos los Cursos"}
+                      </span>
+                    </div>
                     <div className={styles.detailRow}>
                       <span>
                         {plan.totalQuotas === 0 || plan.planType === "subscription"
@@ -878,6 +927,12 @@ export function FinanceView() {
                       <span>Alumnos suscritos:</span>
                       <span>{plan.subscribersCount} alumnos</span>
                     </div>
+                    {plan.whatsapp_number && (
+                      <div className={styles.detailRow}>
+                        <span>Soporte:</span>
+                        <span>{plan.whatsapp_number}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className={styles.cardDivider} />
@@ -1524,7 +1579,7 @@ export function FinanceView() {
                     </div>
                   </div>
 
-                  <div className={styles.twoColGrid}>
+                  <div className={styles.twoColGrid} style={{ marginBottom: 0 }}>
                     <div className={styles.formGroup} style={{ marginBottom: 0 }}>
                       <Input
                         label="Nombre del Método"
@@ -1536,14 +1591,52 @@ export function FinanceView() {
                       />
                     </div>
                     <div className={styles.formGroup} style={{ marginBottom: 0 }}>
-                      <label className={styles.label}>Datos e Instrucciones de la Cuenta</label>
-                      <textarea
-                        className={styles.textarea}
-                        rows={3}
-                        placeholder={"Banco:\nCuenta / Teléfono / Correo:\nTitular:\nDocumento / Cédula:"}
-                        value={method.details}
+                      <Input
+                        label="Banco o Plataforma"
+                        placeholder="Ej: Bancolombia, Banesco, Chase, Zelle, Bizum..."
+                        value={method.bank || ""}
                         onChange={(e) =>
-                          handleUpdateManualMethod(method.id, "details", e.target.value)
+                          handleUpdateManualMethod(method.id, "bank", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                      <Input
+                        label="N° de Cuenta / Teléfono / Correo"
+                        placeholder="Ej: 0414-1234567, pagos@empresa.com o 0134-XXXX..."
+                        value={method.account_number || ""}
+                        onChange={(e) =>
+                          handleUpdateManualMethod(method.id, "account_number", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                      <Input
+                        label="Nombre del Titular"
+                        placeholder="Ej: Alejandro Suárez o Tu Academia C.A."
+                        value={method.holder_name || ""}
+                        onChange={(e) =>
+                          handleUpdateManualMethod(method.id, "holder_name", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                      <Input
+                        label="Cédula / Documento / RIF / RUT"
+                        placeholder="Ej: V-15965321 o J-12345678"
+                        value={method.holder_id || ""}
+                        onChange={(e) =>
+                          handleUpdateManualMethod(method.id, "holder_id", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className={styles.formGroup} style={{ marginBottom: 0 }}>
+                      <Input
+                        label="Nota o Instrucción Adicional (Opcional)"
+                        placeholder="Ej: Enviar comprobante por WhatsApp con la referencia"
+                        value={method.instructions || ""}
+                        onChange={(e) =>
+                          handleUpdateManualMethod(method.id, "instructions", e.target.value)
                         }
                       />
                     </div>
@@ -1551,16 +1644,21 @@ export function FinanceView() {
                 </div>
               ))}
 
+              {manualMethods.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.addManualMethodBtn}
+                  onClick={handleAddManualMethod}
+                >
+                  <Plus size={15} /> Añadir más métodos
+                </button>
+              )}
+
               {manualMethods.length === 0 && (
                 <div className={styles.emptyState} style={{ padding: "var(--space-6)" }}>
-                  <p className={styles.emptyDesc}>No has configurado ningún método de pago manual.</p>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleAddManualMethod}
-                  >
-                    <Plus size={14} /> Añadir Primer Método
-                  </Button>
+                  <p className={styles.emptyDesc}>
+                    No has configurado ningún método de pago manual. Pulsa en &quot;+ Añadir Método&quot; arriba para agregar el primero.
+                  </p>
                 </div>
               )}
             </div>

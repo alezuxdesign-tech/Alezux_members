@@ -421,36 +421,27 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 8px 22px;
-  background: #202024;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 9999px;
-  color: #ffffff;
+  gap: 6px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color 0.2s;
   outline: none;
 }
 
 .configBtn:hover {
-  background: #2a2a30;
-  border-color: var(--accent);
   color: var(--accent);
-  transform: translateY(-1px);
 }
 
 :global([data-theme="light"]) .configBtn {
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  color: var(--foreground);
-  box-shadow: var(--shadow-resting);
+  color: var(--text-secondary);
 }
 
 :global([data-theme="light"]) .configBtn:hover {
-  background: var(--surface-muted);
-  border-color: var(--accent);
   color: var(--accent);
 }
 
@@ -1190,16 +1181,16 @@
 .viewToggleWrap {
   display: inline-flex;
   align-items: center;
-  background: var(--bg-surface, #141523);
-  border: 1px solid var(--border, #222538);
-  border-radius: var(--radius-pill, 9999px);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
   padding: 3px;
   gap: 2px;
 }
 
 :global([data-theme="light"]) .viewToggleWrap {
-  background: #f1f3f9;
-  border-color: #e2e8f0;
+  background: var(--surface-muted);
+  border-color: var(--border);
 }
 
 .viewToggleBtn {
@@ -1208,28 +1199,29 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
-  color: var(--text-secondary, #94a3b8);
-  border-radius: var(--radius-pill, 9999px);
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 0.15s) var(--ease-standard, ease);
 }
 
 .viewToggleBtn:hover {
-  color: var(--text-primary, #ffffff);
+  color: var(--foreground);
 }
 
 .viewToggleBtnActive {
-  background: var(--bg-card, #1c1d30);
-  color: var(--text-primary, #ffffff);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+  color: var(--foreground);
+  box-shadow: var(--shadow-resting);
 }
 
 :global([data-theme="light"]) .viewToggleBtnActive {
-  background: #ffffff;
-  color: #0f172a;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  background: var(--surface-raised, #ffffff);
+  border-color: var(--border-strong, #cbd5e1);
+  color: var(--foreground, #0f172a);
 }
 
 /* 2-Column Grid for Modal Forms */
@@ -1256,19 +1248,19 @@
 }
 
 .manualMethodCard {
-  background: var(--bg-surface, #141523);
-  border: 1px solid var(--border, #222538);
-  border-radius: var(--radius-card, 16px);
-  padding: var(--space-4, 16px);
+  background: var(--surface-raised, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface, 12px);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3, 12px);
-  transition: border-color 0.15s ease;
+  gap: var(--space-3);
+  transition: border-color var(--duration-fast, 0.15s) ease;
 }
 
 :global([data-theme="light"]) .manualMethodCard {
-  background: #f8fafc;
-  border-color: #e2e8f0;
+  background: var(--surface-raised, #ffffff);
+  border-color: var(--border);
 }
 
 .manualMethodHeader {
@@ -1290,10 +1282,10 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted);
   background: rgba(255, 255, 255, 0.05);
   padding: 2px 8px;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
 }
 
 :global([data-theme="light"]) .manualMethodIndex {
@@ -1309,15 +1301,15 @@
 .manualMethodRemoveBtn {
   background: transparent;
   border: none;
-  color: #ef4444;
+  color: var(--danger, #ef4444);
   cursor: pointer;
   padding: 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-control, 6px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   opacity: 0.75;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity var(--duration-fast, 0.15s) ease, background var(--duration-fast, 0.15s) ease;
 }
 
 .manualMethodRemoveBtn:hover {
@@ -1326,27 +1318,27 @@
 }
 
 .addManualMethodBtn {
-  margin-top: var(--space-2, 8px);
+  margin-top: var(--space-2);
   width: 100%;
-  border: 1px dashed var(--border, #2a2d45);
-  border-radius: var(--radius-card, 14px);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-surface, 12px);
   padding: 12px;
   background: transparent;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--text-secondary);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 0.15s) ease;
 }
 
 .addManualMethodBtn:hover {
   border-color: var(--accent);
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.02);
+  color: var(--foreground);
+  background: var(--surface-muted);
 }
 
 

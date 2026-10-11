@@ -139,19 +139,47 @@ if ( ! empty( $settings['manual_methods'] ) && is_array( $settings['manual_metho
 	foreach ( $settings['manual_methods'] as $idx => $m ) {
 		if ( ! empty( $m['enabled'] ) && ! empty( $m['name'] ) ) {
 			$m_id = 'manual_' . sanitize_title( $m['name'] . '_' . ( $m['id'] ?? $idx ) );
+			
+			$m_fields = [];
+			if ( ! empty( $m['bank'] ) ) {
+				$m_fields['Banco / Entidad'] = $m['bank'];
+			}
+			if ( ! empty( $m['account_number'] ) ) {
+				$m_fields['Cuenta / Teléfono / Correo'] = $m['account_number'];
+			}
+			if ( ! empty( $m['holder_name'] ) ) {
+				$m_fields['Titular'] = $m['holder_name'];
+			}
+			if ( ! empty( $m['holder_id'] ) ) {
+				$m_fields['Cédula / Documento / RIF'] = $m['holder_id'];
+			}
+			if ( ! empty( $m['instructions'] ) ) {
+				$m_fields['Instrucción Adicional'] = $m['instructions'];
+			}
+			if ( empty( $m_fields ) && ! empty( $m['details'] ) ) {
+				$m_fields['Datos de Pago'] = $m['details'];
+			}
+			$m_fields['Monto a Pagar'] = '$' . $amount_formatted . ' USD';
+
+			// Crear texto para copiar
+			$copy_parts = [];
+			if ( ! empty( $m['bank'] ) )           $copy_parts[] = 'Banco: ' . $m['bank'];
+			if ( ! empty( $m['account_number'] ) ) $copy_parts[] = 'Cuenta/Destino: ' . $m['account_number'];
+			if ( ! empty( $m['holder_name'] ) )    $copy_parts[] = 'Titular: ' . $m['holder_name'];
+			if ( ! empty( $m['holder_id'] ) )      $copy_parts[] = 'Doc/ID: ' . $m['holder_id'];
+			if ( ! empty( $m['instructions'] ) )   $copy_parts[] = 'Nota: ' . $m['instructions'];
+			$m_copy = ! empty( $copy_parts ) ? implode( "\n", $copy_parts ) : ( $m['details'] ?? '' );
+
 			$methods[ $m_id ] = [
 				'id'         => $m_id,
 				'title'      => esc_html( $m['name'] ),
-				'subtitle'   => 'Pago Manual Directo',
+				'subtitle'   => ! empty( $m['bank'] ) ? esc_html( $m['bank'] ) : 'Pago Manual Directo',
 				'badge_type' => 'manual',
 				'is_manual'  => true,
-				'copy_data'  => $m['details'] ?? '',
+				'copy_data'  => $m_copy,
 				'copy_label' => 'Copiar Datos de Pago',
-				'fields'     => [
-					'Datos de Pago' => $m['details'] ?? '',
-					'Monto a Pagar' => '$' . $amount_formatted . ' USD',
-				],
-				'notice'     => 'Realiza tu transferencia o pago con los datos indicados y adjunta tu comprobante a continuación.',
+				'fields'     => $m_fields,
+				'notice'     => ! empty( $m['instructions'] ) ? esc_html( $m['instructions'] ) : 'Realiza tu transferencia o pago con los datos indicados y adjunta tu comprobante a continuación.',
 			];
 		}
 	}
