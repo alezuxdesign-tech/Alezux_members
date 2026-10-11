@@ -278,6 +278,7 @@ export interface MarketingSettings {
   from_name: string;
   from_email: string;
   logo_url: string;
+  email_theme?: "clean" | "dark";
   smtp_enabled: boolean;
   smtp_host: string;
   smtp_port: number;
@@ -1519,6 +1520,27 @@ class ApiService {
     return true;
   }
 
+  async resetAutomation(id: string): Promise<{ success: boolean; subject?: string; body?: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}marketing/automations/${id}/reset`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          return { success: true, subject: json.subject, body: json.body };
+        }
+      }
+    } catch (e) {
+      console.warn("API Error resetting automation:", e);
+    }
+    return { success: false };
+  }
+
   async sendTestEmail(id: string, email?: string): Promise<{ success: boolean; message?: string }> {
     try {
       if (this.wpData) {
@@ -1547,6 +1569,7 @@ class ApiService {
       from_name: "Academia Crezca",
       from_email: "notificaciones@crezca.com",
       logo_url: "",
+      email_theme: "clean",
       smtp_enabled: false,
       smtp_host: "",
       smtp_port: 587,

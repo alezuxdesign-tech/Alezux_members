@@ -121,7 +121,7 @@ class Marketing extends Module_Base {
 		$table_name = $wpdb->prefix . 'alezux_marketing_templates';
 		
 		$installed_ver = get_option( 'alezux_marketing_db_version' );
-		$version = '1.0.1'; // Bump to force update
+		$version = '1.0.2'; // Actualizado para plantillas UI Arc
 
 		if ( $installed_ver !== $version ) {
 			$charset_collate = $wpdb->get_charset_collate();
@@ -155,6 +155,28 @@ class Marketing extends Module_Base {
 			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 			dbDelta( $sql_templates );
 			dbDelta( $sql_logs );
+
+			// Migración automática: Si existen plantillas antiguas con el diseño previo (#0073aa), actualizarlas al diseño Arc
+			require_once __DIR__ . '/includes/Default_Templates.php';
+			$rows = $wpdb->get_results( "SELECT id, type, content FROM $table_name" );
+			if ( ! empty( $rows ) ) {
+				$theme = get_option( 'alezux_marketing_email_theme', 'clean' );
+				foreach ( $rows as $row ) {
+					if ( strpos( $row->content, '#0073aa' ) !== false || strpos( $row->content, 'font-family: sans-serif;' ) !== false ) {
+						$new_tpl = \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $row->type, $theme );
+						if ( ! empty( $new_tpl['content'] ) ) {
+							$wpdb->update(
+								$table_name,
+								[
+									'content' => $new_tpl['content'],
+									'subject' => $new_tpl['subject']
+								],
+								[ 'id' => $row->id ]
+							);
+						}
+					}
+				}
+			}
 
 			update_option( 'alezux_marketing_db_version', $version );
 		}
@@ -342,6 +364,10 @@ class Marketing extends Module_Base {
 		update_option( 'alezux_marketing_from_name', sanitize_text_field( $_POST['from_name'] ) );
 		update_option( 'alezux_marketing_from_email', sanitize_email( $_POST['from_email'] ) );
 		update_option( 'alezux_marketing_logo_url', sanitize_url( $_POST['logo_url'] ) );
+		if ( isset( $_POST['email_theme'] ) ) {
+			$theme = in_array( $_POST['email_theme'], [ 'clean', 'dark' ], true ) ? $_POST['email_theme'] : 'clean';
+			update_option( 'alezux_marketing_email_theme', $theme );
+		}
 
 		// Nuevas opciones SMTP
 		update_option( 'alezux_marketing_smtp_enabled', isset( $_POST['smtp_enabled'] ) ? '1' : '0' );
@@ -361,9 +387,10 @@ class Marketing extends Module_Base {
 		if ( ! current_user_can( 'administrator' ) ) wp_send_json_error( 'Forbidden' );
 
 		$data = [
-			'from_name'  => get_option( 'alezux_marketing_from_name', get_bloginfo( 'name' ) ),
-			'from_email' => get_option( 'alezux_marketing_from_email', get_bloginfo( 'admin_email' ) ),
-			'logo_url'   => get_option( 'alezux_marketing_logo_url', '' ),
+			'from_name'   => get_option( 'alezux_marketing_from_name', get_bloginfo( 'name' ) ),
+			'from_email'  => get_option( 'alezux_marketing_from_email', get_bloginfo( 'admin_email' ) ),
+			'logo_url'    => get_option( 'alezux_marketing_logo_url', '' ),
+			'email_theme' => get_option( 'alezux_marketing_email_theme', 'clean' ),
 			
 			// Nuevas opciones SMTP
 			'smtp_enabled'  => get_option( 'alezux_marketing_smtp_enabled', '0' ),

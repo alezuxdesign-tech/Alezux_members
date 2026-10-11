@@ -15,6 +15,7 @@ import {
   Clock,
   RotateCcw,
   AlertCircle,
+  Palette,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -69,34 +70,33 @@ function renderSampleText(text: string): string {
   return rendered;
 }
 
-function renderSampleEmail(content: string): string {
+function renderSampleEmail(content: string, logoUrl?: string, theme: "clean" | "dark" = "clean"): string {
   const logoSvg =
-    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='40' viewBox='0 0 160 40'><rect width='160' height='40' rx='8' fill='%236366f1'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' font-family='sans-serif' font-weight='bold' font-size='16'>CREZCA</text></svg>";
+    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='40' viewBox='0 0 160 40'><rect width='160' height='40' rx='9999' fill='%237747ff'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' font-family='sans-serif' font-weight='bold' font-size='15' letter-spacing='2'>ALEZUX</text></svg>";
 
   const trophySvg =
     "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'><circle cx='45' cy='45' r='40' fill='%23fef3c7' stroke='%23f59e0b' stroke-width='3'/><text x='50%25' y='58%25' dominant-baseline='middle' text-anchor='middle' font-size='38'>🏆</text></svg>";
 
   const currentYear = new Date().getFullYear().toString();
+  const isDark = theme === "dark";
 
   const replacements: Record<string, string> = {
-    "{{logo_url}}": logoSvg,
+    "{{logo_url}}": logoUrl || logoSvg,
     "{{site_name}}": "Academia Crezca",
     "{{home_url}}": "#",
     "{{login_url}}": "#",
     "{{year}}": currentYear,
-    "{{user.name}}": "Carlos Mendoza",
     "{{user.first_name}}": "Carlos",
-    "{{user.username}}": "carlos_mendoza",
+    "{{user.name}}": "Carlos Mendoza",
+    "{{user.username}}": "carlos_m",
     "{{user.email}}": "carlos.mendoza@empresa.com",
-    "{{password}}": "••••••••••••",
-    "{{new_password}}": "••••••••••••",
-    "{{reset_link}}": "#",
+    "{{password}}": "Alezux#2026!",
+    "{{new_password}}": "Alezux#2026!",
     "{{course_title}}": "Master en Marketing Digital & Performance",
     "{{course_name}}": "Master en Marketing Digital & Performance",
-    "{{courses_list}}":
-      "<ul style='margin: 0; padding-left: 20px; line-height: 1.8;'><li><a href='#' style='color: #4f46e5; font-weight: 600;'>Módulo Avanzado de Funnels y Automatización</a></li><li><a href='#' style='color: #4f46e5; font-weight: 600;'>Copywriting y Cierre High-Ticket</a></li></ul>",
-    "{{lessons_list}}":
-      "<ul style='margin: 0; padding-left: 20px; line-height: 1.8;'><li><a href='#' style='color: #4f46e5;'>Clase 1: Configuración de Campañas de Alto Impacto</a></li><li><a href='#' style='color: #4f46e5;'>Clase 2: Métricas y Optimización de ROAS</a></li></ul>",
+    "{{courses_list}}": "<ul style=\"margin: 0; padding-left: 20px;\"><li>Módulo 1: Fundamentos de Performance</li><li>Módulo 2: Estrategias de Escalamiento</li></ul>",
+    "{{lessons_list}}": "<ul style=\"margin: 0; padding-left: 20px;\"><li>Clase 1: Psicología de Hooks</li><li>Clase 2: Estructuras CBO vs ABO</li></ul>",
+    "{{reset_link}}": "#",
     "{{plan.name}}": "Plan Pro Anual VIP (4 Cuotas)",
     "{{plan_name}}": "Plan Pro Anual VIP (4 Cuotas)",
     "{{payment.amount}}": "97",
@@ -127,33 +127,43 @@ function renderSampleEmail(content: string): string {
   }
 
   if (!rendered.includes("<html") && !rendered.includes("<body")) {
+    const colors = {
+      bodyBg: isDark ? "#0c0d14" : "#f3f4f8",
+      cardBg: isDark ? "#141523" : "#ffffff",
+      cardBorder: isDark ? "#222538" : "#e6e8ee",
+      textPrimary: isDark ? "#f8fafc" : "#0f172a",
+      textSecondary: isDark ? "#94a3b8" : "#475569",
+      accent: "#7747ff",
+      footerText: isDark ? "#6b7280" : "#8e8ea0",
+    };
+
     rendered = `
       <!DOCTYPE html>
-      <html>
+      <html lang="es">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
-          .container { max-width: 580px; margin: 0 auto; background: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07); border: 1px solid #e2e8f0; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Helvetica, Arial, sans-serif; background: ${colors.bodyBg}; margin: 0; padding: 28px 12px; color: ${colors.textPrimary}; -webkit-font-smoothing: antialiased; }
+          .container { max-width: 580px; margin: 0 auto; background: ${colors.cardBg}; padding: 36px 32px; border-radius: 20px; box-shadow: ${isDark ? "0 12px 40px rgba(0,0,0,0.45)" : "0 10px 30px rgba(0,0,0,0.04)"}; border: 1px solid ${colors.cardBorder}; }
           .header { text-align: center; margin-bottom: 24px; }
-          .header img { max-width: 150px; }
-          .btn { display: inline-block; padding: 12px 24px; background: #4f46e5; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 16px 0; }
-          .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; }
-          .content { line-height: 1.6; font-size: 15px; }
+          .header img { max-height: 44px; max-width: 200px; }
+          .btn { display: inline-block; padding: 13px 32px; background: ${colors.accent}; color: #ffffff !important; text-decoration: none; border-radius: 9999px; font-weight: 600; margin: 20px 0 10px; box-shadow: 0 4px 14px rgba(119,71,255,0.35); }
+          .footer { margin-top: 28px; text-align: center; font-size: 12px; color: ${colors.footerText}; line-height: 1.5; }
+          .content { line-height: 1.65; font-size: 15px; color: ${colors.textSecondary}; }
         </style>
       </head>
       <body>
+        <div class="header">
+          <img src="${logoUrl || logoSvg}" alt="Logotipo">
+        </div>
         <div class="container">
-          <div class="header">
-            <img src="${logoSvg}" alt="Crezca">
-          </div>
           <div class="content">
             ${rendered.replace(/\n/g, "<br />")}
           </div>
-          <div class="footer">
-            <p>&copy; ${currentYear} Academia Crezca. Todos los derechos reservados.</p>
-          </div>
+        </div>
+        <div class="footer">
+          <p>&copy; ${currentYear} <strong>Academia Crezca</strong>. Todos los derechos reservados.</p>
         </div>
       </body>
       </html>
@@ -287,6 +297,35 @@ export function MarketingView() {
     setCopiedVar(null);
     setSaveSuccess(false);
     setTestSuccess(false);
+    setResetSuccess(false);
+  };
+
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+
+  const handleResetToArc = async () => {
+    if (!selectedAuto) return;
+    const confirmReset = window.confirm(
+      "¿Deseas restaurar esta plantilla al diseño oficial de UI Arc? Cualquier edición manual personalizada se reemplazará por la plantilla oficial del sistema."
+    );
+    if (!confirmReset) return;
+
+    setIsResetting(true);
+    const res = await api.resetAutomation(selectedAuto.id);
+    setIsResetting(false);
+    if (res.success && res.body) {
+      setEditSubject(res.subject || selectedAuto.subject);
+      setEditBody(res.body);
+      setAutomations((prev) =>
+        prev.map((a) =>
+          a.id === selectedAuto.id
+            ? { ...a, subject: res.subject || a.subject, body: res.body || a.body }
+            : a
+        )
+      );
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 2500);
+    }
   };
 
   const handleSaveModal = async () => {
@@ -548,17 +587,32 @@ export function MarketingView() {
                 <Check size={16} /> Correo de prueba enviado
               </span>
             )}
+            {resetSuccess && (
+              <span className={styles.saveSuccessNotice}>
+                <Check size={16} /> ¡Diseño Arc restaurado!
+              </span>
+            )}
             <Button
               variant="ghost"
               onClick={() => setSelectedAuto(null)}
-              disabled={isSaving || isSendingTest}
+              disabled={isSaving || isSendingTest || isResetting}
             >
               Cerrar
             </Button>
             <Button
               variant="secondary"
+              loading={isResetting}
+              disabled={isSaving || isSendingTest || isResetting}
+              onClick={handleResetToArc}
+              title="Restaura la plantilla al diseño oficial de UI Arc"
+            >
+              <RotateCcw size={14} /> Restaurar Arc
+            </Button>
+            <Button
+              variant="secondary"
               loading={isSendingTest}
               onClick={handleSendTest}
+              disabled={isSaving || isResetting}
             >
               <Send size={14} /> Enviar Prueba
             </Button>
@@ -566,6 +620,7 @@ export function MarketingView() {
               variant="primary"
               loading={isSaving}
               onClick={handleSaveModal}
+              disabled={isSendingTest || isResetting}
             >
               Guardar Plantilla
             </Button>
@@ -644,7 +699,7 @@ export function MarketingView() {
                 <div className={styles.iframeBox}>
                   <iframe
                     title="Previsualización de Correo"
-                    srcDoc={renderSampleEmail(editBody)}
+                    srcDoc={renderSampleEmail(editBody, settings.logo_url, settings.email_theme)}
                     className={styles.emailIframe}
                     sandbox="allow-same-origin"
                   />
@@ -834,7 +889,38 @@ export function MarketingView() {
             </div>
           </div>
 
-          {/* 2. SECCIÓN SMTP */}
+          {/* 2. SECCIÓN ESTILO VISUAL DE CORREOS (TEMA ARC) */}
+          <div className={styles.settingsSection}>
+            <h4 className={styles.settingsSectionTitle}>
+              <Palette size={16} /> Estilo Visual de Correos (Diseño Arc)
+            </h4>
+            <p className={styles.statusHint}>
+              Define la estética visual predeterminada con la que tus alumnos recibirán todas las comunicaciones por correo:
+            </p>
+            <div style={{ marginTop: "12px", marginBottom: "10px" }}>
+              <SegmentedControl
+                options={[
+                  { label: "Arc Clean (Híbrido)", value: "clean" },
+                  { label: "Arc Dark (Premium)", value: "dark" },
+                ]}
+                value={settings.email_theme || "clean"}
+                onChange={(val) => setSettings({ ...settings, email_theme: val as "clean" | "dark" })}
+              />
+            </div>
+            <p className={styles.statusHint} style={{ fontSize: "12px", marginTop: "4px" }}>
+              {(settings.email_theme || "clean") === "clean" ? (
+                <span>
+                  ✨ <strong>Arc Clean (Híbrido - Recomendado):</strong> Fondo claro suave (#f3f4f8), tarjeta blanca elevada con bordes finos y acento violeta Arc (#7747ff). Brinda máxima legibilidad y alta compatibilidad en Gmail, Apple Mail y Outlook.
+                </span>
+              ) : (
+                <span>
+                  🌙 <strong>Arc Dark (Premium):</strong> Fondo oscuro (#0c0d14), tarjeta grafito (#141523) y detalles violeta Arc. Diseñado para un look elegante y moderno a juego con el tema nocturno de la plataforma.
+                </span>
+              )}
+            </p>
+          </div>
+
+          {/* 3. SECCIÓN SMTP */}
           <div className={styles.settingsSection}>
             <h4 className={styles.settingsSectionTitle}>
               <Server size={16} /> Envío por Servidor SMTP (Opcional)

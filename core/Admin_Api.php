@@ -160,6 +160,12 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
+			register_rest_route( $namespace, '/marketing/automations/(?P<id>[a-zA-Z0-9_-]+)/reset', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'reset_marketing_automation' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
 			register_rest_route( $namespace, '/marketing/automations/(?P<id>[a-zA-Z0-9_-]+)/logs', [
 				'methods'             => 'GET',
 				'callback'            => [ $this, 'get_automation_logs' ],
@@ -1858,11 +1864,12 @@ class Admin_Api {
 			'course_completed'       => 'Al alcanzar el 100% del curso',
 		];
 
+		$email_theme = get_option( 'alezux_marketing_email_theme', 'clean' );
 		$result = [];
 		foreach ( $registered_types as $type_key => $info ) {
 			$saved = isset( $saved_templates[ $type_key ] ) ? $saved_templates[ $type_key ] : null;
 			$default = class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' )
-				? \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $type_key )
+				? \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $type_key, $email_theme )
 				: [ 'subject' => $info['title'], 'content' => '' ];
 
 			$subject = $saved && ! empty( $saved->subject ) ? $saved->subject : ( isset( $default['subject'] ) ? $default['subject'] : $info['title'] );
@@ -1885,6 +1892,35 @@ class Admin_Api {
 		}
 
 		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * Restablecer una plantilla de marketing al diseño oficial Arc
+	 */
+	public function reset_marketing_automation( $request ) {
+		$type = sanitize_text_field( $request->get_param( 'id' ) );
+		global $wpdb;
+		$table = $wpdb->prefix . 'alezux_marketing_templates';
+
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table'" ) === $table ) {
+			$wpdb->delete( $table, [ 'type' => $type ] );
+		}
+
+		$theme = get_option( 'alezux_marketing_email_theme', 'clean' );
+		if ( ! class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' ) && file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php';
+		}
+
+		$default = class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' )
+			? \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $type, $theme )
+			: [ 'subject' => 'Notificación', 'content' => '' ];
+
+		return rest_ensure_response( [
+			'success' => true,
+			'id'      => $type,
+			'subject' => $default['subject'],
+			'body'    => $default['content'],
+		] );
 	}
 
 	/**
@@ -2095,6 +2131,7 @@ class Admin_Api {
 			'from_name'     => get_option( 'alezux_marketing_from_name', get_bloginfo( 'name' ) ),
 			'from_email'    => get_option( 'alezux_marketing_from_email', get_bloginfo( 'admin_email' ) ),
 			'logo_url'      => get_option( 'alezux_marketing_logo_url', '' ),
+			'email_theme'   => get_option( 'alezux_marketing_email_theme', 'clean' ),
 			'smtp_enabled'  => get_option( 'alezux_marketing_smtp_enabled', '0' ) === '1',
 			'smtp_host'     => get_option( 'alezux_marketing_smtp_host', '' ),
 			'smtp_port'     => (int) get_option( 'alezux_marketing_smtp_port', 587 ),
@@ -2120,6 +2157,10 @@ class Admin_Api {
 		}
 		if ( isset( $params['logo_url'] ) ) {
 			update_option( 'alezux_marketing_logo_url', sanitize_url( $params['logo_url'] ) );
+		}
+		if ( isset( $params['email_theme'] ) ) {
+			$theme = in_array( $params['email_theme'], [ 'clean', 'dark' ], true ) ? $params['email_theme'] : 'clean';
+			update_option( 'alezux_marketing_email_theme', $theme );
 		}
 		if ( isset( $params['smtp_enabled'] ) ) {
 			update_option( 'alezux_marketing_smtp_enabled', ! empty( $params['smtp_enabled'] ) ? '1' : '0' );
