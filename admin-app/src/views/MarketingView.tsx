@@ -70,15 +70,70 @@ function renderSampleText(text: string): string {
   return rendered;
 }
 
-function renderSampleEmail(content: string, logoUrl?: string, theme: "clean" | "dark" = "clean"): string {
+function getAccentPalette(accent: string = "violet", isDark: boolean = false) {
+  const normalized = accent.toLowerCase().trim();
+  const presets: Record<string, { accent: string; buttonBg: string; badgeBg: string; badgeText: string; badgeBorder: string; shadow: string }> = {
+    violet: {
+      accent: isDark ? "#a78bff" : "#7747ff",
+      buttonBg: "#7747ff",
+      badgeBg: isDark ? "rgba(119,71,255,0.18)" : "#f3f0ff",
+      badgeText: isDark ? "#c7b7ff" : "#5825d6",
+      badgeBorder: isDark ? "rgba(119,71,255,0.32)" : "#ddd6fe",
+      shadow: "rgba(119,71,255,0.35)",
+    },
+    blue: {
+      accent: isDark ? "#60a5fa" : "#0562ef",
+      buttonBg: "#0562ef",
+      badgeBg: isDark ? "rgba(5,98,239,0.18)" : "#eff6ff",
+      badgeText: isDark ? "#93c5fd" : "#0345b5",
+      badgeBorder: isDark ? "rgba(5,98,239,0.32)" : "#bfdbfe",
+      shadow: "rgba(5,98,239,0.35)",
+    },
+    green: {
+      accent: isDark ? "#34d399" : "#059669",
+      buttonBg: "#059669",
+      badgeBg: isDark ? "rgba(16,185,129,0.18)" : "#ecfdf5",
+      badgeText: isDark ? "#6ee7b7" : "#065f46",
+      badgeBorder: isDark ? "rgba(16,185,129,0.32)" : "#a7f3d0",
+      shadow: "rgba(5,150,105,0.35)",
+    },
+    amber: {
+      accent: isDark ? "#fbbf24" : "#d97706",
+      buttonBg: "#d97706",
+      badgeBg: isDark ? "rgba(245,158,11,0.18)" : "#fffbeb",
+      badgeText: isDark ? "#fcd34d" : "#92400e",
+      badgeBorder: isDark ? "rgba(245,158,11,0.32)" : "#fde68a",
+      shadow: "rgba(217,119,6,0.35)",
+    },
+    coral: {
+      accent: isDark ? "#fca5a5" : "#e0483d",
+      buttonBg: "#e0483d",
+      badgeBg: isDark ? "rgba(241,95,85,0.18)" : "#fef2f2",
+      badgeText: isDark ? "#fca5a5" : "#991b1b",
+      badgeBorder: isDark ? "rgba(241,95,85,0.32)" : "#fecaca",
+      shadow: "rgba(224,72,61,0.35)",
+    },
+  };
+
+  return presets[normalized] || presets.violet;
+}
+
+function renderSampleEmail(
+  content: string,
+  logoUrl?: string,
+  theme: "clean" | "dark" = "clean",
+  accent: string = "violet"
+): string {
+  const isDark = theme === "dark";
+  const palette = getAccentPalette(accent, isDark);
+
   const logoSvg =
-    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='40' viewBox='0 0 160 40'><rect width='160' height='40' rx='9999' fill='%237747ff'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' font-family='sans-serif' font-weight='bold' font-size='15' letter-spacing='2'>ALEZUX</text></svg>";
+    `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='40' viewBox='0 0 160 40'><rect width='160' height='40' rx='9999' fill='${encodeURIComponent(palette.buttonBg)}'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' font-family='sans-serif' font-weight='bold' font-size='15' letter-spacing='2'>ALEZUX</text></svg>`;
 
   const trophySvg =
     "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'><circle cx='45' cy='45' r='40' fill='%23fef3c7' stroke='%23f59e0b' stroke-width='3'/><text x='50%25' y='58%25' dominant-baseline='middle' text-anchor='middle' font-size='38'>🏆</text></svg>";
 
   const currentYear = new Date().getFullYear().toString();
-  const isDark = theme === "dark";
 
   const replacements: Record<string, string> = {
     "{{logo_url}}": logoUrl || logoSvg,
@@ -126,6 +181,11 @@ function renderSampleEmail(content: string, logoUrl?: string, theme: "clean" | "
     rendered = rendered.split(key).join(value);
   }
 
+  // Si el tema tiene un acento diferente al violeta base, sincronizarlo en la previsualización
+  if (palette.buttonBg !== "#7747ff") {
+    rendered = rendered.split("#7747ff").join(palette.buttonBg);
+  }
+
   if (!rendered.includes("<html") && !rendered.includes("<body")) {
     const colors = {
       bodyBg: isDark ? "#0c0d14" : "#f3f4f8",
@@ -133,7 +193,7 @@ function renderSampleEmail(content: string, logoUrl?: string, theme: "clean" | "
       cardBorder: isDark ? "#222538" : "#e6e8ee",
       textPrimary: isDark ? "#f8fafc" : "#0f172a",
       textSecondary: isDark ? "#94a3b8" : "#475569",
-      accent: "#7747ff",
+      accent: palette.buttonBg,
       footerText: isDark ? "#6b7280" : "#8e8ea0",
     };
 
@@ -148,7 +208,7 @@ function renderSampleEmail(content: string, logoUrl?: string, theme: "clean" | "
           .container { max-width: 580px; margin: 0 auto; background: ${colors.cardBg}; padding: 36px 32px; border-radius: 20px; box-shadow: ${isDark ? "0 12px 40px rgba(0,0,0,0.45)" : "0 10px 30px rgba(0,0,0,0.04)"}; border: 1px solid ${colors.cardBorder}; }
           .header { text-align: center; margin-bottom: 24px; }
           .header img { max-height: 44px; max-width: 200px; }
-          .btn { display: inline-block; padding: 13px 32px; background: ${colors.accent}; color: #ffffff !important; text-decoration: none; border-radius: 9999px; font-weight: 600; margin: 20px 0 10px; box-shadow: 0 4px 14px rgba(119,71,255,0.35); }
+          .btn { display: inline-block; padding: 13px 32px; background: ${colors.accent}; color: #ffffff !important; text-decoration: none; border-radius: 9999px; font-weight: 600; margin: 20px 0 10px; box-shadow: 0 4px 14px ${palette.shadow}; }
           .footer { margin-top: 28px; text-align: center; font-size: 12px; color: ${colors.footerText}; line-height: 1.5; }
           .content { line-height: 1.65; font-size: 15px; color: ${colors.textSecondary}; }
         </style>
@@ -173,7 +233,12 @@ function renderSampleEmail(content: string, logoUrl?: string, theme: "clean" | "
   return rendered;
 }
 
-export function MarketingView() {
+export interface MarketingViewProps {
+  currentAccent?: string;
+}
+
+export function MarketingView({ currentAccent }: MarketingViewProps = {}) {
+  const activeAccent = currentAccent || localStorage.getItem("crezca_accent") || "violet";
   const [automations, setAutomations] = useState<MarketingAutomation[]>([]);
   const [activeFilter, setActiveFilter] = useState<CategoryFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -297,35 +362,6 @@ export function MarketingView() {
     setCopiedVar(null);
     setSaveSuccess(false);
     setTestSuccess(false);
-    setResetSuccess(false);
-  };
-
-  const [isResetting, setIsResetting] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState(false);
-
-  const handleResetToArc = async () => {
-    if (!selectedAuto) return;
-    const confirmReset = window.confirm(
-      "¿Deseas restaurar esta plantilla al diseño oficial de UI Arc? Cualquier edición manual personalizada se reemplazará por la plantilla oficial del sistema."
-    );
-    if (!confirmReset) return;
-
-    setIsResetting(true);
-    const res = await api.resetAutomation(selectedAuto.id);
-    setIsResetting(false);
-    if (res.success && res.body) {
-      setEditSubject(res.subject || selectedAuto.subject);
-      setEditBody(res.body);
-      setAutomations((prev) =>
-        prev.map((a) =>
-          a.id === selectedAuto.id
-            ? { ...a, subject: res.subject || a.subject, body: res.body || a.body }
-            : a
-        )
-      );
-      setResetSuccess(true);
-      setTimeout(() => setResetSuccess(false), 2500);
-    }
   };
 
   const handleSaveModal = async () => {
@@ -587,32 +623,18 @@ export function MarketingView() {
                 <Check size={16} /> Correo de prueba enviado
               </span>
             )}
-            {resetSuccess && (
-              <span className={styles.saveSuccessNotice}>
-                <Check size={16} /> ¡Diseño Arc restaurado!
-              </span>
-            )}
             <Button
               variant="ghost"
               onClick={() => setSelectedAuto(null)}
-              disabled={isSaving || isSendingTest || isResetting}
+              disabled={isSaving || isSendingTest}
             >
               Cerrar
             </Button>
             <Button
               variant="secondary"
-              loading={isResetting}
-              disabled={isSaving || isSendingTest || isResetting}
-              onClick={handleResetToArc}
-              title="Restaura la plantilla al diseño oficial de UI Arc"
-            >
-              <RotateCcw size={14} /> Restaurar Arc
-            </Button>
-            <Button
-              variant="secondary"
               loading={isSendingTest}
               onClick={handleSendTest}
-              disabled={isSaving || isResetting}
+              disabled={isSaving}
             >
               <Send size={14} /> Enviar Prueba
             </Button>
@@ -620,7 +642,7 @@ export function MarketingView() {
               variant="primary"
               loading={isSaving}
               onClick={handleSaveModal}
-              disabled={isSendingTest || isResetting}
+              disabled={isSendingTest}
             >
               Guardar Plantilla
             </Button>
@@ -699,7 +721,7 @@ export function MarketingView() {
                 <div className={styles.iframeBox}>
                   <iframe
                     title="Previsualización de Correo"
-                    srcDoc={renderSampleEmail(editBody, settings.logo_url, settings.email_theme)}
+                    srcDoc={renderSampleEmail(editBody, settings.logo_url, settings.email_theme, activeAccent)}
                     className={styles.emailIframe}
                     sandbox="allow-same-origin"
                   />

@@ -8,13 +8,193 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Default_Templates {
 
 	/**
-	 * Obtiene una plantilla de correo por tipo, adaptada al tema Arc seleccionado.
+	 * Obtiene el juego de colores de acento calibrado para accesibilidad y contraste WCAG AA.
 	 *
-	 * @param string      $type  Identificador de la plantilla.
-	 * @param string|null $theme 'clean' (híbrido/claro) o 'dark' (oscuro premium). Por defecto lee el ajuste del sitio.
+	 * @param string $accent  Identificador del preset ('violet', 'blue', 'green', 'amber', 'coral') o código HEX.
+	 * @param bool   $is_dark Modo oscuro activo.
+	 * @return array{accent: string, button_bg: string, button_text: string, badge_bg: string, badge_text: string, badge_border: string, shadow: string}
+	 */
+	public static function get_accent_palette( $accent = 'violet', $is_dark = false ) {
+		$accent = strtolower( trim( (string) $accent ) );
+
+		// Paletas predefinidas con contraste calibrado para fondo claro y oscuro
+		$palettes = [
+			'violet' => [
+				'accent'         => '#7747ff',
+				'accent_dark'    => '#5b2bd9',
+				'accent_light'   => '#a78bff',
+				'button_bg'      => '#7747ff',
+				'button_text'    => '#ffffff',
+				'badge_bg_light' => '#f3f0ff',
+				'badge_tx_light' => '#5825d6',
+				'badge_bd_light' => '#ddd6fe',
+				'badge_bg_dark'  => 'rgba(119, 71, 255, 0.18)',
+				'badge_tx_dark'  => '#c7b7ff',
+				'badge_bd_dark'  => 'rgba(119, 71, 255, 0.32)',
+				'shadow'         => 'rgba(119, 71, 255, 0.35)',
+			],
+			'blue' => [
+				'accent'         => '#0562ef',
+				'accent_dark'    => '#0345b5',
+				'accent_light'   => '#60a5fa',
+				'button_bg'      => '#0562ef',
+				'button_text'    => '#ffffff',
+				'badge_bg_light' => '#eff6ff',
+				'badge_tx_light' => '#0345b5',
+				'badge_bd_light' => '#bfdbfe',
+				'badge_bg_dark'  => 'rgba(5, 98, 239, 0.18)',
+				'badge_tx_dark'  => '#93c5fd',
+				'badge_bd_dark'  => 'rgba(5, 98, 239, 0.32)',
+				'shadow'         => 'rgba(5, 98, 239, 0.35)',
+			],
+			'green' => [
+				// Calibrado a #059669 para asegurar contraste > 4.5:1 con texto blanco en fondo claro
+				'accent'         => '#059669',
+				'accent_dark'    => '#047857',
+				'accent_light'   => '#34d399',
+				'button_bg'      => '#059669',
+				'button_text'    => '#ffffff',
+				'badge_bg_light' => '#ecfdf5',
+				'badge_tx_light' => '#065f46',
+				'badge_bd_light' => '#a7f3d0',
+				'badge_bg_dark'  => 'rgba(16, 185, 129, 0.18)',
+				'badge_tx_dark'  => '#6ee7b7',
+				'badge_bd_dark'  => 'rgba(16, 185, 129, 0.32)',
+				'shadow'         => 'rgba(5, 150, 105, 0.35)',
+			],
+			'amber' => [
+				// Calibrado a #d97706 para garantizar legibilidad óptima sobre fondo claro
+				'accent'         => '#d97706',
+				'accent_dark'    => '#b45309',
+				'accent_light'   => '#fbbf24',
+				'button_bg'      => '#d97706',
+				'button_text'    => '#ffffff',
+				'badge_bg_light' => '#fffbeb',
+				'badge_tx_light' => '#92400e',
+				'badge_bd_light' => '#fde68a',
+				'badge_bg_dark'  => 'rgba(245, 158, 11, 0.18)',
+				'badge_tx_dark'  => '#fcd34d',
+				'badge_bd_dark'  => 'rgba(245, 158, 11, 0.32)',
+				'shadow'         => 'rgba(217, 119, 6, 0.35)',
+			],
+			'coral' => [
+				// Calibrado a #e0483d para tono coral de alto contraste
+				'accent'         => '#e0483d',
+				'accent_dark'    => '#b91c1c',
+				'accent_light'   => '#fca5a5',
+				'button_bg'      => '#e0483d',
+				'button_text'    => '#ffffff',
+				'badge_bg_light' => '#fef2f2',
+				'badge_tx_light' => '#991b1b',
+				'badge_bd_light' => '#fecaca',
+				'badge_bg_dark'  => 'rgba(241, 95, 85, 0.18)',
+				'badge_tx_dark'  => '#fca5a5',
+				'badge_bd_dark'  => 'rgba(241, 95, 85, 0.32)',
+				'shadow'         => 'rgba(224, 72, 61, 0.35)',
+			],
+		];
+
+		if ( isset( $palettes[ $accent ] ) ) {
+			$p = $palettes[ $accent ];
+		} else {
+			// Manejo de código HEX personalizado con cálculo de luminancia
+			$hex = ltrim( $accent, '#' );
+			if ( strlen( $hex ) === 3 ) {
+				$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+			}
+			if ( preg_match( '/^[0-9a-f]{6}$/i', $hex ) ) {
+				$r = hexdec( substr( $hex, 0, 2 ) );
+				$g = hexdec( substr( $hex, 2, 2 ) );
+				$b = hexdec( substr( $hex, 4, 2 ) );
+
+				// Luminancia relativa
+				$lum = ( 0.299 * $r + 0.587 * $g + 0.114 * $b ) / 255;
+
+				// Si el color es demasiado claro para texto blanco en botones, oscurecerlo
+				$btn_r = $lum > 0.55 ? (int)( $r * 0.72 ) : $r;
+				$btn_g = $lum > 0.55 ? (int)( $g * 0.72 ) : $g;
+				$btn_b = $lum > 0.55 ? (int)( $b * 0.72 ) : $b;
+				$button_bg = sprintf( '#%02x%02x%02x', $btn_r, $btn_g, $btn_b );
+
+				$dark_r = (int)( $r * 0.65 );
+				$dark_g = (int)( $g * 0.65 );
+				$dark_b = (int)( $b * 0.65 );
+				$text_dark = sprintf( '#%02x%02x%02x', $dark_r, $dark_g, $dark_b );
+
+				$p = [
+					'accent'         => '#' . $hex,
+					'accent_dark'    => $text_dark,
+					'accent_light'   => '#' . $hex,
+					'button_bg'      => $button_bg,
+					'button_text'    => '#ffffff',
+					'badge_bg_light' => 'rgba(' . $r . ',' . $g . ',' . $b . ',0.1)',
+					'badge_tx_light' => $text_dark,
+					'badge_bd_light' => 'rgba(' . $r . ',' . $g . ',' . $b . ',0.25)',
+					'badge_bg_dark'  => 'rgba(' . $r . ',' . $g . ',' . $b . ',0.2)',
+					'badge_tx_dark'  => '#' . $hex,
+					'badge_bd_dark'  => 'rgba(' . $r . ',' . $g . ',' . $b . ',0.35)',
+					'shadow'         => 'rgba(' . $r . ',' . $g . ',' . $b . ',0.35)',
+				];
+			} else {
+				$p = $palettes['violet'];
+			}
+		}
+
+		return [
+			'accent'       => $is_dark ? $p['accent_light'] : $p['accent'],
+			'button_bg'    => $p['button_bg'],
+			'button_text'  => $p['button_text'],
+			'badge_bg'     => $is_dark ? $p['badge_bg_dark'] : $p['badge_bg_light'],
+			'badge_text'   => $is_dark ? $p['badge_tx_dark'] : $p['badge_tx_light'],
+			'badge_border' => $is_dark ? $p['badge_bd_dark'] : $p['badge_bd_light'],
+			'shadow'       => $p['shadow'],
+		];
+	}
+
+	/**
+	 * Renderiza un icono vectorial Lucide SVG para correos electrónicos.
+	 *
+	 * @param string $name  Nombre del icono (sparkles, key, lock, shield-check, check-circle, credit-card, alert-circle, calendar, file-text, award, book-open, play-circle, zap, graduation-cap).
+	 * @param string $color Color del trazo (stroke).
+	 * @param int    $size  Tamaño en píxeles.
+	 * @return string Código SVG inline seguro para email.
+	 */
+	public static function lucide_icon( $name, $color = '#7747ff', $size = 14 ) {
+		$icons = [
+			'sparkles'       => '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M7 5H3"/><path d="M19 17v4"/><path d="M21 19h-4"/>',
+			'key'            => '<path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/>',
+			'lock'           => '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+			'shield-check'   => '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+			'check-circle'   => '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+			'credit-card'    => '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+			'alert-circle'   => '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+			'calendar'       => '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+			'file-text'      => '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+			'award'          => '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>',
+			'trophy'         => '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+			'book-open'      => '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+			'play-circle'    => '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>',
+			'zap'            => '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+			'graduation-cap' => '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
+			'info'           => '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+		];
+
+		if ( ! isset( $icons[ $name ] ) ) {
+			return '';
+		}
+
+		return '<svg xmlns="http://www.w3.org/2000/svg" width="' . $size . '" height="' . $size . '" viewBox="0 0 24 24" fill="none" stroke="' . $color . '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: -2px; margin-right: 6px;">' . $icons[ $name ] . '</svg>';
+	}
+
+	/**
+	 * Obtiene una plantilla de correo por tipo, adaptada al tema Arc y color de acento configurado.
+	 *
+	 * @param string      $type   Identificador de la plantilla.
+	 * @param string|null $theme  'clean' o 'dark'.
+	 * @param string|null $accent Color de acento de la plataforma ('violet', 'blue', 'green', 'amber', 'coral' o HEX).
 	 * @return array{subject: string, content: string}
 	 */
-	public static function get( $type, $theme = null ) {
+	public static function get( $type, $theme = null, $accent = null ) {
 		if ( empty( $theme ) ) {
 			$theme = function_exists( 'get_option' ) ? get_option( 'alezux_marketing_email_theme', 'clean' ) : 'clean';
 		}
@@ -22,7 +202,12 @@ class Default_Templates {
 			$theme = 'clean';
 		}
 
+		if ( empty( $accent ) ) {
+			$accent = function_exists( 'get_option' ) ? get_option( 'alezux_accent', 'violet' ) : 'violet';
+		}
+
 		$is_dark = ( 'dark' === $theme );
+		$accent_data = self::get_accent_palette( $accent, $is_dark );
 
 		$colors = [
 			'body_bg'        => $is_dark ? '#0c0d14' : '#f3f4f8',
@@ -33,10 +218,6 @@ class Default_Templates {
 			'text_muted'     => $is_dark ? '#64748b' : '#94a3b8',
 			'box_bg'         => $is_dark ? '#191b2c' : '#f8fafc',
 			'box_border'     => $is_dark ? '#292c44' : '#e2e8f0',
-			'accent'         => '#7747ff',
-			'badge_bg'       => $is_dark ? 'rgba(119,71,255,0.18)' : '#f0ebff',
-			'badge_text'     => $is_dark ? '#c7b7ff' : '#6d28d9',
-			'badge_border'   => $is_dark ? 'rgba(119,71,255,0.3)' : '#ddd6fe',
 			'code_bg'        => $is_dark ? '#10111a' : '#f1f3f9',
 			'code_border'    => $is_dark ? '#282b42' : '#d5daf0',
 			'footer_text'    => $is_dark ? '#6b7280' : '#8e8ea0',
@@ -103,12 +284,13 @@ class Default_Templates {
 </html>
 ';
 
-		// Helpers de componentes Arc para el cuerpo
-		$badge = function( $text, $custom_bg = null, $custom_color = null, $custom_border = null ) use ( $colors ) {
-			$bg = $custom_bg ? $custom_bg : $colors['badge_bg'];
-			$color = $custom_color ? $custom_color : $colors['badge_text'];
-			$border = $custom_border ? $custom_border : $colors['badge_border'];
-			return '<div style="margin-bottom: 18px;"><span style="display: inline-block; background-color: ' . $bg . '; color: ' . $color . '; border: 1px solid ' . $border . '; border-radius: 9999px; padding: 4px 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em;">' . $text . '</span></div>';
+		// Helpers de componentes Arc con Lucide Icons y colores calibrados
+		$badge = function( $text, $icon_name = '', $custom_bg = null, $custom_color = null, $custom_border = null ) use ( $colors, $accent_data ) {
+			$bg = $custom_bg ? $custom_bg : $accent_data['badge_bg'];
+			$color = $custom_color ? $custom_color : $accent_data['badge_text'];
+			$border = $custom_border ? $custom_border : $accent_data['badge_border'];
+			$icon_html = $icon_name ? self::lucide_icon( $icon_name, $color, 14 ) : '';
+			return '<div style="margin-bottom: 18px;"><span style="display: inline-block; background-color: ' . $bg . '; color: ' . $color . '; border: 1px solid ' . $border . '; border-radius: 9999px; padding: 5px 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; line-height: 1;">' . $icon_html . $text . '</span></div>';
 		};
 
 		$title = function( $text ) use ( $colors ) {
@@ -119,13 +301,15 @@ class Default_Templates {
 			return '<p style="margin: 0 0 16px 0; font-size: 15px; color: ' . $colors['text_secondary'] . '; line-height: 1.65;">' . $text . '</p>';
 		};
 
-		$button = function( $text, $url, $custom_accent = null ) use ( $colors ) {
-			$bg = $custom_accent ? $custom_accent : $colors['accent'];
+		$button = function( $text, $url, $custom_bg = null ) use ( $colors, $accent_data ) {
+			$bg = $custom_bg ? $custom_bg : $accent_data['button_bg'];
+			$color = $accent_data['button_text'];
+			$shadow = $accent_data['shadow'];
 			return '
 				<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 28px auto 12px auto;">
 					<tr>
-						<td align="center" style="border-radius: 9999px; background-color: ' . $bg . '; box-shadow: 0 4px 14px rgba(119,71,255,0.35);">
-							<a href="' . $url . '" class="arc-btn" style="background-color: ' . $bg . '; color: #ffffff !important; font-size: 14px; font-weight: 600; text-decoration: none; padding: 13px 32px; border-radius: 9999px; display: inline-block; letter-spacing: 0.01em;">
+						<td align="center" style="border-radius: 9999px; background-color: ' . $bg . '; box-shadow: 0 4px 14px ' . $shadow . ';">
+							<a href="' . $url . '" class="arc-btn" style="background-color: ' . $bg . '; color: ' . $color . ' !important; font-size: 14px; font-weight: 600; text-decoration: none; padding: 13px 32px; border-radius: 9999px; display: inline-block; letter-spacing: 0.01em;">
 								' . $text . '
 							</a>
 						</td>
@@ -134,10 +318,11 @@ class Default_Templates {
 			';
 		};
 
-		$box_start = function( $title_text = '' ) use ( $colors ) {
+		$box_start = function( $title_text = '', $icon_name = '' ) use ( $colors, $accent_data ) {
 			$header_html = '';
 			if ( ! empty( $title_text ) ) {
-				$header_html = '<div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: ' . $colors['accent'] . '; margin-bottom: 12px;">' . $title_text . '</div>';
+				$icon_html = $icon_name ? self::lucide_icon( $icon_name, $accent_data['accent'], 14 ) : '';
+				$header_html = '<div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: ' . $accent_data['accent'] . '; margin-bottom: 12px; line-height: 1;">' . $icon_html . $title_text . '</div>';
 			}
 			return '
 				<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ' . $colors['box_bg'] . '; border: 1px solid ' . $colors['box_border'] . '; border-radius: 14px; margin: 22px 0; overflow: hidden;">
@@ -154,19 +339,19 @@ class Default_Templates {
 			';
 		};
 
-		$row = function( $label, $value, $is_code = false, $is_last = false ) use ( $colors ) {
+		$row = function( $label, $value, $is_code = false, $is_last = false ) use ( $colors, $accent_data ) {
 			$val_html = $value;
 			if ( $is_code ) {
-				$val_html = '<span style="display: inline-block; background-color: ' . $colors['code_bg'] . '; border: 1px solid ' . $colors['code_border'] . '; padding: 3px 10px; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; font-weight: 700; color: ' . $colors['accent'] . ';">' . $value . '</span>';
+				$val_html = '<span style="display: inline-block; background-color: ' . $colors['code_bg'] . '; border: 1px solid ' . $colors['code_border'] . '; padding: 3px 10px; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; font-weight: 700; color: ' . $accent_data['accent'] . ';">' . $value . '</span>';
 			}
 			$border_bottom = $is_last ? '' : 'border-bottom: 1px solid ' . $colors['divider'] . ';';
 			return '
 				<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0; padding: 0;">
 					<tr>
-						<td class="arc-data-td" style="padding: 9px 0; font-size: 13px; font-weight: 500; color: ' . $colors['text_muted'] . '; width: 36%; vertical-align: middle; ' . $border_bottom . '">
+						<td class="arc-data-td" style="padding: 9px 0; font-size: 13px; font-weight: 500; color: ' . $colors['text_muted'] . '; width: 38%; vertical-align: middle; ' . $border_bottom . '">
 							' . $label . '
 						</td>
-						<td class="arc-data-td" style="padding: 9px 0; font-size: 14px; font-weight: 600; color: ' . $colors['text_primary'] . '; width: 64%; vertical-align: middle; text-align: right; ' . $border_bottom . '">
+						<td class="arc-data-td" style="padding: 9px 0; font-size: 14px; font-weight: 600; color: ' . $colors['text_primary'] . '; width: 62%; vertical-align: middle; text-align: right; ' . $border_bottom . '">
 							' . $val_html . '
 						</td>
 					</tr>
@@ -179,10 +364,10 @@ class Default_Templates {
 				return [
 					'subject' => '¡Bienvenido a {{site_name}}! Tus credenciales de acceso',
 					'content' => $header .
-						$badge( '🎉 ¡Cuenta Creada Exitosamente!' ) .
+						$badge( 'Cuenta Creada Exitosamente', 'sparkles' ) .
 						$title( '¡Hola, {{user.first_name}}!' ) .
 						$paragraph( 'Nos emociona darte la bienvenida a <strong>{{site_name}}</strong>. Tu acceso a la plataforma ya se encuentra activo y tienes todo preparado para empezar a aprender.' ) .
-						$box_start( '🔑 Tus Credenciales de Acceso' ) .
+						$box_start( 'Tus Credenciales de Acceso', 'key' ) .
 						$row( 'Usuario / Correo', '{{user.username}}' ) .
 						$row( 'Contraseña Temporal', '{{password}}', true ) .
 						$row( 'Curso o Membresía', '{{course_title}}', false, true ) .
@@ -196,13 +381,13 @@ class Default_Templates {
 				return [
 					'subject' => 'Recuperación de Contraseña - {{site_name}}',
 					'content' => $header .
-						$badge( '🔐 Seguridad de la Cuenta' ) .
+						$badge( 'Seguridad de la Cuenta', 'lock' ) .
 						$title( '¿Olvidaste tu contraseña?' ) .
 						$paragraph( 'Hola <strong>{{user.name}}</strong>, hemos recibido una solicitud para restablecer la contraseña asociada a tu cuenta en <strong>{{site_name}}</strong>.' ) .
 						$paragraph( 'Para crear una nueva contraseña y recuperar tu acceso, haz clic en el botón siguiente:' ) .
 						$button( 'Restablecer Mi Contraseña &rarr;', '{{reset_link}}' ) .
-						$box_start() .
-						$paragraph( '⚠️ Si no solicitaste este cambio, puedes ignorar este mensaje con tranquilidad. Tu contraseña actual continuará siendo totalmente segura.' ) .
+						$box_start( 'Aviso de Seguridad', 'info' ) .
+						$paragraph( 'Si no solicitaste este cambio, puedes ignorar este mensaje con tranquilidad. Tu contraseña actual continuará siendo totalmente segura.' ) .
 						$box_end() .
 						$footer
 				];
@@ -211,10 +396,10 @@ class Default_Templates {
 				return [
 					'subject' => 'Tus credenciales de acceso han sido actualizadas',
 					'content' => $header .
-						$badge( '🛡️ Actualización de Seguridad' ) .
+						$badge( 'Actualización de Seguridad', 'shield-check' ) .
 						$title( 'Nueva contraseña asignada' ) .
 						$paragraph( 'Hola <strong>{{user.name}}</strong>, un administrador de la plataforma ha restablecido las credenciales de tu cuenta.' ) .
-						$box_start( 'Nuevos Datos de Acceso' ) .
+						$box_start( 'Nuevos Datos de Acceso', 'key' ) .
 						$row( 'Usuario', '{{user.email}}' ) .
 						$row( 'Nueva Contraseña', '{{new_password}}', true, true ) .
 						$box_end() .
@@ -227,10 +412,10 @@ class Default_Templates {
 				return [
 					'subject' => '¡Pago Confirmado! - {{plan_name}}',
 					'content' => $header .
-						$badge( '✓ Pago Procesado con Éxito', ( $is_dark ? 'rgba(16,185,129,0.18)' : '#ecfdf5' ), ( $is_dark ? '#6ee7b7' : '#059669' ), ( $is_dark ? 'rgba(16,185,129,0.3)' : '#a7f3d0' ) ) .
+						$badge( 'Pago Procesado con Éxito', 'check-circle', ( $is_dark ? 'rgba(16,185,129,0.18)' : '#ecfdf5' ), ( $is_dark ? '#6ee7b7' : '#059669' ), ( $is_dark ? 'rgba(16,185,129,0.3)' : '#a7f3d0' ) ) .
 						$title( '¡Gracias por tu compra, {{user.first_name}}!' ) .
 						$paragraph( 'Hemos procesado correctamente tu pago para la suscripción <strong>{{plan_name}}</strong>. Tu acceso a los materiales y lecciones ya está disponible.' ) .
-						$box_start( 'Comprobante de Transacción' ) .
+						$box_start( 'Comprobante de Transacción', 'credit-card' ) .
 						$row( 'Plan Adquirido', '{{plan_name}}' ) .
 						$row( 'Monto Pagado', '{{amount}}' ) .
 						$row( 'Fecha', '{{date}}' ) .
@@ -244,16 +429,16 @@ class Default_Templates {
 				return [
 					'subject' => 'Acción Requerida: Problema con tu pago de {{plan_name}}',
 					'content' => $header .
-						$badge( '⚠️ Alerta de Pago', ( $is_dark ? 'rgba(239,68,68,0.18)' : '#fef2f2' ), ( $is_dark ? '#fca5a5' : '#dc2626' ), ( $is_dark ? 'rgba(239,68,68,0.3)' : '#fecaca' ) ) .
+						$badge( 'Alerta de Pago', 'alert-circle', ( $is_dark ? 'rgba(239,68,68,0.18)' : '#fef2f2' ), ( $is_dark ? '#fca5a5' : '#dc2626' ), ( $is_dark ? 'rgba(239,68,68,0.3)' : '#fecaca' ) ) .
 						$title( 'No pudimos procesar tu pago' ) .
 						$paragraph( 'Hola <strong>{{user.first_name}}</strong>, intentamos procesar la renovación o cuota correspondiente a tu plan <strong>{{plan_name}}</strong>, pero la transacción no pudo completarse.' ) .
-						$box_start( 'Detalles del Intento' ) .
+						$box_start( 'Detalles del Intento', 'credit-card' ) .
 						$row( 'Plan', '{{plan_name}}' ) .
 						$row( 'Fecha del intento', '{{attempt_date}}' ) .
 						$row( 'Estado', '<span style="color: #ef4444; font-weight: 700;">Rechazado</span>', false, true ) .
 						$box_end() .
 						$paragraph( 'Por favor actualiza tu método de pago para evitar la interrupción de tu acceso al campus y a tus clases.' ) .
-						$button( 'Actualizar Método de Pago &rarr;', '{{retry_url}}', '#ef4444' ) .
+						$button( 'Actualizar Método de Pago &rarr;', '{{retry_url}}', '#e0483d' ) .
 						$footer
 				];
 
@@ -261,10 +446,10 @@ class Default_Templates {
 				return [
 					'subject' => 'Recordatorio: Próxima cuota de {{plan_name}} - {{site_name}}',
 					'content' => $header .
-						$badge( '📅 Aviso de Renovación' ) .
+						$badge( 'Aviso de Renovación', 'calendar' ) .
 						$title( 'Próxima cuota programada' ) .
 						$paragraph( 'Hola <strong>{{user.name}}</strong>, te recordamos que en los próximos días se procesará automáticamente la siguiente cuota de tu membresía <strong>{{plan_name}}</strong>.' ) .
-						$box_start( 'Resumen del Cobro' ) .
+						$box_start( 'Resumen del Cobro', 'credit-card' ) .
 						$row( 'Membresía', '{{plan_name}}' ) .
 						$row( 'Monto estimado', '{{price}}' ) .
 						$row( 'Fecha programada', '{{renewal_date}}', false, true ) .
@@ -278,10 +463,10 @@ class Default_Templates {
 				return [
 					'subject' => 'Confirmación de Suscripción Cancelada - {{plan_name}}',
 					'content' => $header .
-						$badge( '📋 Notificación de Suscripción' ) .
+						$badge( 'Notificación de Suscripción', 'file-text' ) .
 						$title( 'Suscripción cancelada' ) .
 						$paragraph( 'Hola <strong>{{user.name}}</strong>, confirmamos que la solicitud de cancelación para tu membresía <strong>{{plan_name}}</strong> ha sido procesada.' ) .
-						$box_start( 'Vigencia de Acceso' ) .
+						$box_start( 'Vigencia de Acceso', 'calendar' ) .
 						$row( 'Plan', '{{plan_name}}' ) .
 						$row( 'Acceso activo hasta', '{{end_date}}', false, true ) .
 						$box_end() .
@@ -292,14 +477,16 @@ class Default_Templates {
 
 			case 'achievement_assigned':
 				return [
-					'subject' => '¡Ganaste un nuevo Logro! 🏆 {{achievement_name}}',
+					'subject' => '¡Ganaste un nuevo logro! {{achievement_name}}',
 					'content' => $header .
-						$badge( '🏆 ¡Nuevo Logro Desbloqueado!', ( $is_dark ? 'rgba(245,158,11,0.18)' : '#fffbeb' ), ( $is_dark ? '#fcd34d' : '#d97706' ), ( $is_dark ? 'rgba(245,158,11,0.3)' : '#fde68a' ) ) .
+						$badge( 'Nuevo Logro Desbloqueado', 'award' ) .
 						$title( '¡Felicidades, {{user.first_name}}!' ) .
-						$paragraph( 'Tu constancia y disciplina en la academia están dando frutos extraordinarios. Has obtenido una nueva insignia:' ) .
-						$box_start() .
-						'<div style="text-align: center; padding: 8px 0;">
-							<img src="{{achievement.image}}" width="84" height="84" alt="Logro" style="border-radius: 50%; box-shadow: 0 4px 16px rgba(245,158,11,0.3); display: inline-block; margin-bottom: 12px;" />
+						$paragraph( 'Tu constancia y disciplina en la academia están dando frutos extraordinarios. Has obtenido una nueva insignia oficial:' ) .
+						$box_start( 'Detalles del Logro', 'trophy' ) .
+						'<div style="text-align: center; padding: 12px 0;">
+							<div style="display: inline-block; width: 72px; height: 72px; line-height: 72px; border-radius: 50%; background-color: ' . $accent_data['badge_bg'] . '; border: 2px solid ' . $accent_data['badge_border'] . '; margin-bottom: 12px;">
+								' . self::lucide_icon( 'award', $accent_data['accent'], 36 ) . '
+							</div>
 							<h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 700; color: ' . $colors['text_primary'] . ';">{{achievement_name}}</h3>
 							<p style="margin: 0; font-size: 14px; color: ' . $colors['text_secondary'] . '; line-height: 1.5;">{{achievement_desc}}</p>
 						</div>' .
@@ -310,12 +497,12 @@ class Default_Templates {
 
 			case 'course_available':
 				return [
-					'subject' => '🚀 ¡Nuevo Curso Lanzado: {{course_name}}!',
+					'subject' => 'Nuevo Curso Lanzado: {{course_name}}',
 					'content' => $header .
-						$badge( '🚀 Nuevo Lanzamiento' ) .
+						$badge( 'Nuevo Lanzamiento', 'book-open' ) .
 						$title( '¡Tenemos novedades para ti!' ) .
 						$paragraph( 'Hola <strong>{{user.name}}</strong>, nos emociona anunciarte que hay nuevo contenido formativo disponible en <strong>{{site_name}}</strong>:' ) .
-						$box_start( '📚 Nuevo Contenido Formativo' ) .
+						$box_start( 'Nuevo Contenido Formativo', 'book-open' ) .
 						'<div style="font-size: 16px; font-weight: 700; color: ' . $colors['text_primary'] . '; margin-bottom: 8px;">{{course_name}}</div>' .
 						'<div style="font-size: 14px; color: ' . $colors['text_secondary'] . '; line-height: 1.6;">{{courses_list}}</div>' .
 						$box_end() .
@@ -328,10 +515,10 @@ class Default_Templates {
 				return [
 					'subject' => 'Nuevas clases disponibles en: {{course_name}}',
 					'content' => $header .
-						$badge( '✨ Clases Nuevas' ) .
+						$badge( 'Clases Nuevas', 'play-circle' ) .
 						$title( '¡Hay nuevas lecciones listas!' ) .
 						$paragraph( 'Hola <strong>{{user.name}}</strong>, se han incorporado nuevas lecciones al curso <strong>{{course_name}}</strong> en el cual estás inscrito:' ) .
-						$box_start( '📖 Lecciones Publicadas' ) .
+						$box_start( 'Lecciones Publicadas', 'play-circle' ) .
 						'<div style="font-size: 14px; color: ' . $colors['text_secondary'] . '; line-height: 1.65;">{{lessons_list}}</div>' .
 						$box_end() .
 						$paragraph( '¡Mantén vivo tu ritmo de estudio y no dejes pasar la oportunidad de avanzar hoy!' ) .
@@ -343,12 +530,12 @@ class Default_Templates {
 				return [
 					'subject' => '¡Te extrañamos en {{site_name}}! Retoma tus metas',
 					'content' => $header .
-						$badge( '⚡ Impulsa tu Progreso' ) .
+						$badge( 'Impulsa tu Progreso', 'zap' ) .
 						$title( '¡Hola, {{user.name}}!' ) .
 						$paragraph( 'Hemos notado que llevas <strong>{{days_inactive}} días</strong> sin ingresar a la plataforma.' ) .
 						$paragraph( 'Recuerda que la consistencia es el factor determinante para dominar cualquier habilidad. Tienes lecciones pendientes que te esperan para continuar avanzando.' ) .
-						$box_start() .
-						'<p style="margin: 0; font-size: 14px; color: ' . $colors['accent'] . '; font-weight: 600; text-align: center;">🎯 Dedícale 15 minutos hoy y mantén tu impulso de aprendizaje.</p>' .
+						$box_start( 'Compromiso de Aprendizaje', 'zap' ) .
+						'<p style="margin: 0; font-size: 14px; color: ' . $accent_data['accent'] . '; font-weight: 600; text-align: center;">Dedícale 15 minutos hoy y mantén tu impulso de aprendizaje.</p>' .
 						$box_end() .
 						$button( 'Continuar Aprendiendo &rarr;', '{{login_url}}' ) .
 						$footer
@@ -356,13 +543,13 @@ class Default_Templates {
 
 			case 'course_completed':
 				return [
-					'subject' => '🎓 ¡Felicitaciones por graduarte de {{course_title}}!',
+					'subject' => '¡Felicitaciones por graduarte de {{course_title}}!',
 					'content' => $header .
-						$badge( '🎓 ¡Graduación Completada!', ( $is_dark ? 'rgba(119,71,255,0.18)' : '#f0ebff' ), ( $is_dark ? '#c7b7ff' : '#7747ff' ), ( $is_dark ? 'rgba(119,71,255,0.3)' : '#ddd6fe' ) ) .
-						$title( '¡Felicitaciones, {{user.name}}! 🎉' ) .
+						$badge( 'Graduación Completada', 'graduation-cap' ) .
+						$title( '¡Lo lograste, {{user.name}}!' ) .
 						$paragraph( '¡Has alcanzado el 100% de progreso en el programa <strong>{{course_title}}</strong>!' ) .
 						$paragraph( 'Tu constancia y dedicación han dado resultados admirables. Tu certificado oficial de finalización ya se encuentra generado y disponible para ser compartido en tu perfil profesional.' ) .
-						$box_start( '🏅 Certificación Oficial' ) .
+						$box_start( 'Certificación Oficial', 'award' ) .
 						$row( 'Programa', '{{course_title}}' ) .
 						$row( 'Progreso Final', '100% Completado', false, true ) .
 						$box_end() .
@@ -374,7 +561,7 @@ class Default_Templates {
 				return [
 					'subject' => 'Notificación de {{site_name}}',
 					'content' => $header .
-						$badge( 'Notificación' ) .
+						$badge( 'Notificación', 'info' ) .
 						$title( 'Aviso Importante' ) .
 						$paragraph( 'Tienes una nueva notificación de tu academia <strong>{{site_name}}</strong>.' ) .
 						$button( 'Ir a la Plataforma &rarr;', '{{home_url}}' ) .

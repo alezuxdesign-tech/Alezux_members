@@ -161,9 +161,10 @@ class Marketing extends Module_Base {
 			$rows = $wpdb->get_results( "SELECT id, type, content FROM $table_name" );
 			if ( ! empty( $rows ) ) {
 				$theme = get_option( 'alezux_marketing_email_theme', 'clean' );
+				$accent = get_option( 'alezux_accent', 'violet' );
 				foreach ( $rows as $row ) {
 					if ( strpos( $row->content, '#0073aa' ) !== false || strpos( $row->content, 'font-family: sans-serif;' ) !== false ) {
-						$new_tpl = \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $row->type, $theme );
+						$new_tpl = \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $row->type, $theme, $accent );
 						if ( ! empty( $new_tpl['content'] ) ) {
 							$wpdb->update(
 								$table_name,

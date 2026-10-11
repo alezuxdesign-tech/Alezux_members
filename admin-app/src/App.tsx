@@ -680,7 +680,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               {activeAdminTab === "courses" && <CoursesView />}
               {activeAdminTab === "students" && <StudentsView />}
               {activeAdminTab === "finance" && <FinanceView />}
-              {activeAdminTab === "marketing" && <MarketingView />}
+              {activeAdminTab === "marketing" && <MarketingView currentAccent={accent} />}
               {activeAdminTab === "community" && (
                 <StudentCommunityView
                   courses={studentCourses}

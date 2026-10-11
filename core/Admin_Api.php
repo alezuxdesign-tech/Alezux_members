@@ -1865,11 +1865,12 @@ class Admin_Api {
 		];
 
 		$email_theme = get_option( 'alezux_marketing_email_theme', 'clean' );
+		$accent = get_option( 'alezux_accent', 'violet' );
 		$result = [];
 		foreach ( $registered_types as $type_key => $info ) {
 			$saved = isset( $saved_templates[ $type_key ] ) ? $saved_templates[ $type_key ] : null;
 			$default = class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' )
-				? \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $type_key, $email_theme )
+				? \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $type_key, $email_theme, $accent )
 				: [ 'subject' => $info['title'], 'content' => '' ];
 
 			$subject = $saved && ! empty( $saved->subject ) ? $saved->subject : ( isset( $default['subject'] ) ? $default['subject'] : $info['title'] );
@@ -1907,12 +1908,13 @@ class Admin_Api {
 		}
 
 		$theme = get_option( 'alezux_marketing_email_theme', 'clean' );
+		$accent = get_option( 'alezux_accent', 'violet' );
 		if ( ! class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' ) && file_exists( ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php' ) ) {
 			require_once ALEZUX_MEMBERS_PATH . 'modules/marketing/includes/Default_Templates.php';
 		}
 
 		$default = class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' )
-			? \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $type, $theme )
+			? \Alezux_Members\Modules\Marketing\Includes\Default_Templates::get( $type, $theme, $accent )
 			: [ 'subject' => 'Notificación', 'content' => '' ];
 
 		return rest_ensure_response( [
