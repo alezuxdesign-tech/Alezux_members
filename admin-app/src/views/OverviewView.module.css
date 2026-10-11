@@ -11,7 +11,7 @@
   justify-content: space-between;
   gap: var(--space-6);
   flex-wrap: wrap;
-  padding-bottom: var(--space-1);
+  padding-bottom: var(--space-2);
 }
 
 .pageTitle {
@@ -21,14 +21,15 @@
   font-weight: 700;
   color: var(--foreground);
   letter-spacing: var(--tracking-display);
+  line-height: 1.25;
 }
 
 .pageDescription {
-  margin: var(--space-1) 0 0;
+  margin: 10px 0 0;
   font-size: var(--text-sm);
   color: var(--text-muted);
   max-width: 650px;
-  line-height: var(--leading-body);
+  line-height: var(--leading-body, 1.5);
 }
 
 /* Grid de Métricas con Arc MetricCard */
@@ -100,10 +101,11 @@
   font-size: var(--text-base);
   font-weight: 600;
   color: var(--foreground);
+  line-height: 1.3;
 }
 
 .cardSubtitle {
-  margin: var(--space-1) 0 0;
+  margin: 6px 0 0;
   font-size: var(--text-xs);
   color: var(--text-muted);
 }

@@ -55,10 +55,10 @@
 
 .description {
   position: relative;
-  margin: var(--space-1) 0 0;
+  margin: 6px 0 0;
   color: var(--text-secondary);
   font-size: var(--text-xs);
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .info .icon {
