@@ -268,8 +268,9 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     }
   }, [appMode, studentProfile]);
 
-  // Scroll al inicio al cambiar de pestaña o modo
+  // Scroll al inicio y cerrar notificaciones al cambiar de pestaña o modo
   useEffect(() => {
+    setIsNotificationsOpen(false);
     if (mainAreaRef.current) {
       mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -758,6 +759,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               type="button"
               className={styles.headerProfileBtn}
               onClick={() => {
+                setIsNotificationsOpen(false);
                 if (appMode === "student") {
                   setActiveStudentTab("profile");
                 } else {

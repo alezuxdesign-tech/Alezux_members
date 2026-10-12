@@ -257,7 +257,7 @@ export interface AcademyEvent {
   date: string;
   time: string;
   timezone?: string;
-  type: "live" | "workshop" | "qna" | "webinar";
+  type: "live" | "workshop" | "qna" | "webinar" | string;
   meeting_url?: string;
   badge?: string;
   is_active?: boolean;

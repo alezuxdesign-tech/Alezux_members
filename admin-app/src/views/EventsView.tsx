@@ -10,7 +10,8 @@ import {
   ExternalLink,
   Users,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Tag
 } from "lucide-react";
 import { MetricCard } from "../components/arc/metric-card/metric-card";
 import { Button } from "../components/arc/button/button";
@@ -19,6 +20,9 @@ import { Modal } from "../components/arc/modal/modal";
 import { Input } from "../components/arc/input/input";
 import { Switch } from "../components/arc/switch/switch";
 import { Alert } from "../components/arc/alert/alert";
+import { Select, SelectOption } from "../components/arc/select";
+import { DatePicker } from "../components/arc/date-picker";
+import { TimePicker } from "../components/arc/time-picker";
 import { api, AcademyEvent, Instructor } from "../services/api";
 import styles from "./EventsView.module.css";
 
@@ -29,10 +33,40 @@ interface ToastState {
   description?: string;
 }
 
+export interface SessionTypeOption {
+  id: string;
+  name: string;
+  badge: string;
+}
+
+const DEFAULT_SESSION_TYPES: SessionTypeOption[] = [
+  { id: "live", name: "Masterclass en Vivo", badge: "Masterclass" },
+  { id: "workshop", name: "Taller Práctico / Lab", badge: "Taller Práctico" },
+  { id: "qna", name: "Preguntas & Respuestas", badge: "Q&A" },
+  { id: "mentorship", name: "Mentoría Grupal", badge: "Mentoría" },
+  { id: "webinar", name: "Webinar Abierto", badge: "Webinar" },
+];
+
 export function EventsView() {
   const [events, setEvents] = useState<AcademyEvent[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Tipos de sesión configurables y personalizables
+  const [sessionTypes, setSessionTypes] = useState<SessionTypeOption[]>(() => {
+    try {
+      const saved = localStorage.getItem("crezca_custom_session_types");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_SESSION_TYPES;
+  });
+
+  const [isCustomizingType, setIsCustomizingType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeBadge, setNewTypeBadge] = useState("");
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,8 +94,8 @@ export function EventsView() {
   const [formDate, setFormDate] = useState("");
   const [formTime, setFormTime] = useState("19:00");
   const [formTimezone, setFormTimezone] = useState("GMT-5");
-  const [formType, setFormType] = useState<"live" | "workshop" | "qna" | "webinar">("live");
-  const [formBadge, setFormBadge] = useState("En Vivo");
+  const [formType, setFormType] = useState<string>("live");
+  const [formBadge, setFormBadge] = useState("Masterclass");
   const [formMeetingUrl, setFormMeetingUrl] = useState("");
   const [formInstructorId, setFormInstructorId] = useState("");
   const [formIsActive, setFormIsActive] = useState(true);
@@ -100,10 +134,11 @@ export function EventsView() {
     setFormTime("19:00");
     setFormTimezone("GMT-5");
     setFormType("live");
-    setFormBadge("En Vivo");
+    setFormBadge("Masterclass");
     setFormMeetingUrl("https://zoom.us/j/");
     setFormInstructorId(instructors[0]?.id || "");
     setFormIsActive(true);
+    setIsCustomizingType(false);
     setIsModalOpen(true);
   };
 
@@ -115,12 +150,38 @@ export function EventsView() {
     setFormTime(evt.time || "19:00");
     setFormTimezone(evt.timezone || "GMT-5");
     setFormType(evt.type || "live");
-    setFormBadge(evt.badge || "En Vivo");
+    setFormBadge(evt.badge || "Masterclass");
     setFormMeetingUrl(evt.meeting_url || "");
     const matchingInst = instructors.find((i) => i.name === evt.instructor);
     setFormInstructorId(matchingInst ? matchingInst.id : "");
     setFormIsActive(evt.is_active !== false);
+    setIsCustomizingType(false);
     setIsModalOpen(true);
+  };
+
+  const handleCreateCustomType = () => {
+    if (!newTypeName.trim()) {
+      showToast("warning", "Nombre requerido", "Ingresa un nombre para el nuevo tipo de sesión.");
+      return;
+    }
+    const slug = `custom_${Date.now()}`;
+    const badge = newTypeBadge.trim() || newTypeName.trim().slice(0, 16);
+    const newType: SessionTypeOption = {
+      id: slug,
+      name: newTypeName.trim(),
+      badge,
+    };
+    const updated = [...sessionTypes, newType];
+    setSessionTypes(updated);
+    try {
+      localStorage.setItem("crezca_custom_session_types", JSON.stringify(updated));
+    } catch (e) {}
+    setFormType(slug);
+    setFormBadge(badge);
+    setNewTypeName("");
+    setNewTypeBadge("");
+    setIsCustomizingType(false);
+    showToast("success", "Tipo de sesión creado", `Ahora puedes usar "${newType.name}".`);
   };
 
   const handleSaveEvent = async () => {
@@ -135,6 +196,7 @@ export function EventsView() {
 
     setIsSaving(true);
     const selectedInst = instructors.find((i) => i.id === formInstructorId);
+    const matchedSessionType = sessionTypes.find((st) => st.id === formType);
 
     const eventItem: AcademyEvent = {
       id: editingEvent ? editingEvent.id : `evt-${Date.now()}`,
@@ -144,10 +206,10 @@ export function EventsView() {
       time: formTime,
       timezone: formTimezone,
       type: formType,
-      badge: formBadge || (formType === "live" ? "En Vivo" : formType === "workshop" ? "Taller Práctico" : "Masterclass"),
+      badge: formBadge || matchedSessionType?.badge || "Masterclass",
       meeting_url: formMeetingUrl.trim(),
-      instructor: selectedInst ? selectedInst.name : "Equipo Docente",
-      instructor_avatar: selectedInst?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      instructor: selectedInst ? selectedInst.name : (instructors[0]?.name || "Equipo Docente"),
+      instructor_avatar: selectedInst?.avatar || instructors[0]?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
       is_active: formIsActive,
     };
 
@@ -219,6 +281,38 @@ export function EventsView() {
       return `${dateStr} · ${timeStr}`;
     }
   };
+
+  const instructorOptions: SelectOption<string>[] = [
+    { value: "", label: "-- Sin Docente Asignado --" },
+    ...instructors.map((inst) => ({
+      value: inst.id,
+      label: `${inst.name}${inst.isAdmin ? " (Admin)" : ""}`,
+      sublabel: inst.email || (inst.isAdmin ? "Administrador de la Academia" : "Docente"),
+      icon: inst.avatar ? (
+        <img
+          src={inst.avatar}
+          alt={inst.name}
+          style={{ width: 18, height: 18, borderRadius: "50%", objectFit: "cover" }}
+        />
+      ) : (
+        <Users size={14} />
+      ),
+    })),
+  ];
+
+  const sessionTypeOptions: SelectOption<string>[] = [
+    ...sessionTypes.map((st) => ({
+      value: st.id,
+      label: st.name,
+      sublabel: `Insignia: ${st.badge}`,
+      icon: <Tag size={13} />,
+    })),
+    {
+      value: "__custom__",
+      label: "+ Personalizar nuevo tipo de sesión...",
+      icon: <Plus size={13} />,
+    },
+  ];
 
   return (
     <div className={styles.container}>
@@ -422,61 +516,43 @@ export function EventsView() {
             />
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Fecha *</label>
-                <input
-                  type="date"
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                  style={{
-                    height: 40,
-                    background: "var(--background)",
-                    color: "var(--foreground)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius-control)",
-                    padding: "0 12px",
-                    outline: "none",
-                    fontSize: 13,
-                  }}
-                />
-              </div>
+              <DatePicker
+                label="Fecha de la Sesión *"
+                value={formDate}
+                onChange={(d) => setFormDate(d)}
+                placeholder="Seleccionar fecha..."
+              />
 
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Hora y Zona *</label>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input
-                    type="time"
-                    value={formTime}
-                    onChange={(e) => setFormTime(e.target.value)}
-                    style={{
-                      height: 40,
-                      flex: 1,
-                      background: "var(--background)",
-                      color: "var(--foreground)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-control)",
-                      padding: "0 10px",
-                      outline: "none",
-                      fontSize: 13,
-                    }}
-                  />
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                  <div style={{ flex: 1 }}>
+                    <TimePicker
+                      value={formTime}
+                      onChange={(t) => setFormTime(t)}
+                      placeholder="Seleccionar hora..."
+                    />
+                  </div>
                   <input
                     type="text"
                     value={formTimezone}
                     onChange={(e) => setFormTimezone(e.target.value)}
                     placeholder="GMT-5"
                     style={{
-                      width: 74,
+                      width: 80,
                       height: 40,
-                      background: "var(--background)",
+                      background: "var(--surface)",
                       color: "var(--foreground)",
                       border: "1px solid var(--border)",
                       borderRadius: "var(--radius-control)",
                       padding: "0 8px",
                       outline: "none",
                       fontSize: 12,
+                      fontWeight: 600,
                       textAlign: "center",
+                      boxSizing: "border-box",
                     }}
+                    title="Zona horaria (ej: GMT-5)"
                   />
                 </div>
               </div>
@@ -485,56 +561,106 @@ export function EventsView() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Docente / Anfitrión</label>
-                <select
+                <Select<string>
+                  options={instructorOptions}
                   value={formInstructorId}
-                  onChange={(e) => setFormInstructorId(e.target.value)}
-                  style={{
-                    height: 40,
-                    background: "var(--background)",
-                    color: "var(--foreground)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius-control)",
-                    padding: "0 12px",
-                    outline: "none",
-                    fontSize: 13,
-                  }}
-                >
-                  <option value="">-- Seleccionar Docente --</option>
-                  {instructors.map((inst) => (
-                    <option key={inst.id} value={inst.id}>
-                      {inst.name} {inst.isAdmin ? "(Admin)" : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormInstructorId(val)}
+                  placeholder="Seleccionar docente..."
+                />
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Tipo de Sesión</label>
-                <select
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Tipo de Sesión</label>
+                  {!isCustomizingType && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomizingType(true)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        fontSize: 11,
+                        color: "var(--accent)",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        padding: 0,
+                      }}
+                    >
+                      + Personalizar
+                    </button>
+                  )}
+                </div>
+                <Select<string>
+                  options={sessionTypeOptions}
                   value={formType}
-                  onChange={(e) => {
-                    const t = e.target.value as any;
-                    setFormType(t);
-                    setFormBadge(t === "live" ? "En Vivo" : t === "workshop" ? "Taller Práctico" : t === "qna" ? "Preguntas & Respuestas" : "Webinar");
+                  onChange={(val) => {
+                    if (val === "__custom__") {
+                      setIsCustomizingType(true);
+                    } else {
+                      setFormType(val);
+                      const found = sessionTypes.find((st) => st.id === val);
+                      if (found) setFormBadge(found.badge);
+                      setIsCustomizingType(false);
+                    }
                   }}
-                  style={{
-                    height: 40,
-                    background: "var(--background)",
-                    color: "var(--foreground)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius-control)",
-                    padding: "0 12px",
-                    outline: "none",
-                    fontSize: 13,
-                  }}
-                >
-                  <option value="live">En Vivo (Masterclass / Clase)</option>
-                  <option value="workshop">Taller Práctico / Lab</option>
-                  <option value="qna">Preguntas & Respuestas (Q&A)</option>
-                  <option value="webinar">Webinar Abierto</option>
-                </select>
+                  placeholder="Tipo de sesión..."
+                />
               </div>
             </div>
+
+            {/* Panel de personalización rápida de tipo de sesión */}
+            {isCustomizingType && (
+              <div
+                style={{
+                  background: "var(--surface-muted)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-control)",
+                  padding: 12,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
+                    Configurar Nuevo Tipo de Sesión
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomizingType(false)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      fontSize: 11,
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr", gap: 8 }}>
+                  <Input
+                    placeholder="Nombre (ej: Revisión de Portafolio)"
+                    value={newTypeName}
+                    onChange={(e) => setNewTypeName(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Insignia (ej: Revisión)"
+                    value={newTypeBadge}
+                    onChange={(e) => setNewTypeBadge(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <Button variant="ghost" size="sm" onClick={() => setIsCustomizingType(false)}>
+                    Cancelar
+                  </Button>
+                  <Button variant="primary" size="sm" onClick={handleCreateCustomType}>
+                    <Plus size={13} /> Guardar y Seleccionar
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <Input
               label="Enlace de Reunión de Zoom / Meet / Transmisión *"

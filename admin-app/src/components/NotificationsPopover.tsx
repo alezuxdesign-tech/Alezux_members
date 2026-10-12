@@ -156,61 +156,63 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
   };
 
   return (
-    <div ref={popoverRef} className={styles.popoverContainer} onClick={(e) => e.stopPropagation()}>
-      <div className={styles.header}>
-        <div className={styles.headerTitleRow}>
-          <h4 className={styles.headerTitle}>Notificaciones</h4>
+    <>
+      <div className={styles.popoverOverlay} onClick={onClose} />
+      <div ref={popoverRef} className={styles.popoverContainer} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.header}>
+          <div className={styles.headerTitleRow}>
+            <h4 className={styles.headerTitle}>Notificaciones</h4>
+            {unreadCount > 0 && (
+              <span className={styles.unreadChip}>{unreadCount} nuevas</span>
+            )}
+          </div>
           {unreadCount > 0 && (
-            <span className={styles.unreadChip}>{unreadCount} nuevas</span>
+            <button
+              type="button"
+              className={styles.markAllBtn}
+              onClick={handleMarkAllAsRead}
+              title="Marcar todas como leídas"
+            >
+              <CheckCheck size={14} />
+              <span>Leer todas</span>
+            </button>
           )}
         </div>
-        {unreadCount > 0 && (
+
+        <div className={styles.tabsRow}>
           <button
             type="button"
-            className={styles.markAllBtn}
-            onClick={handleMarkAllAsRead}
-            title="Marcar todas como leídas"
+            className={`${styles.tabBtn} ${filter === "all" ? styles.tabActive : ""}`}
+            onClick={() => setFilter("all")}
           >
-            <CheckCheck size={14} />
-            <span>Leer todas</span>
+            Todas ({notifications.length})
           </button>
-        )}
-      </div>
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${filter === "unread" ? styles.tabActive : ""}`}
+            onClick={() => setFilter("unread")}
+          >
+            No leídas ({unreadCount})
+          </button>
+        </div>
 
-      <div className={styles.tabsRow}>
-        <button
-          type="button"
-          className={`${styles.tabBtn} ${filter === "all" ? styles.tabActive : ""}`}
-          onClick={() => setFilter("all")}
-        >
-          Todas ({notifications.length})
-        </button>
-        <button
-          type="button"
-          className={`${styles.tabBtn} ${filter === "unread" ? styles.tabActive : ""}`}
-          onClick={() => setFilter("unread")}
-        >
-          No leídas ({unreadCount})
-        </button>
-      </div>
-
-      <div className={styles.list}>
-        {filteredList.length === 0 ? (
-          <div className={styles.emptyState}>
-            <Bell size={24} style={{ opacity: 0.3 }} />
-            <p>No tienes notificaciones {filter === "unread" ? "sin leer" : ""}</p>
-          </div>
-        ) : (
-          filteredList.map((item) => (
-            <div
-              key={item.id}
-              className={`${styles.item} ${!item.read ? styles.unread : ""}`}
-              onClick={() => handleClickItem(item)}
-            >
-              <div className={`${styles.iconWrap} ${styles[item.type]}`}>
-                {getIcon(item.type)}
-              </div>
-              <div className={styles.itemContent}>
+        <div className={styles.list}>
+          {filteredList.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Bell size={24} style={{ opacity: 0.3 }} />
+              <p>No tienes notificaciones {filter === "unread" ? "sin leer" : ""}</p>
+            </div>
+          ) : (
+            filteredList.map((item) => (
+              <div
+                key={item.id}
+                className={`${styles.item} ${!item.read ? styles.unread : ""}`}
+                onClick={() => handleClickItem(item)}
+              >
+                <div className={styles.iconWrap}>
+                  {getIcon(item.type)}
+                </div>
+                <div className={styles.itemContent}>
                 <div className={styles.itemTitle}>{item.title}</div>
                 <div className={styles.itemDesc}>{item.message}</div>
                 <div className={styles.itemTime}>{item.time}</div>
@@ -227,5 +229,6 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
         </span>
       </div>
     </div>
+    </>
   );
 };
