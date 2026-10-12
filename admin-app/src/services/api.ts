@@ -186,6 +186,12 @@ export interface StudentProfile {
   enrolledCourseIds: number[];
   completedTopicIds: string[];
   isAdmin: boolean;
+  headline?: string;
+  experience?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  coverBanner?: string;
 }
 
 export interface LMSSettingsResponse {
@@ -2087,21 +2093,29 @@ class ApiService {
       console.warn("API Error getting student profile:", e);
     }
     const savedCompleted = JSON.parse(localStorage.getItem("crezca_completed_topics") || "[]");
+    const localProfile = JSON.parse(localStorage.getItem("crezca_student_profile_custom") || "{}");
     return {
       id: 99,
-      name: "Alejandro Zuñiga",
-      email: "alejandro@crezca.io",
-      username: "alezux",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      name: localProfile.name || "Alejandro Zuñiga",
+      email: localProfile.email || "alejandro@crezca.io",
+      username: localProfile.username || "alezux",
+      avatar: localProfile.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      headline: localProfile.headline || "Diseñador de Producto & Estratega Digital",
+      experience: localProfile.experience || "Especializado en diseño UX/UI, funnels de conversión y arquitecturas de software modernas.",
+      bio: localProfile.bio || "Apasionado por crear experiencias digitales de alto impacto, plataformas escalables y estrategias de crecimiento para startups y creadores. Formándome continuamente en los programas de Crezca para llevar proyectos al siguiente nivel.\n\nHe trabajado en múltiples proyectos de diseño, desarrollo frontend y adquisición de usuarios, combinando buenas prácticas de experiencia de usuario con una mentalidad ágil y orientada a métricas.",
+      location: localProfile.location || "Bogotá, Colombia",
+      website: localProfile.website || "alezux.com",
+      coverBanner: localProfile.coverBanner || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&auto=format&fit=crop&q=80",
       joinedDate: "15 Ene 2026",
       planName: "Plan Maestro VIP",
       enrolledCourseIds: [1], // Acceso habilitado al curso 1, curso 2 restringido para compra
       completedTopicIds: savedCompleted,
       isAdmin: true,
+      ...localProfile,
     };
   }
 
-  async updateStudentProfile(data: { name?: string; email?: string; password?: string; avatar?: string }): Promise<StudentProfile> {
+  async updateStudentProfile(data: Partial<StudentProfile> & { password?: string }): Promise<StudentProfile> {
     try {
       if (this.wpData) {
         const res = await fetch(`${this.rootUrl}student/profile`, {
@@ -2113,19 +2127,30 @@ class ApiService {
           body: JSON.stringify(data),
         });
         if (res.ok) {
-          return await res.json();
+          const remoteUpdated = await res.json();
+          localStorage.setItem("crezca_student_profile_custom", JSON.stringify(remoteUpdated));
+          return remoteUpdated;
         }
       }
     } catch (e) {
       console.warn("API Error updating student profile:", e);
     }
     const current = await this.getStudentProfile();
-    return {
+    const updated: StudentProfile = {
       ...current,
+      ...data,
       name: data.name || current.name,
       email: data.email || current.email,
       avatar: data.avatar || current.avatar,
+      headline: data.headline !== undefined ? data.headline : current.headline,
+      experience: data.experience !== undefined ? data.experience : current.experience,
+      bio: data.bio !== undefined ? data.bio : current.bio,
+      location: data.location !== undefined ? data.location : current.location,
+      website: data.website !== undefined ? data.website : current.website,
+      coverBanner: data.coverBanner !== undefined ? data.coverBanner : current.coverBanner,
     };
+    localStorage.setItem("crezca_student_profile_custom", JSON.stringify(updated));
+    return updated;
   }
 
   async getStudentCourses(): Promise<Course[]> {
