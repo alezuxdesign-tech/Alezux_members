@@ -54,6 +54,7 @@ import {
   CourseQuestion,
   CourseInstructor,
   Instructor,
+  Student,
   CourseFileAttachment,
   FinancePlan,
   LMSSettingsResponse,
@@ -105,6 +106,7 @@ interface CoursesViewProps {
 export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [availablePlans, setAvailablePlans] = useState<FinancePlan[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Alertas Arc tipo Toast
@@ -281,12 +283,13 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
   };
 
   useEffect(() => {
-    Promise.all([api.getCourses(), api.getPlans(), api.getLMSSettings(), api.getInstructors()])
-      .then(([coursesData, plansData, lmsData, instructorsData]) => {
+    Promise.all([api.getCourses(), api.getPlans(), api.getLMSSettings(), api.getInstructors(), api.getStudents()])
+      .then(([coursesData, plansData, lmsData, instructorsData, studentsData]) => {
         setCourses(coursesData);
         setAvailablePlans(plansData);
         setLmsSettings(lmsData);
         setGlobalInstructors(instructorsData.instructors || []);
+        setStudents(studentsData || []);
       })
       .finally(() => {
         setIsLoading(false);
@@ -1144,10 +1147,13 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                   <Badge variant={courseStatus === "publish" ? "success" : "neutral"} size="sm">
                     {courseStatus === "publish" ? "Habilitado" : "Borrador"}
                   </Badge>
-                  <span className={styles.heroPriceTag}>
+                  <span className={[
+                    styles.heroPriceTag,
+                    (!isFreeCourse && coursePrice && Number(coursePrice) > 0) ? styles.heroPriceTagPaid : styles.heroPriceTagFree
+                  ].join(" ")}>
                     <DollarSign size={13} /> {isFreeCourse || !coursePrice || Number(coursePrice) === 0 ? "Gratis" : `${coursePrice} USD`}
                   </span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
+                  <span className={styles.heroMetaStats}>
                     {sections.length} Módulos &bull; {totalTopics} Lecciones
                   </span>
                 </div>
@@ -3165,13 +3171,28 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
             ? course.sections.reduce((acc, s) => acc + (s.lessons?.length || 0), 0)
             : 0;
 
+          const courseInstructors = course.instructors || [];
+          const isFree = !course.price || Number(course.price) === 0;
+
+          const enrolledStudentsCount = students.filter((s) => {
+            const ids = (s.enabledCourseIds || []).map(Number);
+            return ids.includes(Number(course.id));
+          }).length;
+
+          const realStudentCount = enrolledStudentsCount > 0 
+            ? enrolledStudentsCount 
+            : (course.studentCount && course.studentCount !== 120 && course.studentCount !== 520 && course.studentCount !== 390 && course.studentCount !== 510 ? course.studentCount : 0);
+
           return (
             <div key={course.id} className={styles.courseCard}>
               {/* Portada 16:9 con Badge de Estado y Precio */}
               <div className={styles.courseCoverWrapper}>
                 <img src={course.thumbnail} alt={course.title} className={styles.courseCoverImg} />
-                <span className={styles.cardPriceTag}>
-                  {course.price && Number(course.price) > 0 ? `$${course.price} USD` : "Gratis"}
+                <span className={[
+                  styles.cardPriceTag,
+                  isFree ? styles.cardPriceTagFree : styles.cardPriceTagPaid
+                ].join(" ")}>
+                  {!isFree ? `$${course.price} USD` : "Gratis"}
                 </span>
                 <div className={styles.courseCoverOverlay}>
                   <Badge variant={course.status === "publish" ? "success" : "neutral"} size="sm">
@@ -3195,19 +3216,68 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                   </div>
                 ) : null}
 
-                {/* Métricas del Curso */}
+                {/* Fila de Docentes del Curso con Avatar Group */}
+                <div className={styles.courseCardInstructors}>
+                  {courseInstructors.length > 0 ? (
+                    <div className={styles.instructorAvatarGroupWrap}>
+                      <div className={styles.avatarGroup}>
+                        {courseInstructors.slice(0, 3).map((inst, idx) => (
+                          inst.avatar ? (
+                            <img
+                              key={inst.id || idx}
+                              src={inst.avatar}
+                              alt={inst.name}
+                              title={`${inst.name}${inst.role ? ` • ${inst.role}` : ""}`}
+                              className={styles.avatarCircle}
+                            />
+                          ) : (
+                            <div
+                              key={inst.id || idx}
+                              title={`${inst.name}${inst.role ? ` • ${inst.role}` : ""}`}
+                              className={styles.avatarCircleFallback}
+                            >
+                              {inst.name.charAt(0).toUpperCase()}
+                            </div>
+                          )
+                        ))}
+                        {courseInstructors.length > 3 && (
+                          <div 
+                            className={styles.avatarMore} 
+                            title={`Docentes adicionales: ${courseInstructors.slice(3).map(i => i.name).join(", ")}`}
+                          >
+                            +{courseInstructors.length - 3}
+                          </div>
+                        )}
+                      </div>
+                      <span className={styles.instructorNamesText} title={courseInstructors.map(i => i.name).join(", ")}>
+                        {courseInstructors.length === 1
+                          ? courseInstructors[0].name
+                          : courseInstructors.length === 2
+                          ? `${courseInstructors[0].name}, ${courseInstructors[1].name}`
+                          : `${courseInstructors[0].name} +${courseInstructors.length - 1} docentes`}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className={styles.noInstructorsRow}>
+                      <Users size={13} className={styles.noInstructorsIcon} />
+                      <span>Sin docentes asignados</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Métricas del Curso con Colores de Marca */}
                 <div className={styles.courseCardStats}>
                   <div className={styles.statItem} title="Módulos en el plan de estudio">
-                    <Layers size={14} style={{ color: "var(--accent)" }} />
+                    <Layers size={14} className={styles.statIcon} />
                     <span>{totalModules} Módulos</span>
                   </div>
                   <div className={styles.statItem} title="Lecciones y topics">
-                    <FileText size={14} style={{ color: "#3b82f6" }} />
+                    <FileText size={14} className={styles.statIcon} />
                     <span>{totalTopics} Topics</span>
                   </div>
                   <div className={styles.statItem} title="Alumnos inscritos">
-                    <Users size={14} style={{ color: "var(--success)" }} />
-                    <span>{course.studentCount} Alumnos</span>
+                    <Users size={14} className={styles.statIcon} />
+                    <span>{realStudentCount} Alumnos</span>
                   </div>
                 </div>
               </div>

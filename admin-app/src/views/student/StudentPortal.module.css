@@ -2524,15 +2524,16 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: #141722;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 12px);
   padding: 20px;
   transition: border-color 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .classroomInstructorCard:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--border-strong);
   transform: translateY(-2px);
 }
 
@@ -2547,21 +2548,22 @@
   height: 52px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--accent, #7747ff);
-  background: #1a1e27;
+  border: 2px solid var(--border);
+  background: var(--surface-muted);
 }
 
 .classroomInstructorAvatarFallback {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent, #7747ff) 0%, #3b82f6 100%);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  font-weight: 800;
-  color: #ffffff;
+  font-weight: 700;
+  color: var(--foreground);
   flex-shrink: 0;
 }
 
@@ -2574,7 +2576,7 @@
 .classroomInstructorName {
   font-size: 15px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--foreground);
   margin: 0;
 }
 
@@ -2582,9 +2584,9 @@
   display: inline-block;
   font-size: 11px;
   font-weight: 600;
-  color: #a78bfa;
-  background: rgba(119, 71, 255, 0.12);
-  border: 1px solid rgba(119, 71, 255, 0.25);
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
   padding: 2px 8px;
   border-radius: 9999px;
   width: fit-content;
@@ -2592,7 +2594,7 @@
 
 .classroomInstructorBio {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--text-secondary);
   line-height: 1.5;
   margin: 0;
 }

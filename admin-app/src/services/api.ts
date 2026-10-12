@@ -467,6 +467,65 @@ const MOCK_STATS: DashboardStats = {
   },
 };
 
+const MOCK_INSTRUCTORS: Instructor[] = [
+  {
+    id: "inst-1",
+    userId: 1,
+    name: "Alejandro Suarez",
+    email: "alejandro@alezux.com",
+    role: "Lead Performance Marketing",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    bio: "Especialista en adquisición de tráfico, funnels escalables y media buying de alto rendimiento.",
+    isAdmin: true,
+    assigned_courses: [
+      { id: 1, title: "Master en Marketing Digital & Performance" },
+      { id: 3, title: "Ventas y Cierre de Clientes High-Ticket" },
+    ],
+    assignedCourseIds: [1, 3],
+  },
+  {
+    id: "inst-2",
+    userId: 2,
+    name: "Sofia Martin",
+    email: "sofia.m@alezux.com",
+    role: "Senior Media Buyer",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+    bio: "Especialista en creativos de alta retención, hooks publicitarios y analítica de datos en Meta Ads.",
+    assigned_courses: [
+      { id: 1, title: "Master en Marketing Digital & Performance" },
+      { id: 3, title: "Ventas y Cierre de Clientes High-Ticket" },
+    ],
+    assignedCourseIds: [1, 3],
+  },
+  {
+    id: "inst-3",
+    userId: 3,
+    name: "Carlos Mendoza",
+    email: "carlos.m@alezux.com",
+    role: "Full Stack Engineer",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+    bio: "Ingeniero de software con más de 8 años construyendo arquitecturas de plugins y aplicaciones modernas.",
+    assigned_courses: [
+      { id: 2, title: "Desarrollo Web Full Stack con WordPress & React" },
+      { id: 3, title: "Ventas y Cierre de Clientes High-Ticket" },
+    ],
+    assignedCourseIds: [2, 3],
+  },
+  {
+    id: "inst-4",
+    userId: 4,
+    name: "Valentina Ríos",
+    email: "valentina.r@alezux.com",
+    role: "Consultora High Ticket",
+    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+    bio: "Experta en prospección consultiva B2B y negociación de contratos de alto valor.",
+    assigned_courses: [
+      { id: 3, title: "Ventas y Cierre de Clientes High-Ticket" },
+    ],
+    assignedCourseIds: [3],
+  },
+];
+
 const MOCK_COURSES: Course[] = [
   {
     id: 1,
@@ -478,7 +537,8 @@ const MOCK_COURSES: Course[] = [
     price: 197,
     linkedPlanId: 1,
     status: "publish",
-    studentCount: 520,
+    studentCount: 4,
+    instructors: [MOCK_INSTRUCTORS[0], MOCK_INSTRUCTORS[1]],
     sections: [
       {
         id: "sec-1",
@@ -595,7 +655,8 @@ const MOCK_COURSES: Course[] = [
     price: 297,
     linkedPlanId: 2,
     status: "publish",
-    studentCount: 390,
+    studentCount: 2,
+    instructors: [MOCK_INSTRUCTORS[2]],
     sections: [
       {
         id: "sec-3",
@@ -636,7 +697,8 @@ const MOCK_COURSES: Course[] = [
     price: 147,
     linkedPlanId: 3,
     status: "publish",
-    studentCount: 510,
+    studentCount: 2,
+    instructors: [MOCK_INSTRUCTORS[0], MOCK_INSTRUCTORS[1], MOCK_INSTRUCTORS[2], MOCK_INSTRUCTORS[3]],
     sections: [
       {
         id: "sec-4",
@@ -1227,13 +1289,13 @@ class ApiService {
       console.warn("API Error fetching instructors:", e);
     }
     return {
-      instructors: [],
+      instructors: MOCK_INSTRUCTORS,
       current_admin: {
         id: 1,
         name: "Administrador",
         email: "admin@alezux.com",
         avatar: "",
-        is_already_instructor: false,
+        is_already_instructor: true,
       },
     };
   }

@@ -622,6 +622,29 @@ class Admin_Api {
 				}
 			}
 
+			// Contar estudiantes reales con acceso habilitado
+			$real_students = 0;
+			global $wpdb;
+			$meta_count = (int) $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(DISTINCT user_id) FROM {$wpdb->usermeta} WHERE meta_key = '_alezux_enabled_courses' AND meta_value LIKE %s",
+				'%' . $wpdb->esc_like( (string) $post->ID ) . '%'
+			) );
+			$real_students = $meta_count;
+
+			if ( function_exists( 'learndash_get_course_users' ) ) {
+				$ld_users = learndash_get_course_users( $post->ID );
+				if ( is_array( $ld_users ) && ! empty( $ld_users ) ) {
+					$real_students = max( $real_students, count( $ld_users ) );
+				}
+			}
+
+			if ( 0 === $real_students ) {
+				$saved_count = get_post_meta( $post->ID, '_student_count', true );
+				if ( false !== $saved_count && '' !== $saved_count ) {
+					$real_students = (int) $saved_count;
+				}
+			}
+
 			$courses[] = [
 				'id'           => $post->ID,
 				'title'        => $post->post_title,
@@ -632,7 +655,7 @@ class Admin_Api {
 				'price'        => ( '' !== $price && false !== $price ) ? (float) $price : 0,
 				'linkedPlanId' => $linked_plan_id ? (int) $linked_plan_id : null,
 				'status'       => $post->post_status,
-				'studentCount' => (int) get_post_meta( $post->ID, '_student_count', true ) ?: 120,
+				'studentCount' => $real_students,
 				'sections'     => $sections,
 				'instructors'  => is_array( $instructors ) ? $instructors : [],
 				'whatsapp_url' => $whatsapp_url,
