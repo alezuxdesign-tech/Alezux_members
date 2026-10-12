@@ -845,19 +845,218 @@
   transition: all var(--duration-fast);
 }
 
-.discordAttachBtn:hover {
+.discordAttachBtn:hover,
+.discordAttachBtn.active {
   background: var(--surface-hover);
   color: var(--foreground);
   border-color: var(--border-strong);
   transform: scale(1.06);
 }
 
-/* Textarea de redacción sin bordes */
-.discordTextarea {
-  flex: 1;
+/* Menú flotante del botón + para elegir qué tipo de archivo subir */
+.attachMenuPopover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 12px;
+  width: 250px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 100;
+  animation: popoverFadeIn 0.15s ease-out;
+}
+
+.attachMenuHeader {
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.attachMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
   background: transparent;
   border: none;
-  outline: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background var(--duration-fast);
+}
+
+.attachMenuItem:hover {
+  background: var(--surface-hover);
+}
+
+.attachMenuItemIconBox {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.attachMenuItemTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.attachMenuItemTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.attachMenuItemDesc {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* Previsualización del archivo adjunto antes de enviar */
+.attachmentDraftWrapper {
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.attachmentImageThumbBox {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.attachmentImageThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.removeDraftAttachmentBtn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--duration-fast), background var(--duration-fast);
+  z-index: 2;
+}
+
+.removeDraftAttachmentBtn:hover {
+  background: #ef4444;
+  transform: scale(1.12);
+}
+
+.attachmentFileThumbBox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-width: 320px;
+}
+
+.attachmentFileThumbIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.attachmentFileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.attachmentThumbName {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachmentSubText {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.removeDraftAttachmentBtnInline {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--duration-fast), background var(--duration-fast);
+}
+
+.removeDraftAttachmentBtnInline:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Textarea de redacción TOTALMENTE SIN BORDES ni contornos */
+.discordTextarea,
+.discordTextarea:focus,
+.discordTextarea:hover,
+.discordTextarea:active {
+  flex: 1;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  outline-width: 0 !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
   font-family: inherit;
   font-size: 14px;
   color: var(--foreground);
@@ -872,6 +1071,7 @@
 .discordTextarea::placeholder {
   color: var(--text-dim);
   font-size: 13.5px;
+  opacity: 0.8;
 }
 
 /* Agrupación de botones de acción a la derecha de Discord */
@@ -907,7 +1107,83 @@
   background: var(--accent-subtle);
 }
 
-/* Badge GIF estilo Discord */
+/* Previsualizaciones dentro de los mensajes del chat y de los hilos */
+.messageAttachmentsGrid {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 440px;
+}
+
+.messageAttachmentImageWrap {
+  max-width: 420px;
+  max-height: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.2);
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+}
+
+.messageAttachmentImageWrap:hover {
+  opacity: 0.95;
+  transform: scale(1.008);
+}
+
+.messageAttachmentImage {
+  max-width: 100%;
+  max-height: 280px;
+  display: block;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.messageAttachmentVideoWrap {
+  max-width: 420px;
+  max-height: 280px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: #000000;
+}
+
+.messageAttachmentVideo {
+  width: 100%;
+  max-height: 280px;
+  border-radius: 8px;
+  outline: none;
+  display: block;
+}
+
+.messageAttachmentFileCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--foreground);
+  text-decoration: none;
+  transition: all var(--duration-fast);
+  max-width: 320px;
+}
+
+.messageAttachmentFileCard:hover {
+  background: var(--surface-hover);
+  color: var(--accent);
+  border-color: var(--border-strong);
+}
+
+.messageAttachmentFileName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .gifBadgeBtn {
   display: inline-flex;
   align-items: center;

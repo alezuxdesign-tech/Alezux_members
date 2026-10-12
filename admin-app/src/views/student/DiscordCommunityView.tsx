@@ -9,22 +9,20 @@ import {
   Send,
   MessageSquare,
   RefreshCw,
-  ExternalLink,
   Crown,
-  Sparkles,
   ShieldCheck,
   ChevronDown,
   Globe,
   Folder,
   FolderPlus,
   X,
-  Gift,
   Smile,
-  SmilePlus,
   Search,
   Paperclip,
   GitBranch,
-  Video
+  Video,
+  Image as ImageIcon,
+  FileText,
 } from "lucide-react";
 import {
   api,
@@ -33,6 +31,24 @@ import {
   CommunityMessage,
   CreateCommunityChannelPayload,
 } from "../../services/api";
+
+export interface AttachmentItem {
+  name: string;
+  url: string;
+  type?: "image" | "video" | "file";
+}
+
+function isImageAttachment(att: AttachmentItem): boolean {
+  if (att.type === "image") return true;
+  if (att.url?.startsWith("data:image/")) return true;
+  return /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(att.name || "") || /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(att.url || "");
+}
+
+function isVideoAttachment(att: AttachmentItem): boolean {
+  if (att.type === "video") return true;
+  if (att.url?.startsWith("data:video/")) return true;
+  return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(att.name || "") || /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(att.url || "");
+}
 import { Modal } from "../../components/arc/modal";
 import { Select, SelectOption } from "../../components/arc/select";
 import moneyStyles from "../../components/arc/money-input/money-input.module.css";
@@ -145,8 +161,14 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
 
-  // Adjunto temporal para el input principal
-  const [pendingAttachment, setPendingAttachment] = useState<{ name: string; url: string } | null>(null);
+  // Adjuntos temporales con tipo detectado (image, video, file)
+  const [pendingAttachment, setPendingAttachment] = useState<AttachmentItem | null>(null);
+  const [threadAttachment, setThreadAttachment] = useState<AttachmentItem | null>(null);
+
+  // Menú flotante del botón + para elegir si subir imagen, video o archivo
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+  const [fileInputAccept, setFileInputAccept] = useState("*/*");
+  const attachMenuRef = useRef<HTMLDivElement | null>(null);
 
   // Categorías colapsadas en la barra lateral
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
@@ -165,7 +187,6 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   const [activeThreadMessage, setActiveThreadMessage] = useState<CommunityMessage | null>(null);
   const [threadNewMessage, setThreadNewMessage] = useState("");
   const [isThreadSending, setIsThreadSending] = useState(false);
-  const [threadAttachment, setThreadAttachment] = useState<{ name: string; url: string } | null>(null);
 
   // Modales de administración de canales
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
@@ -304,18 +325,21 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     scrollToBottom("auto");
   }, [messages.length, activeChannelId]);
 
-  // Cerrar popover de emojis al hacer click afuera
+  // Cerrar popover de emojis y menú de adjuntos al hacer click afuera
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setIsEmojiPickerOpen(false);
       }
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setIsAttachMenuOpen(false);
+      }
     };
-    if (isEmojiPickerOpen) {
+    if (isEmojiPickerOpen || isAttachMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isEmojiPickerOpen]);
+  }, [isEmojiPickerOpen, isAttachMenuOpen]);
 
   // Agrupar canales por categoría
   const groupedChannels = useMemo(() => {
@@ -735,15 +759,37 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
   };
 
-  // Adjuntar archivo o imagen simulado/local
+  // Abrir selector de archivo con el tipo filtrado (imagen, video, archivo)
+  const handleTriggerAttach = (type: "image" | "video" | "file") => {
+    setIsAttachMenuOpen(false);
+    if (type === "image") {
+      setFileInputAccept("image/*");
+    } else if (type === "video") {
+      setFileInputAccept("video/*");
+    } else {
+      setFileInputAccept("*/*");
+    }
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 50);
+  };
+
+  // Adjuntar archivo o imagen simulado/local con detección de tipo
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, isThread = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    let fileType: "image" | "video" | "file" = "file";
+    if (file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.name)) {
+      fileType = "image";
+    } else if (file.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(file.name)) {
+      fileType = "video";
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const resultUrl = reader.result as string;
-      const att = { name: file.name, url: resultUrl };
+      const att: AttachmentItem = { name: file.name, url: resultUrl, type: fileType };
       if (isThread) {
         setThreadAttachment(att);
       } else {
@@ -1167,32 +1213,43 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                             {renderMessageText(msg.message)}
                           </div>
 
-                          {/* Adjuntos en el mensaje si existen */}
+                          {/* Adjuntos en el mensaje (Previsualización de imágenes, videos o archivos) */}
                           {msg.attachments && msg.attachments.length > 0 && (
-                            <div style={{ marginTop: "6px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                              {msg.attachments.map((att, i) => (
-                                <a
-                                  key={i}
-                                  href={att.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "6px",
-                                    padding: "4px 8px",
-                                    borderRadius: "6px",
-                                    background: "var(--surface-raised)",
-                                    border: "1px solid var(--border)",
-                                    fontSize: "12px",
-                                    color: "var(--accent)",
-                                    textDecoration: "none",
-                                  }}
-                                >
-                                  <Paperclip size={12} />
-                                  <span>{att.name}</span>
-                                </a>
-                              ))}
+                            <div className={styles.messageAttachmentsGrid}>
+                              {msg.attachments.map((att, i) => {
+                                if (isImageAttachment(att)) {
+                                  return (
+                                    <div key={i} className={styles.messageAttachmentImageWrap}>
+                                      <img
+                                        src={att.url}
+                                        alt={att.name || "Imagen adjunta"}
+                                        className={styles.messageAttachmentImage}
+                                        onClick={() => window.open(att.url, "_blank")}
+                                        title="Click para ver en tamaño completo"
+                                      />
+                                    </div>
+                                  );
+                                }
+                                if (isVideoAttachment(att)) {
+                                  return (
+                                    <div key={i} className={styles.messageAttachmentVideoWrap}>
+                                      <video src={att.url} controls className={styles.messageAttachmentVideo} />
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <a
+                                    key={i}
+                                    href={att.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.messageAttachmentFileCard}
+                                  >
+                                    <FileText size={16} color="var(--accent)" />
+                                    <span className={styles.messageAttachmentFileName}>{att.name}</span>
+                                  </a>
+                                );
+                              })}
                             </div>
                           )}
 
@@ -1353,63 +1410,133 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                         </div>
                       )}
 
-                      {/* Pill de archivo adjunto previo a enviar */}
+                      {/* Previsualización del archivo adjunto antes de enviar */}
                       {pendingAttachment && (
-                        <div
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            padding: "4px 10px",
-                            borderRadius: "6px",
-                            background: "var(--surface-raised)",
-                            border: "1px solid var(--border)",
-                            fontSize: "12px",
-                            marginBottom: "6px",
-                            alignSelf: "flex-start",
-                          }}
-                        >
-                          <Paperclip size={13} color="var(--accent)" />
-                          <span style={{ maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {pendingAttachment.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setPendingAttachment(null)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              color: "var(--text-dim)",
-                              cursor: "pointer",
-                              padding: "2px",
-                            }}
-                          >
-                            <X size={12} />
-                          </button>
+                        <div className={styles.attachmentDraftWrapper}>
+                          {pendingAttachment.type === "image" ? (
+                            <div className={styles.attachmentImageThumbBox}>
+                              <img
+                                src={pendingAttachment.url}
+                                alt={pendingAttachment.name}
+                                className={styles.attachmentImageThumb}
+                              />
+                              <button
+                                type="button"
+                                className={styles.removeDraftAttachmentBtn}
+                                onClick={() => setPendingAttachment(null)}
+                                title="Quitar imagen"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ) : pendingAttachment.type === "video" ? (
+                            <div className={styles.attachmentFileThumbBox}>
+                              <div className={styles.attachmentFileThumbIcon} style={{ background: "rgba(14, 165, 233, 0.15)", color: "#0ea5e9" }}>
+                                <Video size={18} />
+                              </div>
+                              <div className={styles.attachmentFileInfo}>
+                                <span className={styles.attachmentThumbName}>{pendingAttachment.name}</span>
+                                <span className={styles.attachmentSubText}>Video listo para enviar</span>
+                              </div>
+                              <button
+                                type="button"
+                                className={styles.removeDraftAttachmentBtnInline}
+                                onClick={() => setPendingAttachment(null)}
+                                title="Quitar video"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className={styles.attachmentFileThumbBox}>
+                              <div className={styles.attachmentFileThumbIcon}>
+                                <FileText size={18} />
+                              </div>
+                              <div className={styles.attachmentFileInfo}>
+                                <span className={styles.attachmentThumbName}>{pendingAttachment.name}</span>
+                                <span className={styles.attachmentSubText}>Archivo adjunto</span>
+                              </div>
+                              <button
+                                type="button"
+                                className={styles.removeDraftAttachmentBtnInline}
+                                onClick={() => setPendingAttachment(null)}
+                                title="Quitar archivo"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
 
                       {/* Input container exacto estilo Discord */}
                       <div className={styles.discordInputBoxWrapper}>
-                        {/* Input de archivo oculto */}
+                        {/* Menú flotante de opciones para el botón + */}
+                        {isAttachMenuOpen && (
+                          <div ref={attachMenuRef} className={styles.attachMenuPopover}>
+                            <div className={styles.attachMenuHeader}>Compartir contenido</div>
+                            <button
+                              type="button"
+                              className={styles.attachMenuItem}
+                              onClick={() => handleTriggerAttach("image")}
+                            >
+                              <div className={styles.attachMenuItemIconBox} style={{ background: "rgba(139, 92, 246, 0.15)", color: "#8b5cf6" }}>
+                                <ImageIcon size={18} />
+                              </div>
+                              <div className={styles.attachMenuItemTexts}>
+                                <span className={styles.attachMenuItemTitle}>Subir imagen</span>
+                                <span className={styles.attachMenuItemDesc}>PNG, JPG, GIF o WebP</span>
+                              </div>
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.attachMenuItem}
+                              onClick={() => handleTriggerAttach("video")}
+                            >
+                              <div className={styles.attachMenuItemIconBox} style={{ background: "rgba(14, 165, 233, 0.15)", color: "#0ea5e9" }}>
+                                <Video size={18} />
+                              </div>
+                              <div className={styles.attachMenuItemTexts}>
+                                <span className={styles.attachMenuItemTitle}>Subir video</span>
+                                <span className={styles.attachMenuItemDesc}>MP4, WebM o clips</span>
+                              </div>
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.attachMenuItem}
+                              onClick={() => handleTriggerAttach("file")}
+                            >
+                              <div className={styles.attachMenuItemIconBox} style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+                                <FileText size={18} />
+                              </div>
+                              <div className={styles.attachMenuItemTexts}>
+                                <span className={styles.attachMenuItemTitle}>Subir archivo</span>
+                                <span className={styles.attachMenuItemDesc}>PDF, documentos, comprimidos</span>
+                              </div>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Input de archivo oculto con filtro dinámico */}
                         <input
                           type="file"
                           ref={fileInputRef}
                           style={{ display: "none" }}
+                          accept={fileInputAccept}
                           onChange={(e) => handleFileUpload(e, false)}
                         />
 
-                        {/* Botón + circular (Adjuntar) */}
+                        {/* Botón + circular (Abre menú flotante) */}
                         <button
                           type="button"
-                          className={styles.discordAttachBtn}
-                          onClick={() => fileInputRef.current?.click()}
-                          title="Adjuntar archivo o imagen"
+                          className={`${styles.discordAttachBtn} ${isAttachMenuOpen ? styles.active : ""}`}
+                          onClick={() => setIsAttachMenuOpen((prev) => !prev)}
+                          title="Adjuntar imagen, video o archivo"
                         >
                           <Plus size={16} />
                         </button>
 
-                        {/* Textarea de redacción sin bordes */}
+                        {/* Textarea de redacción totalmente sin bordes */}
                         <textarea
                           ref={textareaRef}
                           rows={1}
@@ -1422,44 +1549,14 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
 
                         {/* Botones de acción derecha estilo Discord */}
                         <div className={styles.discordInputActionsGroup}>
-                          {/* Regalo / Nitro */}
-                          <button
-                            type="button"
-                            className={styles.discordActionIconBtn}
-                            onClick={() => alert("🎉 ¡Función de regalos de la academia próximamente!")}
-                            title="Enviar regalo o recurso"
-                          >
-                            <Gift size={18} />
-                          </button>
-
-                          {/* GIF badge */}
-                          <button
-                            type="button"
-                            className={styles.gifBadgeBtn}
-                            onClick={() => alert("GIF selector: próximamente integración con Tenor/Giphy")}
-                            title="Insertar GIF"
-                          >
-                            GIF
-                          </button>
-
-                          {/* Sticker */}
-                          <button
-                            type="button"
-                            className={styles.discordActionIconBtn}
-                            onClick={() => alert("Stickers de la academia próximamente")}
-                            title="Sticker"
-                          >
-                            <SmilePlus size={18} />
-                          </button>
-
-                          {/* Emoji Toggle Popover */}
+                          {/* Selector de Emojis Popover */}
                           <button
                             type="button"
                             className={`${styles.discordActionIconBtn} ${isEmojiPickerOpen ? styles.active : ""}`}
                             onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
                             title="Selector de emojis"
                           >
-                            <Smile size={18} />
+                            <Smile size={19} />
                           </button>
 
                           {/* Botón Enviar */}
@@ -1551,6 +1648,46 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
               <div className={styles.threadParentBody}>
                 {renderMessageText(activeThreadMessage.message)}
               </div>
+
+              {/* Adjuntos del mensaje padre si tiene */}
+              {activeThreadMessage.attachments && activeThreadMessage.attachments.length > 0 && (
+                <div className={styles.messageAttachmentsGrid}>
+                  {activeThreadMessage.attachments.map((att, i) => {
+                    if (isImageAttachment(att)) {
+                      return (
+                        <div key={i} className={styles.messageAttachmentImageWrap}>
+                          <img
+                            src={att.url}
+                            alt={att.name || "Imagen adjunta"}
+                            className={styles.messageAttachmentImage}
+                            onClick={() => window.open(att.url, "_blank")}
+                            title="Click para ver en tamaño completo"
+                          />
+                        </div>
+                      );
+                    }
+                    if (isVideoAttachment(att)) {
+                      return (
+                        <div key={i} className={styles.messageAttachmentVideoWrap}>
+                          <video src={att.url} controls className={styles.messageAttachmentVideo} />
+                        </div>
+                      );
+                    }
+                    return (
+                      <a
+                        key={i}
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.messageAttachmentFileCard}
+                      >
+                        <FileText size={16} color="var(--accent)" />
+                        <span className={styles.messageAttachmentFileName}>{att.name}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Divisor de respuestas */}
@@ -1583,6 +1720,46 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                     <div className={styles.messageBody}>
                       {renderMessageText(reply.message)}
                     </div>
+
+                    {/* Adjuntos en respuesta del hilo */}
+                    {reply.attachments && reply.attachments.length > 0 && (
+                      <div className={styles.messageAttachmentsGrid}>
+                        {reply.attachments.map((att, i) => {
+                          if (isImageAttachment(att)) {
+                            return (
+                              <div key={i} className={styles.messageAttachmentImageWrap}>
+                                <img
+                                  src={att.url}
+                                  alt={att.name || "Imagen adjunta"}
+                                  className={styles.messageAttachmentImage}
+                                  onClick={() => window.open(att.url, "_blank")}
+                                  title="Click para ver en tamaño completo"
+                                />
+                              </div>
+                            );
+                          }
+                          if (isVideoAttachment(att)) {
+                            return (
+                              <div key={i} className={styles.messageAttachmentVideoWrap}>
+                                <video src={att.url} controls className={styles.messageAttachmentVideo} />
+                              </div>
+                            );
+                          }
+                          return (
+                            <a
+                              key={i}
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={styles.messageAttachmentFileCard}
+                            >
+                              <FileText size={16} color="var(--accent)" />
+                              <span className={styles.messageAttachmentFileName}>{att.name}</span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {isAuthorOrAdmin && (
@@ -1611,28 +1788,43 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
               onChange={(e) => handleFileUpload(e, true)}
             />
 
+            {/* Previsualización del archivo adjunto en el hilo */}
             {threadAttachment && (
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "2px 8px",
-                  borderRadius: "4px",
-                  background: "var(--surface-raised)",
-                  fontSize: "11.5px",
-                  marginBottom: "6px",
-                }}
-              >
-                <Paperclip size={11} color="var(--accent)" />
-                <span>{threadAttachment.name}</span>
-                <button
-                  type="button"
-                  onClick={() => setThreadAttachment(null)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}
-                >
-                  <X size={11} />
-                </button>
+              <div className={styles.attachmentDraftWrapper}>
+                {threadAttachment.type === "image" ? (
+                  <div className={styles.attachmentImageThumbBox} style={{ width: "70px", height: "70px" }}>
+                    <img
+                      src={threadAttachment.url}
+                      alt={threadAttachment.name}
+                      className={styles.attachmentImageThumb}
+                    />
+                    <button
+                      type="button"
+                      className={styles.removeDraftAttachmentBtn}
+                      onClick={() => setThreadAttachment(null)}
+                      title="Quitar imagen"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.attachmentFileThumbBox} style={{ padding: "4px 8px" }}>
+                    <div className={styles.attachmentFileThumbIcon} style={{ width: "24px", height: "24px" }}>
+                      <FileText size={14} />
+                    </div>
+                    <span className={styles.attachmentThumbName} style={{ fontSize: "11px", maxWidth: "160px" }}>
+                      {threadAttachment.name}
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.removeDraftAttachmentBtnInline}
+                      onClick={() => setThreadAttachment(null)}
+                      title="Quitar archivo"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
