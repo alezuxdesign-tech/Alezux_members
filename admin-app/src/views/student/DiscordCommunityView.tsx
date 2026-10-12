@@ -14,14 +14,17 @@ import {
   Sparkles,
   ShieldCheck,
   ChevronDown,
-  Info,
-  CheckCircle2,
-  Video,
-  AlertCircle,
   Globe,
   Folder,
   FolderPlus,
-  X
+  X,
+  Gift,
+  Smile,
+  SmilePlus,
+  Search,
+  Paperclip,
+  GitBranch,
+  Video
 } from "lucide-react";
 import {
   api,
@@ -48,7 +51,72 @@ interface DiscordCommunityViewProps {
   onNavigateToCourse?: (courseId: number) => void;
 }
 
-const QUICK_EMOJIS = ["🚀", "🔥", "💡", "❤️", "👍", "👏", "🎉", "🙌"];
+// Categorías de emojis para el popover estilo Discord
+const EMOJI_CATEGORIES = [
+  {
+    id: "popular",
+    label: "Populares",
+    emojis: ["🚀", "🔥", "💡", "❤️", "👍", "👏", "🎉", "🙌", "✨", "⭐", "💯", "🎯", "💪", "🎓", "📚", "💻"],
+  },
+  {
+    id: "faces",
+    label: "Caritas",
+    emojis: [
+      "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
+      "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😋", "😛", "😜",
+      "🤪", "🤓", "😎", "🥳", "😏", "🧐", "🤔", "🤫", "🤭", "🤗",
+      "😴", "🥺", "😳", "🤯", "🥳", "🤩", "🤐", "🤨", "😐", "😑"
+    ],
+  },
+  {
+    id: "gestures",
+    label: "Gestos",
+    emojis: [
+      "👍", "👎", "👏", "🙌", "👐", "🤲", "🤝", "✌️", "🤞", "🤟",
+      "🤘", "🤙", "👈", "👉", "👆", "👇", "☝️", "✋", "🤚", "🖐️",
+      "🖖", "👋", "👊", "✊", "🤛", "🤜", "💪", "🙏", "✍️", "💅"
+    ],
+  },
+  {
+    id: "study",
+    label: "Estudio & Objetos",
+    emojis: [
+      "💻", "🖥️", "📱", "⌨️", "🖱️", "📚", "📖", "🎓", "📝", "✏️",
+      "💡", "🔍", "🔎", "🔔", "📢", "🎯", "🏆", "🥇", "🎨", "🚀",
+      "⚙️", "🔧", "⚡", "💎", "📌", "📍", "📂", "📁", "📊", "📈"
+    ],
+  },
+];
+
+// Helper para leer canales iniciales en caché sincrónico (0ms)
+function getInitialCachedChannels(): CommunityChannel[] {
+  try {
+    const saved = localStorage.getItem("crezca_community_channels");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (_) {}
+  return [
+    { id: 1, name: "bienvenida", slug: "bienvenida", description: "Canal de bienvenida para todos los nuevos estudiantes.", category: "General", course_id: 0, is_announcement: false, has_access: true, messages_count: 1 },
+    { id: 2, name: "anuncios-oficiales", slug: "anuncios-oficiales", description: "Comunicados oficiales de la academia.", category: "General", course_id: 0, is_announcement: true, has_access: true, messages_count: 0 },
+    { id: 3, name: "charla-general", slug: "charla-general", description: "Espacio para compartir ideas y proyectos.", category: "Comunidad", course_id: 0, is_announcement: false, has_access: true, messages_count: 0 },
+    { id: 4, name: "networking-proyectos", slug: "networking-proyectos", description: "Colabora en proyectos con tus compañeros.", category: "Comunidad", course_id: 0, is_announcement: false, has_access: true, messages_count: 0 },
+  ];
+}
+
+// Helper para leer mensajes en caché sincrónico (0ms)
+function getInitialCachedMessages(channelId: number | null): CommunityMessage[] {
+  if (!channelId) return [];
+  try {
+    const saved = localStorage.getItem(`crezca_channel_messages_${channelId}`);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (_) {}
+  return [];
+}
 
 export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   courses = [],
@@ -57,21 +125,49 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   currentUser,
   onNavigateToCourse,
 }) => {
-  // Canales
-  const [channels, setChannels] = useState<CommunityChannel[]>([]);
-  const [activeChannelId, setActiveChannelId] = useState<number | null>(null);
-  const [channelsLoading, setChannelsLoading] = useState(true);
+  // Canales - Inicialización instantánea con caché
+  const [channels, setChannels] = useState<CommunityChannel[]>(getInitialCachedChannels);
+  const [activeChannelId, setActiveChannelId] = useState<number | null>(() => {
+    const initial = getInitialCachedChannels();
+    const savedActive = localStorage.getItem("crezca_active_channel_id");
+    if (savedActive && initial.some((c) => c.id === Number(savedActive))) {
+      return Number(savedActive);
+    }
+    return initial[0]?.id || 1;
+  });
+  const [channelsLoading, setChannelsLoading] = useState(false);
 
-  // Mensajes
-  const [messages, setMessages] = useState<CommunityMessage[]>([]);
+  // Mensajes - Inicialización instantánea con caché
+  const [messages, setMessages] = useState<CommunityMessage[]>(() =>
+    getInitialCachedMessages(activeChannelId)
+  );
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
 
+  // Adjunto temporal para el input principal
+  const [pendingAttachment, setPendingAttachment] = useState<{ name: string; url: string } | null>(null);
+
   // Categorías colapsadas en la barra lateral
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
-  // Modales
+  // Selector flotante de Emojis
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [activeEmojiCategory, setActiveEmojiCategory] = useState("popular");
+  const [emojiSearchQuery, setEmojiSearchQuery] = useState("");
+
+  // Autocompletado de menciones (@usuario y #canal)
+  const [mentionMode, setMentionMode] = useState<"user" | "channel" | null>(null);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionMatchIndex, setMentionMatchIndex] = useState(0);
+
+  // Hilos de conversación (Threads)
+  const [activeThreadMessage, setActiveThreadMessage] = useState<CommunityMessage | null>(null);
+  const [threadNewMessage, setThreadNewMessage] = useState("");
+  const [isThreadSending, setIsThreadSending] = useState(false);
+  const [threadAttachment, setThreadAttachment] = useState<{ name: string; url: string } | null>(null);
+
+  // Modales de administración de canales
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<CommunityChannel | null>(null);
   const [channelForm, setChannelForm] = useState<CreateCommunityChannelPayload>({
@@ -82,41 +178,40 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     is_announcement: false,
   });
 
-  // Estado para selección de categoría y restricción con Arc Select
   const NEW_CATEGORY_OPTION = "__NEW_CATEGORY__";
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string>("General");
   const [isCustomCategory, setIsCustomCategory] = useState<boolean>(false);
   const [customCategoryText, setCustomCategoryText] = useState<string>("");
-
   const [channelToDelete, setChannelToDelete] = useState<CommunityChannel | null>(null);
   const [isDeletingChannel, setIsDeletingChannel] = useState(false);
 
-  // Lista de cursos para el dropdown de restricciones
+  // Cursos disponibles para restricción (carga perezosa solo cuando se necesita)
   const [availableCourses, setAvailableCourses] = useState<Course[]>(courses);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const threadTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const threadFileInputRef = useRef<HTMLInputElement | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
 
-  // Cargar cursos si no vienen en props
-  useEffect(() => {
-    if (courses.length > 0) {
-      setAvailableCourses(courses);
-    } else {
+  // Cargar cursos bajo demanda cuando se abre el modal si no estaban cargados
+  const ensureCoursesLoaded = () => {
+    if (availableCourses.length === 0) {
       api.getCourses().then((res) => {
-        if (Array.isArray(res) && res.length > 0) {
-          setAvailableCourses(res);
-        }
-      }).catch((e) => console.warn("Error cargando cursos en comunidad:", e));
+        if (Array.isArray(res)) setAvailableCourses(res);
+      }).catch((e) => console.warn("Error cargando cursos:", e));
     }
-  }, [courses]);
+  };
 
-  // 1. Cargar canales al montar
+  // 1. Cargar canales en background sin bloquear
   const loadChannels = async (keepActive = true) => {
     try {
       const data = await api.getCommunityChannels();
-      setChannels(data);
+      if (Array.isArray(data) && data.length > 0) {
+        setChannels(data);
+        localStorage.setItem("crezca_community_channels", JSON.stringify(data));
 
-      if (data.length > 0) {
         if (!keepActive || !activeChannelId || !data.some((c) => c.id === activeChannelId)) {
           setActiveChannelId(data[0].id);
         }
@@ -129,20 +224,35 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   };
 
   useEffect(() => {
-    loadChannels(false);
+    loadChannels(true);
   }, []);
+
+  // Guardar canal activo en persistencia local
+  useEffect(() => {
+    if (activeChannelId) {
+      localStorage.setItem("crezca_active_channel_id", String(activeChannelId));
+    }
+  }, [activeChannelId]);
 
   // Canal activo actual
   const activeChannel = useMemo(() => {
-    return channels.find((c) => c.id === activeChannelId) || null;
+    return channels.find((c) => c.id === activeChannelId) || channels[0] || null;
   }, [channels, activeChannelId]);
 
-  // 2. Cargar mensajes del canal activo
+  // 2. Cargar mensajes del canal activo (SWR: primero lee caché, luego revalida)
   const loadMessages = async (channelId: number) => {
-    setMessagesLoading(true);
+    // Si no tenemos mensajes para este canal, leemos caché inmediatamente
+    const cached = getInitialCachedMessages(channelId);
+    if (cached.length > 0 && messages.length === 0) {
+      setMessages(cached);
+    }
+
     try {
       const res = await api.getChannelMessages(channelId);
-      setMessages(res.messages || []);
+      if (res && Array.isArray(res.messages)) {
+        setMessages(res.messages);
+        localStorage.setItem(`crezca_channel_messages_${channelId}`, JSON.stringify(res.messages));
+      }
     } catch (err) {
       console.error("Error cargando mensajes:", err);
     } finally {
@@ -152,11 +262,18 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
 
   useEffect(() => {
     if (activeChannelId) {
+      // Cargar del caché inmediatamente al cambiar de canal
+      const cached = getInitialCachedMessages(activeChannelId);
+      if (cached.length > 0) {
+        setMessages(cached);
+      }
       loadMessages(activeChannelId);
+      // Cerrar hilo si se cambia de canal
+      setActiveThreadMessage(null);
     }
   }, [activeChannelId]);
 
-  // Polling periódico ligero cada 8 segundos para mensajes nuevos
+  // Polling periódico ligero cada 10 segundos para nuevos mensajes
   useEffect(() => {
     if (!activeChannelId) return;
     const interval = setInterval(async () => {
@@ -171,12 +288,12 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
           });
         }
       } catch (_) {}
-    }, 8000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [activeChannelId]);
 
-  // Scroll automático hacia el final del chat
+  // Scroll automático
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior });
@@ -186,6 +303,19 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   useEffect(() => {
     scrollToBottom("auto");
   }, [messages.length, activeChannelId]);
+
+  // Cerrar popover de emojis al hacer click afuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setIsEmojiPickerOpen(false);
+      }
+    };
+    if (isEmojiPickerOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isEmojiPickerOpen]);
 
   // Agrupar canales por categoría
   const groupedChannels = useMemo(() => {
@@ -200,7 +330,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     return groups;
   }, [channels]);
 
-  // Lista de categorías existentes únicas
+  // Lista de categorías únicas
   const existingCategories = useMemo(() => {
     const set = new Set<string>();
     channels.forEach((ch) => {
@@ -208,13 +338,11 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
         set.add(ch.category.trim());
       }
     });
-    if (set.size === 0) {
-      set.add("General");
-    }
+    if (set.size === 0) set.add("General");
     return Array.from(set);
   }, [channels]);
 
-  // Opciones para el Select de Categorías (con Lucide Folder y FolderPlus)
+  // Opciones para el Select de Categorías
   const categorySelectOptions: SelectOption<string>[] = useMemo(() => {
     const list: SelectOption<string>[] = existingCategories.map((cat) => {
       const count = channels.filter((c) => c.category === cat).length;
@@ -236,7 +364,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     return list;
   }, [existingCategories, channels]);
 
-  // Opciones para el Select de Restricciones (con Lucide Globe y Lock)
+  // Opciones de restricción
   const restrictionOptions: SelectOption<number>[] = useMemo(() => {
     const list: SelectOption<number>[] = [
       {
@@ -259,16 +387,55 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     return list;
   }, [availableCourses]);
 
+  // Lista de usuarios detectados para autocompletado de menciones @
+  const mentionableUsers = useMemo(() => {
+    const map = new Map<string, { id: number; name: string; avatar?: string; role?: string }>();
+
+    // Usuario actual
+    if (currentUser) {
+      map.set(currentUser.name.toLowerCase(), currentUser);
+    }
+
+    // Administrador por defecto
+    map.set("administrador", { id: 1, name: "Administrador", role: "admin" });
+    map.set("soporte", { id: 2, name: "Soporte Academia", role: "instructor" });
+
+    // Autores de los mensajes actuales
+    messages.forEach((m) => {
+      if (m.user_name && !map.has(m.user_name.toLowerCase())) {
+        map.set(m.user_name.toLowerCase(), {
+          id: m.user_id,
+          name: m.user_name,
+          avatar: m.user_avatar,
+          role: m.user_role,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [messages, currentUser]);
+
+  // Filtrado para menú flotante de menciones
+  const filteredMentionUsers = useMemo(() => {
+    if (mentionMode !== "user") return [];
+    const q = mentionQuery.toLowerCase();
+    return mentionableUsers.filter((u) => u.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [mentionMode, mentionQuery, mentionableUsers]);
+
+  const filteredMentionChannels = useMemo(() => {
+    if (mentionMode !== "channel") return [];
+    const q = mentionQuery.toLowerCase();
+    return channels.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [mentionMode, mentionQuery, channels]);
+
   // Alternar categoría colapsada
   const toggleCategory = (cat: string) => {
-    setCollapsedCategories((prev) => ({
-      ...prev,
-      [cat]: !prev[cat],
-    }));
+    setCollapsedCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
   };
 
-  // Abrir modal para crear canal
+  // Abrir modal canal
   const handleOpenCreateModal = (defaultCategory = "General") => {
+    ensureCoursesLoaded();
     setEditingChannel(null);
     const cat = defaultCategory || existingCategories[0] || "General";
     setSelectedCategoryKey(cat);
@@ -284,9 +451,9 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     setIsChannelModalOpen(true);
   };
 
-  // Abrir modal para editar canal
   const handleOpenEditModal = (ch: CommunityChannel, e: React.MouseEvent) => {
     e.stopPropagation();
+    ensureCoursesLoaded();
     setEditingChannel(ch);
     const cat = ch.category || "General";
     if (existingCategories.includes(cat)) {
@@ -308,12 +475,12 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     setIsChannelModalOpen(true);
   };
 
-  // Guardar canal (crear o editar)
+  // Guardar canal
   const handleSaveChannel = async () => {
     if (!channelForm.name.trim()) return;
     const finalCategory = isCustomCategory
-      ? (customCategoryText.trim() || "General")
-      : (selectedCategoryKey || "General");
+      ? customCategoryText.trim() || "General"
+      : selectedCategoryKey || "General";
 
     try {
       const cleanSlug = channelForm.name
@@ -329,6 +496,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
           name: cleanSlug,
         });
         setChannels(updated);
+        localStorage.setItem("crezca_community_channels", JSON.stringify(updated));
       } else {
         const updated = await api.createCommunityChannel({
           ...channelForm,
@@ -336,10 +504,9 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
           name: cleanSlug,
         });
         setChannels(updated);
+        localStorage.setItem("crezca_community_channels", JSON.stringify(updated));
         const created = updated.find((c) => c.name === cleanSlug);
-        if (created) {
-          setActiveChannelId(created.id);
-        }
+        if (created) setActiveChannelId(created.id);
       }
       setIsChannelModalOpen(false);
     } catch (err) {
@@ -354,6 +521,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     try {
       const updated = await api.deleteCommunityChannel(channelToDelete.id);
       setChannels(updated);
+      localStorage.setItem("crezca_community_channels", JSON.stringify(updated));
       if (activeChannelId === channelToDelete.id) {
         setActiveChannelId(updated[0]?.id || null);
       }
@@ -365,15 +533,22 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     }
   };
 
-  // Enviar mensaje
+  // Enviar mensaje en canal principal
   const handleSendMessage = async () => {
-    if (!activeChannelId || !newMessage.trim() || isSending) return;
+    if (!activeChannelId || (!newMessage.trim() && !pendingAttachment) || isSending) return;
     const textToSend = newMessage.trim();
+    const attachmentsToSend = pendingAttachment ? [pendingAttachment] : [];
     setIsSending(true);
     try {
-      const sentMsg = await api.sendChannelMessage(activeChannelId, textToSend);
-      setMessages((prev) => [...prev, sentMsg]);
+      const sentMsg = await api.sendChannelMessage(activeChannelId, textToSend, attachmentsToSend, 0);
+      setMessages((prev) => {
+        const next = [...prev, sentMsg];
+        localStorage.setItem(`crezca_channel_messages_${activeChannelId}`, JSON.stringify(next));
+        return next;
+      });
       setNewMessage("");
+      setPendingAttachment(null);
+      setMentionMode(null);
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -385,27 +560,167 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     }
   };
 
+  // Enviar mensaje dentro de un hilo (Thread)
+  const handleSendThreadReply = async () => {
+    if (!activeChannelId || !activeThreadMessage || (!threadNewMessage.trim() && !threadAttachment) || isThreadSending) return;
+    const textToSend = threadNewMessage.trim();
+    const attachmentsToSend = threadAttachment ? [threadAttachment] : [];
+    setIsThreadSending(true);
+    try {
+      const sentReply = await api.sendChannelMessage(
+        activeChannelId,
+        textToSend,
+        attachmentsToSend,
+        activeThreadMessage.id
+      );
+
+      // Actualizar mensajes locales: agregar la respuesta y aumentar el reply_count del padre
+      setMessages((prev) => {
+        const next = prev.map((m) => {
+          if (m.id === activeThreadMessage.id) {
+            return {
+              ...m,
+              reply_count: (m.reply_count || 0) + 1,
+              last_reply_at: sentReply.created_at,
+            };
+          }
+          return m;
+        });
+        next.push(sentReply);
+        localStorage.setItem(`crezca_channel_messages_${activeChannelId}`, JSON.stringify(next));
+        return next;
+      });
+
+      // Actualizar objeto de mensaje activo en hilo
+      setActiveThreadMessage((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          reply_count: (prev.reply_count || 0) + 1,
+        };
+      });
+
+      setThreadNewMessage("");
+      setThreadAttachment(null);
+      if (threadTextareaRef.current) {
+        threadTextareaRef.current.style.height = "auto";
+      }
+    } catch (err: any) {
+      alert(err?.message || "Error al enviar la respuesta al hilo.");
+    } finally {
+      setIsThreadSending(false);
+    }
+  };
+
   // Borrar mensaje
   const handleDeleteMessage = async (msgId: number) => {
     if (!window.confirm("¿Deseas eliminar este mensaje?")) return;
     try {
       await api.deleteChannelMessage(msgId, activeChannelId || undefined);
-      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+      setMessages((prev) => {
+        const next = prev.filter((m) => m.id !== msgId && m.parent_id !== msgId);
+        if (activeChannelId) {
+          localStorage.setItem(`crezca_channel_messages_${activeChannelId}`, JSON.stringify(next));
+        }
+        return next;
+      });
+      if (activeThreadMessage?.id === msgId) {
+        setActiveThreadMessage(null);
+      }
     } catch (err) {
       console.error("Error al borrar mensaje:", err);
     }
   };
 
-  // Insertar emoji
-  const handleInsertEmoji = (emoji: string) => {
-    setNewMessage((prev) => prev + emoji);
+  // Detección de menciones (@ y #) mientras se escribe
+  const handleInputChangeWithMentions = (val: string, cursorPosition: number) => {
+    setNewMessage(val);
+    const textBeforeCursor = val.slice(0, cursorPosition);
+    const lastWordMatch = textBeforeCursor.match(/(^|\s)([@#])([a-zA-Z0-9_-]*)$/);
+
+    if (lastWordMatch) {
+      const symbol = lastWordMatch[2];
+      const query = lastWordMatch[3] || "";
+      if (symbol === "@") {
+        setMentionMode("user");
+        setMentionQuery(query);
+        setMentionMatchIndex(0);
+      } else if (symbol === "#") {
+        setMentionMode("channel");
+        setMentionQuery(query);
+        setMentionMatchIndex(0);
+      }
+    } else {
+      setMentionMode(null);
+    }
+  };
+
+  // Insertar mención de usuario seleccionada
+  const handleSelectUserMention = (user: { name: string }) => {
+    const cursor = textareaRef.current?.selectionStart || newMessage.length;
+    const textBeforeCursor = newMessage.slice(0, cursor);
+    const textAfterCursor = newMessage.slice(cursor);
+    const replacedBefore = textBeforeCursor.replace(/(^|\s)@[a-zA-Z0-9_-]*$/, `$1@${user.name} `);
+
+    setNewMessage(replacedBefore + textAfterCursor);
+    setMentionMode(null);
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
   };
 
-  // Tecla Enter para enviar
+  // Insertar mención de canal seleccionada
+  const handleSelectChannelMention = (ch: CommunityChannel) => {
+    const cursor = textareaRef.current?.selectionStart || newMessage.length;
+    const textBeforeCursor = newMessage.slice(0, cursor);
+    const textAfterCursor = newMessage.slice(cursor);
+    const replacedBefore = textBeforeCursor.replace(/(^|\s)#[a-zA-Z0-9_-]*$/, `$1#${ch.name} `);
+
+    setNewMessage(replacedBefore + textAfterCursor);
+    setMentionMode(null);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
+  // Insertar emoji desde el popover estilo Discord
+  const handleInsertEmoji = (emoji: string) => {
+    setNewMessage((prev) => prev + emoji);
+    setIsEmojiPickerOpen(false);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
+  // Manejo de teclado (Enter para enviar, flechas para menciones)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionMode) {
+      const listLength = mentionMode === "user" ? filteredMentionUsers.length : filteredMentionChannels.length;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionMatchIndex((prev) => (prev + 1) % Math.max(1, listLength));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionMatchIndex((prev) => (prev - 1 + listLength) % Math.max(1, listLength));
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        if (mentionMode === "user" && filteredMentionUsers[mentionMatchIndex]) {
+          handleSelectUserMention(filteredMentionUsers[mentionMatchIndex]);
+        } else if (mentionMode === "channel" && filteredMentionChannels[mentionMatchIndex]) {
+          handleSelectChannelMention(filteredMentionChannels[mentionMatchIndex]);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        setMentionMode(null);
+        return;
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -414,21 +729,98 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
 
   // Auto expandir altura del textarea
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setNewMessage(e.target.value);
+    const cursor = e.target.selectionStart;
+    handleInputChangeWithMentions(e.target.value, cursor);
     e.target.style.height = "auto";
-    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
   };
 
-  // URLs externas configuradas en los cursos
-  const courseWithWhatsApp = availableCourses.find((c) => c.whatsapp_url);
-  const courseWithSlack = availableCourses.find((c) => c.slack_url);
-  const courseWithZoom = availableCourses.find((c) => c.zoom_url);
+  // Adjuntar archivo o imagen simulado/local
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, isThread = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const resultUrl = reader.result as string;
+      const att = { name: file.name, url: resultUrl };
+      if (isThread) {
+        setThreadAttachment(att);
+      } else {
+        setPendingAttachment(att);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  // Renderizar texto formateado con menciones interactivas (@ y #)
+  const renderMessageText = (text: string) => {
+    // Regex para detectar menciones @Nombre o #canal
+    const parts = text.split(/(@[a-zA-Z0-9_\u00C0-\u017F\s]+?|\#[a-zA-Z0-9_-]+)(?=[.,!?\s]|$)/g);
+
+    return parts.map((part, index) => {
+      if (part.startsWith("@")) {
+        const username = part.slice(1).trim();
+        const isSelf = currentUser && username.toLowerCase() === currentUser.name.toLowerCase();
+        return (
+          <span
+            key={index}
+            className={`${styles.userMentionPill} ${isSelf ? styles.selfMention : ""}`}
+            title={`Mención a @${username}`}
+          >
+            @{username}
+          </span>
+        );
+      }
+      if (part.startsWith("#")) {
+        const chanSlug = part.slice(1).trim().toLowerCase();
+        const targetChan = channels.find((c) => c.name.toLowerCase() === chanSlug);
+        return (
+          <button
+            key={index}
+            type="button"
+            className={styles.channelMentionPill}
+            onClick={() => targetChan && setActiveChannelId(targetChan.id)}
+            title={targetChan ? `Ir al canal #${targetChan.name}` : undefined}
+          >
+            <Hash size={12} />
+            <span>{chanSlug}</span>
+          </button>
+        );
+      }
+      return <React.Fragment key={index}>{part}</React.Fragment>;
+    });
+  };
 
   // Roles y visualización
   const effectiveIsAdmin = isAdmin || currentUser?.role === "admin";
   const channelIsLocked = Boolean(activeChannel && !activeChannel.has_access && !effectiveIsAdmin);
   const channelIsAnnouncement = Boolean(activeChannel?.is_announcement);
   const canSendMessages = !channelIsLocked && (!channelIsAnnouncement || effectiveIsAdmin);
+
+  // Mensajes principales del feed (excluyendo respuestas que pertenecen a un hilo)
+  const topLevelMessages = useMemo(() => {
+    return messages.filter((m) => !m.parent_id || m.parent_id === 0);
+  }, [messages]);
+
+  // Respuestas del hilo activo actual
+  const threadReplies = useMemo(() => {
+    if (!activeThreadMessage) return [];
+    return messages.filter((m) => m.parent_id === activeThreadMessage.id);
+  }, [messages, activeThreadMessage]);
+
+  // Emojis filtrados para el selector popover
+  const currentCategoryEmojis = useMemo(() => {
+    if (emojiSearchQuery.trim()) {
+      const q = emojiSearchQuery.toLowerCase();
+      const all: string[] = [];
+      EMOJI_CATEGORIES.forEach((cat) => all.push(...cat.emojis));
+      return Array.from(new Set(all)).filter((em) => em.includes(q));
+    }
+    const found = EMOJI_CATEGORIES.find((cat) => cat.id === activeEmojiCategory);
+    return found ? found.emojis : EMOJI_CATEGORIES[0].emojis;
+  }, [activeEmojiCategory, emojiSearchQuery]);
 
   return (
     <div className={styles.discordContainer}>
@@ -463,71 +855,6 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
 
         {/* Lista con scroll de canales agrupados */}
         <div className={styles.channelsScrollList}>
-          {/* Enlaces Rápidos a Sesiones Externas si existen */}
-          {(courseWithWhatsApp || courseWithSlack || courseWithZoom) && (
-            <div className={styles.externalSection}>
-              <div className={styles.externalSectionHeader}>
-                <span>Enlaces Directos</span>
-                <Sparkles size={12} />
-              </div>
-
-              {courseWithWhatsApp && (
-                <a
-                  href={courseWithWhatsApp.whatsapp_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.externalLinkItem}
-                  title="Unirse al grupo de WhatsApp"
-                >
-                  <div className={styles.externalLinkLeft}>
-                    <div className={styles.externalLinkIconBox} style={{ background: "rgba(37, 211, 102, 0.15)", color: "#25D366" }}>
-                      <MessageSquare size={13} />
-                    </div>
-                    <span>WhatsApp VIP</span>
-                  </div>
-                  <ExternalLink size={12} color="var(--text-dim)" />
-                </a>
-              )}
-
-              {courseWithSlack && (
-                <a
-                  href={courseWithSlack.slack_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.externalLinkItem}
-                  title="Abrir workspace de Slack"
-                >
-                  <div className={styles.externalLinkLeft}>
-                    <div className={styles.externalLinkIconBox} style={{ background: "rgba(192, 132, 252, 0.15)", color: "#c084fc" }}>
-                      <Hash size={13} />
-                    </div>
-                    <span>Slack Oficial</span>
-                  </div>
-                  <ExternalLink size={12} color="var(--text-dim)" />
-                </a>
-              )}
-
-              {courseWithZoom && (
-                <a
-                  href={courseWithZoom.zoom_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.externalLinkItem}
-                  title="Acceder a la sala de Zoom"
-                >
-                  <div className={styles.externalLinkLeft}>
-                    <div className={styles.externalLinkIconBox} style={{ background: "rgba(45, 140, 255, 0.15)", color: "#2D8CFF" }}>
-                      <Video size={13} />
-                    </div>
-                    <span>Sala de Zoom</span>
-                  </div>
-                  <ExternalLink size={12} color="var(--text-dim)" />
-                </a>
-              )}
-            </div>
-          )}
-
-          {/* Categorías y Canales */}
           {channelsLoading ? (
             <div style={{ padding: "16px 12px", color: "var(--text-muted)", fontSize: "12px" }}>
               Cargando canales...
@@ -754,7 +1081,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
               </div>
             ) : (
               <>
-                {/* Feed de Mensajes */}
+                {/* Feed de Mensajes Principales */}
                 <div className={styles.messagesStream}>
                   {/* Tarjeta de bienvenida al canal */}
                   <div className={styles.channelHeroCard}>
@@ -776,7 +1103,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                   </div>
 
                   {/* Mensajes del chat */}
-                  {messages.map((msg) => {
+                  {topLevelMessages.map((msg) => {
                     const isAuthorOrAdmin =
                       effectiveIsAdmin ||
                       (currentUser?.id && msg.user_id === currentUser.id);
@@ -790,8 +1117,16 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                       }
                     } catch (_) {}
 
+                    // Comprobar si el mensaje contiene una mención directa al usuario actual
+                    const mentionsCurrentUser =
+                      currentUser &&
+                      msg.message.toLowerCase().includes(`@${currentUser.name.toLowerCase()}`);
+
                     return (
-                      <div key={msg.id} className={styles.messageRow}>
+                      <div
+                        key={msg.id}
+                        className={`${styles.messageRow} ${mentionsCurrentUser ? styles.hasMention : ""}`}
+                      >
                         <div className={styles.messageAvatarWrap}>
                           {msg.user_avatar ? (
                             <img src={msg.user_avatar} alt={msg.user_name} className={styles.messageAvatarImg} />
@@ -829,13 +1164,68 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                           </div>
 
                           <div className={styles.messageBody}>
-                            {msg.message}
+                            {renderMessageText(msg.message)}
                           </div>
+
+                          {/* Adjuntos en el mensaje si existen */}
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div style={{ marginTop: "6px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                              {msg.attachments.map((att, i) => (
+                                <a
+                                  key={i}
+                                  href={att.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    padding: "4px 8px",
+                                    borderRadius: "6px",
+                                    background: "var(--surface-raised)",
+                                    border: "1px solid var(--border)",
+                                    fontSize: "12px",
+                                    color: "var(--accent)",
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  <Paperclip size={12} />
+                                  <span>{att.name}</span>
+                                </a>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Indicador de Hilo / Respuestas (Discord Style) */}
+                          {msg.reply_count && msg.reply_count > 0 ? (
+                            <div
+                              className={styles.threadSummaryBar}
+                              onClick={() => setActiveThreadMessage(msg)}
+                              title="Abrir hilo de respuestas"
+                            >
+                              <GitBranch size={13} className={styles.threadSummaryIcon} />
+                              <span className={styles.threadSummaryCount}>
+                                {msg.reply_count} {msg.reply_count === 1 ? "respuesta" : "respuestas"}
+                              </span>
+                              <span>• Ver hilo</span>
+                            </div>
+                          ) : null}
                         </div>
 
-                        {/* Botón flotante para borrar mensaje */}
-                        {isAuthorOrAdmin && (
-                          <div className={styles.messageActionsBar}>
+                        {/* Botonera flotante al hacer hover sobre el mensaje */}
+                        <div className={styles.messageActionsBar}>
+                          {/* Botón para iniciar o ver hilo */}
+                          <button
+                            type="button"
+                            className={styles.threadActionBtn}
+                            onClick={() => setActiveThreadMessage(msg)}
+                            title="Responder en hilo"
+                          >
+                            <MessageSquare size={13} />
+                          </button>
+
+                          {/* Botón para borrar si es autor o admin */}
+                          {isAuthorOrAdmin && (
                             <button
                               type="button"
                               className={styles.deleteMsgBtn}
@@ -844,8 +1234,8 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                             >
                               <Trash2 size={13} />
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -853,46 +1243,236 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Barra Inferior de Entrada de Mensaje */}
+                {/* =========================================================
+                    3. BARRA INFERIOR DE REDACCIÓN DISCORD (COMO EN LA IMAGEN)
+                    ========================================================= */}
                 <div className={styles.chatInputContainer}>
                   {canSendMessages ? (
                     <>
-                      {/* Emojis rápidos */}
-                      <div className={styles.emojiQuickBar}>
-                        <span className={styles.emojiQuickLabel}>Reacciones:</span>
-                        {QUICK_EMOJIS.map((em) => (
-                          <button
-                            key={em}
-                            type="button"
-                            className={styles.emojiQuickBtn}
-                            onClick={() => handleInsertEmoji(em)}
-                          >
-                            {em}
-                          </button>
-                        ))}
-                      </div>
+                      {/* Popover flotante de Autocompletado de menciones (@usuario y #canal) */}
+                      {mentionMode && (
+                        <div className={styles.mentionAutocompletePopover}>
+                          <div className={styles.mentionHeader}>
+                            <span>{mentionMode === "user" ? "Mencionar miembro" : "Mencionar canal"}</span>
+                            <span style={{ fontSize: "10px", color: "var(--text-dim)" }}>
+                              Tab o Enter para elegir
+                            </span>
+                          </div>
 
-                      {/* Caja de texto */}
-                      <div className={styles.inputBoxWrapper}>
+                          <div className={styles.mentionListScroll}>
+                            {mentionMode === "user" &&
+                              filteredMentionUsers.map((u, i) => (
+                                <button
+                                  key={u.id}
+                                  type="button"
+                                  className={`${styles.mentionOptionItem} ${i === mentionMatchIndex ? styles.selected : ""}`}
+                                  onClick={() => handleSelectUserMention(u)}
+                                >
+                                  <div className={styles.mentionOptionLeft}>
+                                    {u.avatar ? (
+                                      <img src={u.avatar} alt={u.name} className={styles.mentionOptionAvatar} />
+                                    ) : (
+                                      <div className={styles.mentionOptionAvatarFallback}>
+                                        {u.name.charAt(0).toUpperCase()}
+                                      </div>
+                                    )}
+                                    <span className={styles.mentionOptionName}>{u.name}</span>
+                                  </div>
+                                  <span className={styles.mentionOptionBadge}>{u.role || "Miembro"}</span>
+                                </button>
+                              ))}
+
+                            {mentionMode === "channel" &&
+                              filteredMentionChannels.map((c, i) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  className={`${styles.mentionOptionItem} ${i === mentionMatchIndex ? styles.selected : ""}`}
+                                  onClick={() => handleSelectChannelMention(c)}
+                                >
+                                  <div className={styles.mentionOptionLeft}>
+                                    <Hash size={14} color="var(--accent)" />
+                                    <span className={styles.mentionOptionName}>{c.name}</span>
+                                  </div>
+                                  <span className={styles.mentionOptionBadge}>{c.category}</span>
+                                </button>
+                              ))}
+
+                            {((mentionMode === "user" && filteredMentionUsers.length === 0) ||
+                              (mentionMode === "channel" && filteredMentionChannels.length === 0)) && (
+                              <div style={{ padding: "8px 10px", fontSize: "12px", color: "var(--text-muted)" }}>
+                                No se encontraron coincidencias
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Popover flotante de Emojis Discord */}
+                      {isEmojiPickerOpen && (
+                        <div ref={emojiPickerRef} className={styles.emojiPickerPopover}>
+                          <div className={styles.emojiPickerHeader}>
+                            <input
+                              type="text"
+                              className={styles.emojiSearchInput}
+                              placeholder="Buscar emoji..."
+                              value={emojiSearchQuery}
+                              onChange={(e) => setEmojiSearchQuery(e.target.value)}
+                              autoFocus
+                            />
+
+                            <div className={styles.emojiCategoryTabs}>
+                              {EMOJI_CATEGORIES.map((cat) => (
+                                <button
+                                  key={cat.id}
+                                  type="button"
+                                  className={`${styles.emojiCategoryTabBtn} ${activeEmojiCategory === cat.id ? styles.active : ""}`}
+                                  onClick={() => {
+                                    setActiveEmojiCategory(cat.id);
+                                    setEmojiSearchQuery("");
+                                  }}
+                                >
+                                  {cat.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className={styles.emojiGridContainer}>
+                            {currentCategoryEmojis.map((em, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                className={styles.emojiItemBtn}
+                                onClick={() => handleInsertEmoji(em)}
+                              >
+                                {em}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pill de archivo adjunto previo a enviar */}
+                      {pendingAttachment && (
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "4px 10px",
+                            borderRadius: "6px",
+                            background: "var(--surface-raised)",
+                            border: "1px solid var(--border)",
+                            fontSize: "12px",
+                            marginBottom: "6px",
+                            alignSelf: "flex-start",
+                          }}
+                        >
+                          <Paperclip size={13} color="var(--accent)" />
+                          <span style={{ maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {pendingAttachment.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPendingAttachment(null)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "var(--text-dim)",
+                              cursor: "pointer",
+                              padding: "2px",
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Input container exacto estilo Discord */}
+                      <div className={styles.discordInputBoxWrapper}>
+                        {/* Input de archivo oculto */}
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          style={{ display: "none" }}
+                          onChange={(e) => handleFileUpload(e, false)}
+                        />
+
+                        {/* Botón + circular (Adjuntar) */}
+                        <button
+                          type="button"
+                          className={styles.discordAttachBtn}
+                          onClick={() => fileInputRef.current?.click()}
+                          title="Adjuntar archivo o imagen"
+                        >
+                          <Plus size={16} />
+                        </button>
+
+                        {/* Textarea de redacción sin bordes */}
                         <textarea
                           ref={textareaRef}
                           rows={1}
-                          className={styles.messageTextarea}
-                          placeholder={`Enviar un mensaje a #${activeChannel.name}... (Enter para enviar)`}
+                          className={styles.discordTextarea}
+                          placeholder={`Enviar mensaje a #${activeChannel.name}`}
                           value={newMessage}
                           onChange={handleTextareaChange}
                           onKeyDown={handleKeyDown}
                         />
 
-                        <button
-                          type="button"
-                          className={styles.sendMessageBtn}
-                          onClick={handleSendMessage}
-                          disabled={!newMessage.trim() || isSending}
-                          title="Enviar mensaje"
-                        >
-                          <Send size={15} />
-                        </button>
+                        {/* Botones de acción derecha estilo Discord */}
+                        <div className={styles.discordInputActionsGroup}>
+                          {/* Regalo / Nitro */}
+                          <button
+                            type="button"
+                            className={styles.discordActionIconBtn}
+                            onClick={() => alert("🎉 ¡Función de regalos de la academia próximamente!")}
+                            title="Enviar regalo o recurso"
+                          >
+                            <Gift size={18} />
+                          </button>
+
+                          {/* GIF badge */}
+                          <button
+                            type="button"
+                            className={styles.gifBadgeBtn}
+                            onClick={() => alert("GIF selector: próximamente integración con Tenor/Giphy")}
+                            title="Insertar GIF"
+                          >
+                            GIF
+                          </button>
+
+                          {/* Sticker */}
+                          <button
+                            type="button"
+                            className={styles.discordActionIconBtn}
+                            onClick={() => alert("Stickers de la academia próximamente")}
+                            title="Sticker"
+                          >
+                            <SmilePlus size={18} />
+                          </button>
+
+                          {/* Emoji Toggle Popover */}
+                          <button
+                            type="button"
+                            className={`${styles.discordActionIconBtn} ${isEmojiPickerOpen ? styles.active : ""}`}
+                            onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+                            title="Selector de emojis"
+                          >
+                            <Smile size={18} />
+                          </button>
+
+                          {/* Botón Enviar */}
+                          <button
+                            type="button"
+                            className={styles.discordSendBtn}
+                            onClick={handleSendMessage}
+                            disabled={(!newMessage.trim() && !pendingAttachment) || isSending}
+                            title="Enviar mensaje (Enter)"
+                          >
+                            <Send size={14} />
+                          </button>
+                        </div>
                       </div>
                     </>
                   ) : (
@@ -915,7 +1495,194 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
       </section>
 
       {/* =========================================================
-          3. MODAL DE CREACIÓN / EDICIÓN DE CANAL (ADMIN)
+          4. PANEL LATERAL DE HILOS (THREAD DRAWER DISCORD)
+          ========================================================= */}
+      {activeThreadMessage && (
+        <aside className={styles.threadPanel}>
+          <div className={styles.threadPanelHeader}>
+            <div className={styles.threadPanelTitleBox}>
+              <div className={styles.threadPanelTitle}>
+                <MessageSquare size={16} color="var(--accent)" />
+                <span>Hilo de conversación</span>
+              </div>
+              <span className={styles.threadPanelSubtitle}>
+                En #{activeChannel?.name} • Iniciado por {activeThreadMessage.user_name}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className={styles.closeThreadBtn}
+              onClick={() => setActiveThreadMessage(null)}
+              title="Cerrar hilo"
+            >
+              <X size={15} />
+            </button>
+          </div>
+
+          <div className={styles.threadStreamArea}>
+            {/* Mensaje original padre fijado arriba */}
+            <div className={styles.threadParentCard}>
+              <div className={styles.threadParentHeader}>
+                <div className={styles.messageAvatarWrap} style={{ width: "30px", height: "30px" }}>
+                  {activeThreadMessage.user_avatar ? (
+                    <img
+                      src={activeThreadMessage.user_avatar}
+                      alt={activeThreadMessage.user_name}
+                      className={styles.messageAvatarImg}
+                    />
+                  ) : (
+                    <div className={styles.messageAvatarFallback} style={{ fontSize: "12px" }}>
+                      {activeThreadMessage.user_name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--foreground)" }}>
+                    {activeThreadMessage.user_name}
+                  </span>
+                  <span style={{ fontSize: "10.5px", color: "var(--text-dim)" }}>
+                    {activeThreadMessage.created_at}
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles.threadParentBody}>
+                {renderMessageText(activeThreadMessage.message)}
+              </div>
+            </div>
+
+            {/* Divisor de respuestas */}
+            <div className={styles.threadRepliesDivider}>
+              <span>{threadReplies.length} {threadReplies.length === 1 ? "Respuesta" : "Respuestas"}</span>
+            </div>
+
+            {/* Lista de respuestas del hilo */}
+            {threadReplies.map((reply) => {
+              const isAuthorOrAdmin =
+                effectiveIsAdmin || (currentUser?.id && reply.user_id === currentUser.id);
+
+              return (
+                <div key={reply.id} className={styles.messageRow}>
+                  <div className={styles.messageAvatarWrap} style={{ width: "32px", height: "32px" }}>
+                    {reply.user_avatar ? (
+                      <img src={reply.user_avatar} alt={reply.user_name} className={styles.messageAvatarImg} />
+                    ) : (
+                      <div className={styles.messageAvatarFallback} style={{ fontSize: "12px" }}>
+                        {reply.user_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.messageContentWrap}>
+                    <div className={styles.messageHeader}>
+                      <span className={styles.messageAuthorName}>{reply.user_name}</span>
+                      <span className={styles.messageTimestamp}>{reply.created_at}</span>
+                    </div>
+                    <div className={styles.messageBody}>
+                      {renderMessageText(reply.message)}
+                    </div>
+                  </div>
+
+                  {isAuthorOrAdmin && (
+                    <div className={styles.messageActionsBar}>
+                      <button
+                        type="button"
+                        className={styles.deleteMsgBtn}
+                        onClick={() => handleDeleteMessage(reply.id)}
+                        title="Eliminar respuesta"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Input inferior del Hilo */}
+          <div className={styles.threadInputWrapper}>
+            <input
+              type="file"
+              ref={threadFileInputRef}
+              style={{ display: "none" }}
+              onChange={(e) => handleFileUpload(e, true)}
+            />
+
+            {threadAttachment && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "2px 8px",
+                  borderRadius: "4px",
+                  background: "var(--surface-raised)",
+                  fontSize: "11.5px",
+                  marginBottom: "6px",
+                }}
+              >
+                <Paperclip size={11} color="var(--accent)" />
+                <span>{threadAttachment.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setThreadAttachment(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            )}
+
+            <div className={styles.discordInputBoxWrapper}>
+              <button
+                type="button"
+                className={styles.discordAttachBtn}
+                style={{ width: "28px", height: "28px" }}
+                onClick={() => threadFileInputRef.current?.click()}
+                title="Adjuntar en el hilo"
+              >
+                <Plus size={14} />
+              </button>
+
+              <textarea
+                ref={threadTextareaRef}
+                rows={1}
+                className={styles.discordTextarea}
+                placeholder={`Responder en el hilo...`}
+                value={threadNewMessage}
+                onChange={(e) => {
+                  setThreadNewMessage(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendThreadReply();
+                  }
+                }}
+              />
+
+              <button
+                type="button"
+                className={styles.discordSendBtn}
+                style={{ width: "28px", height: "28px" }}
+                onClick={handleSendThreadReply}
+                disabled={(!threadNewMessage.trim() && !threadAttachment) || isThreadSending}
+                title="Enviar respuesta (Enter)"
+              >
+                <Send size={13} />
+              </button>
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {/* =========================================================
+          5. MODAL DE CREACIÓN / EDICIÓN DE CANAL (ADMIN)
           ========================================================= */}
       <Modal
         isOpen={isChannelModalOpen}
@@ -925,7 +1692,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
         maxWidth="540px"
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "10px" }}>
-          {/* Nombre del canal con icono Hash de Lucide */}
+          {/* Nombre del canal */}
           <div className={styles.modalFormGroup}>
             <label className={styles.modalLabel}>
               <span>Nombre del canal</span>
@@ -975,7 +1742,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
               size="md"
             />
 
-            {/* Input para nueva categoría si el usuario selecciona "+ Crear nueva categoría..." */}
+            {/* Input para nueva categoría si se elige crear nueva */}
             {isCustomCategory && (
               <div className={styles.newCategoryRow}>
                 <div className={moneyStyles.container} style={{ flex: 1 }}>
@@ -1022,7 +1789,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
             />
           </div>
 
-          {/* Restricción de Curso con Arc Select y Lucide Globe / Lock */}
+          {/* Restricción de Curso */}
           <div className={styles.modalFormGroup}>
             <label className={styles.modalLabel}>
               <span>Restricción de Acceso por Curso</span>
@@ -1077,7 +1844,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
       </Modal>
 
       {/* =========================================================
-          4. MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE CANAL
+          6. MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE CANAL
           ========================================================= */}
       <Modal
         isOpen={Boolean(channelToDelete)}

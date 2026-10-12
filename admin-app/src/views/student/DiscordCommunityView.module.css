@@ -799,106 +799,637 @@
 }
 
 /* ---------------------------------------------------------
-   3. BARRA INFERIOR DE REDACCIÓN DE MENSAJES
+   3. BARRA INFERIOR DE REDACCIÓN DE MENSAJES ESTILO DISCORD
    --------------------------------------------------------- */
 .chatInputContainer {
-  padding: 14px 24px 20px;
+  padding: 12px 24px 20px;
   background: var(--surface);
   border-top: 1px solid var(--border-subtle);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  position: relative;
 }
 
-/* Barra rápida de emojis */
-.emojiQuickBar {
+/* Contenedor unificado Discord (como en la referencia) */
+.discordInputBoxWrapper {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 4px;
-}
-
-.emojiQuickLabel {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-dim);
-  margin-right: 4px;
-}
-
-.emojiQuickBtn {
-  font-size: 15px;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  gap: 12px;
   background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
-  cursor: pointer;
-  transition: transform var(--duration-fast), background var(--duration-fast);
-  line-height: 1.2;
-}
-
-.emojiQuickBtn:hover {
-  transform: scale(1.2);
-  background: var(--surface-hover);
-}
-
-/* Caja de entrada de texto */
-.inputBoxWrapper {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-control);
-  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  position: relative;
   transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
 }
 
-.inputBoxWrapper:focus-within {
+.discordInputBoxWrapper:focus-within {
   border-color: var(--border-strong);
   box-shadow: 0 0 0 1px var(--border-strong);
 }
 
-.messageTextarea {
+/* Botón + circular de la izquierda (Adjuntar) */
+.discordAttachBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--duration-fast);
+}
+
+.discordAttachBtn:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+  border-color: var(--border-strong);
+  transform: scale(1.06);
+}
+
+/* Textarea de redacción sin bordes */
+.discordTextarea {
   flex: 1;
   background: transparent;
   border: none;
   outline: none;
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--foreground);
   resize: none;
-  max-height: 120px;
-  min-height: 24px;
-  line-height: 1.4;
+  max-height: 140px;
+  min-height: 26px;
+  line-height: 1.45;
+  padding: 4px 0;
+  box-sizing: border-box;
 }
 
-.messageTextarea::placeholder {
-  color: var(--text-muted);
+.discordTextarea::placeholder {
+  color: var(--text-dim);
+  font-size: 13.5px;
 }
 
-.sendMessageBtn {
+/* Agrupación de botones de acción a la derecha de Discord */
+.discordInputActionsGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.discordActionIconBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-control);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color var(--duration-fast), background var(--duration-fast), transform var(--duration-fast);
+  position: relative;
+}
+
+.discordActionIconBtn:hover {
+  color: var(--foreground);
+  background: var(--surface-hover);
+}
+
+.discordActionIconBtn.active {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+/* Badge GIF estilo Discord */
+.gifBadgeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  height: 24px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.gifBadgeBtn:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+  border-color: var(--border-strong);
+}
+
+/* Botón enviar mensaje */
+.discordSendBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
   background: var(--accent);
   color: var(--accent-foreground, #ffffff);
   border: none;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform var(--duration-fast), opacity var(--duration-fast);
+  transition: all var(--duration-fast);
+  margin-left: 2px;
 }
 
-.sendMessageBtn:hover:not(:disabled) {
-  transform: scale(1.05);
+.discordSendBtn:hover:not(:disabled) {
+  transform: scale(1.08);
+  filter: brightness(1.1);
 }
 
-.sendMessageBtn:disabled {
-  opacity: 0.4;
+.discordSendBtn:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
+  background: var(--surface);
+  color: var(--text-dim);
+}
+
+/* ---------------------------------------------------------
+   POPOVER FLOTANTE SELECTOR DE EMOJIS (DISCORD STYLE)
+   --------------------------------------------------------- */
+.emojiPickerPopover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 24px;
+  width: 340px;
+  max-width: 90vw;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  animation: popoverFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.emojiPickerHeader {
+  padding: 10px 12px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emojiSearchInput {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  font-size: 12.5px;
+  color: var(--foreground);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.emojiSearchInput:focus {
+  border-color: var(--accent);
+}
+
+.emojiCategoryTabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.emojiCategoryTabBtn {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-fast);
+}
+
+.emojiCategoryTabBtn:hover {
+  color: var(--foreground);
+  background: var(--surface-hover);
+}
+
+.emojiCategoryTabBtn.active {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.emojiGridContainer {
+  padding: 10px 12px;
+  max-height: 240px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.emojiItemBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--duration-fast), background var(--duration-fast);
+}
+
+.emojiItemBtn:hover {
+  transform: scale(1.22);
+  background: var(--surface-hover);
+}
+
+/* ---------------------------------------------------------
+   AUTOCOMPLETADO FLOTANTE DE MENCIONES (@ y #)
+   --------------------------------------------------------- */
+.mentionAutocompletePopover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 24px;
+  width: 300px;
+  max-width: 90vw;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  animation: popoverFadeIn 0.15s ease-out;
+  overflow: hidden;
+  max-height: 260px;
+}
+
+.mentionHeader {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mentionListScroll {
+  overflow-y: auto;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mentionOptionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background var(--duration-fast);
+}
+
+.mentionOptionItem:hover,
+.mentionOptionItem.selected {
+  background: var(--surface-hover);
+}
+
+.mentionOptionLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mentionOptionAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.mentionOptionAvatarFallback {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mentionOptionName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mentionOptionBadge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------
+   ESTILOS DE MENCIÓN DENTRO DE MENSAJES (@ y #)
+   --------------------------------------------------------- */
+.userMentionPill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.22);
+  color: #a5b4fc;
+  font-weight: 600;
+  font-size: 13px;
+  margin: 0 1px;
+  transition: background var(--duration-fast);
+}
+
+.userMentionPill:hover {
+  background: rgba(99, 102, 241, 0.35);
+}
+
+.userMentionPill.selfMention {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+}
+
+.channelMentionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  font-weight: 600;
+  font-size: 13px;
+  margin: 0 1px;
+  cursor: pointer;
+  border: none;
+  transition: all var(--duration-fast);
+}
+
+.channelMentionPill:hover {
+  background: rgba(16, 185, 129, 0.28);
+  text-decoration: underline;
+}
+
+/* Mensaje con mención directa al usuario actual (glow de Discord) */
+.messageRow.hasMention {
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 3px solid #f59e0b;
+}
+
+.messageRow.hasMention:hover {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+/* ---------------------------------------------------------
+   HILOS DE CONVERSACIÓN (THREADS DISCORD STYLE)
+   --------------------------------------------------------- */
+.threadActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.threadActionBtn:hover {
+  background: var(--surface-hover);
+  color: var(--accent);
+}
+
+/* Indicador de hilo bajo el mensaje */
+.threadSummaryBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  align-self: flex-start;
+}
+
+.threadSummaryBar:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+  color: var(--accent);
+  transform: translateX(2px);
+}
+
+.threadSummaryIcon {
+  color: var(--accent);
+}
+
+.threadSummaryCount {
+  color: var(--foreground);
+}
+
+/* Panel lateral derecho del Hilo (Thread Drawer) */
+.threadPanel {
+  width: 380px;
+  min-width: 340px;
+  max-width: 440px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-sizing: border-box;
+  z-index: 15;
+  animation: slideThreadIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideThreadIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.threadPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.threadPanelTitleBox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.threadPanelTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.threadPanelSubtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.closeThreadBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.closeThreadBtn:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+}
+
+.threadStreamArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+/* Tarjeta del mensaje padre dentro del hilo */
+.threadParentCard {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.threadParentHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.threadParentBody {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--foreground);
+  word-break: break-word;
+}
+
+.threadRepliesDivider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.threadRepliesDivider::before,
+.threadRepliesDivider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.threadInputWrapper {
+  padding: 12px 16px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
 /* Aviso de canal solo lectura / anuncios */

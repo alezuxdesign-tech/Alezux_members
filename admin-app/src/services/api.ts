@@ -240,12 +240,15 @@ export interface CommunityChannel {
 export interface CommunityMessage {
   id: number;
   channel_id: number;
+  parent_id?: number;
   user_id: number;
   user_name: string;
   user_avatar?: string;
   user_role: "admin" | "instructor" | "student" | string;
   message: string;
   attachments?: Array<{ name: string; url: string; size?: string }>;
+  reply_count?: number;
+  last_reply_at?: string;
   created_at: string;
 }
 
@@ -2383,7 +2386,12 @@ class ApiService {
     return { channel, messages };
   }
 
-  async sendChannelMessage(channelId: number, message: string, attachments: Array<{ name: string; url: string }> = []): Promise<CommunityMessage> {
+  async sendChannelMessage(
+    channelId: number,
+    message: string,
+    attachments: Array<{ name: string; url: string }> = [],
+    parentId: number = 0
+  ): Promise<CommunityMessage> {
     try {
       if (this.wpData) {
         const res = await fetch(`${this.rootUrl}community/channels/${channelId}/messages`, {
@@ -2392,7 +2400,7 @@ class ApiService {
             "Content-Type": "application/json",
             "X-WP-Nonce": this.nonce,
           },
-          body: JSON.stringify({ message, attachments }),
+          body: JSON.stringify({ message, attachments, parent_id: parentId }),
         });
         if (res.ok) {
           return await res.json();
@@ -2402,19 +2410,31 @@ class ApiService {
       console.warn("API Error sendChannelMessage:", e);
     }
     const key = `crezca_channel_messages_${channelId}`;
-    const current = JSON.parse(localStorage.getItem(key) || "[]");
+    const current: CommunityMessage[] = JSON.parse(localStorage.getItem(key) || "[]");
     const userProfile = await this.getStudentProfile();
     const newMsg: CommunityMessage = {
       id: Date.now(),
       channel_id: channelId,
+      parent_id: parentId,
       user_id: userProfile.id,
       user_name: userProfile.name,
       user_avatar: userProfile.avatar,
       user_role: userProfile.isAdmin ? "admin" : "student",
       message,
       attachments,
+      reply_count: 0,
+      last_reply_at: undefined,
       created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
+
+    if (parentId > 0) {
+      const parent = current.find((m) => m.id === parentId);
+      if (parent) {
+        parent.reply_count = (parent.reply_count || 0) + 1;
+        parent.last_reply_at = newMsg.created_at;
+      }
+    }
+
     const updated = [...current, newMsg];
     localStorage.setItem(key, JSON.stringify(updated));
     return newMsg;

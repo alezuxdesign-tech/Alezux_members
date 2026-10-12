@@ -3046,13 +3046,19 @@ class Admin_Api {
 	 */
 	public function init_community_tables() {
 		global $wpdb;
-		$charset_collate = $wpdb->get_charset_collate();
 
+		// Evitar re-verificar con SHOW TABLES en cada petición si ya fue inicializado
+		if ( get_option( 'crezca_community_tables_v3_ready' ) ) {
+			return;
+		}
+
+		$charset_collate = $wpdb->get_charset_collate();
 		$table_channels = $wpdb->prefix . 'crezca_community_channels';
 		$table_messages = $wpdb->prefix . 'crezca_community_messages';
 
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
 		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_channels'" ) !== $table_channels ) {
-			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 			$sql1 = "CREATE TABLE $table_channels (
 				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				name varchar(100) NOT NULL,
@@ -3112,10 +3118,10 @@ class Admin_Api {
 		}
 
 		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_messages'" ) !== $table_messages ) {
-			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 			$sql2 = "CREATE TABLE $table_messages (
 				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				channel_id bigint(20) unsigned NOT NULL,
+				parent_id bigint(20) unsigned NOT NULL DEFAULT 0,
 				user_id bigint(20) unsigned NOT NULL,
 				user_name varchar(150) NOT NULL,
 				user_avatar text NULL,
@@ -3125,6 +3131,7 @@ class Admin_Api {
 				created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY  (id),
 				KEY channel_id (channel_id),
+				KEY parent_id (parent_id),
 				KEY created_at (created_at)
 			) $charset_collate;";
 			dbDelta( $sql2 );
@@ -3134,6 +3141,7 @@ class Admin_Api {
 			if ( $first_channel ) {
 				$wpdb->insert( $table_messages, [
 					'channel_id'  => $first_channel,
+					'parent_id'   => 0,
 					'user_id'     => 1,
 					'user_name'   => 'Academia (Admin)',
 					'user_avatar' => '',
@@ -3142,11 +3150,19 @@ class Admin_Api {
 					'created_at'  => current_time( 'mysql' ),
 				] );
 			}
+		} else {
+			// Asegurar columna parent_id para soporte de hilos si la tabla ya existía
+			$has_parent = $wpdb->get_var( "SHOW COLUMNS FROM `$table_messages` LIKE 'parent_id'" );
+			if ( ! $has_parent ) {
+				$wpdb->query( "ALTER TABLE `$table_messages` ADD COLUMN `parent_id` bigint(20) unsigned NOT NULL DEFAULT 0 AFTER `channel_id`, ADD KEY `parent_id` (`parent_id`)" );
+			}
 		}
+
+		update_option( 'crezca_community_tables_v3_ready', 1 );
 	}
 
 	/**
-	 * Listar canales de la comunidad (con control de acceso por curso)
+	 * Listar canales de la comunidad (con control de acceso por curso) - Ultra Optimizado
 	 */
 	public function get_community_channels( $request = null ) {
 		global $wpdb;
@@ -3174,6 +3190,15 @@ class Admin_Api {
 			}
 		}
 
+		// Conteo masivo y eficiente de mensajes en una sola consulta
+		$counts_raw = $wpdb->get_results( "SELECT channel_id, COUNT(*) as cnt FROM $table_messages GROUP BY channel_id" );
+		$counts_map = [];
+		if ( is_array( $counts_raw ) ) {
+			foreach ( $counts_raw as $r ) {
+				$counts_map[ (int) $r->channel_id ] = (int) $r->cnt;
+			}
+		}
+
 		$result = [];
 		foreach ( $channels_raw as $ch ) {
 			$course_id = (int) $ch->course_id;
@@ -3189,11 +3214,7 @@ class Admin_Api {
 				$has_access = in_array( $course_id, $enrolled_ids, true );
 			}
 
-			// Contar mensajes del canal
-			$msg_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_messages WHERE channel_id = %d", $ch->id ) );
-
-			// Último mensaje
-			$last_msg = $wpdb->get_row( $wpdb->prepare( "SELECT message, created_at, user_name FROM $table_messages WHERE channel_id = %d ORDER BY id DESC LIMIT 1", $ch->id ) );
+			$msg_count = $counts_map[ (int) $ch->id ] ?? 0;
 
 			$result[] = [
 				'id'              => (int) $ch->id,
@@ -3206,11 +3227,6 @@ class Admin_Api {
 				'is_announcement' => (bool) $ch->is_announcement,
 				'has_access'      => $has_access,
 				'messages_count'  => $msg_count,
-				'last_message'    => $last_msg ? [
-					'text'       => wp_trim_words( $last_msg->message, 10 ),
-					'date'       => $last_msg->created_at,
-					'user_name'  => $last_msg->user_name,
-				] : null,
 			];
 		}
 
@@ -3330,9 +3346,24 @@ class Admin_Api {
 		}
 
 		$messages = $wpdb->get_results( $wpdb->prepare(
-			"SELECT * FROM $table_messages WHERE channel_id = %d ORDER BY id ASC LIMIT 200",
+			"SELECT * FROM $table_messages WHERE channel_id = %d ORDER BY id ASC LIMIT 300",
 			$channel_id
 		) );
+
+		// Contar respuestas por hilo (parent_id)
+		$thread_counts_raw = $wpdb->get_results( $wpdb->prepare(
+			"SELECT parent_id, COUNT(*) as cnt, MAX(created_at) as last_reply FROM $table_messages WHERE channel_id = %d AND parent_id > 0 GROUP BY parent_id",
+			$channel_id
+		) );
+		$thread_map = [];
+		if ( is_array( $thread_counts_raw ) ) {
+			foreach ( $thread_counts_raw as $tr ) {
+				$thread_map[ (int) $tr->parent_id ] = [
+					'count'      => (int) $tr->cnt,
+					'last_reply' => $tr->last_reply,
+				];
+			}
+		}
 
 		$formatted = [];
 		foreach ( $messages as $m ) {
@@ -3344,16 +3375,23 @@ class Admin_Api {
 				}
 			}
 
+			$msg_id = (int) $m->id;
+			$parent_id = isset( $m->parent_id ) ? (int) $m->parent_id : 0;
+			$thread_info = $thread_map[ $msg_id ] ?? null;
+
 			$formatted[] = [
-				'id'          => (int) $m->id,
-				'channel_id'  => (int) $m->channel_id,
-				'user_id'     => (int) $m->user_id,
-				'user_name'   => $m->user_name,
-				'user_avatar' => $m->user_avatar ?: get_avatar_url( $m->user_id, [ 'size' => 64 ] ),
-				'user_role'   => $m->user_role,
-				'message'     => $m->message,
-				'attachments' => $attachments,
-				'created_at'  => $m->created_at,
+				'id'            => $msg_id,
+				'channel_id'    => (int) $m->channel_id,
+				'parent_id'     => $parent_id,
+				'user_id'       => (int) $m->user_id,
+				'user_name'     => $m->user_name,
+				'user_avatar'   => $m->user_avatar ?: get_avatar_url( $m->user_id, [ 'size' => 64 ] ),
+				'user_role'     => $m->user_role,
+				'message'       => $m->message,
+				'attachments'   => $attachments,
+				'reply_count'   => $thread_info ? $thread_info['count'] : 0,
+				'last_reply_at' => $thread_info ? $thread_info['last_reply'] : null,
+				'created_at'    => $m->created_at,
 			];
 		}
 
@@ -3379,7 +3417,7 @@ class Admin_Api {
 	}
 
 	/**
-	 * Enviar un mensaje a un canal
+	 * Enviar un mensaje a un canal (soporta hilos con parent_id)
 	 */
 	public function send_community_message( $request ) {
 		global $wpdb;
@@ -3423,6 +3461,8 @@ class Admin_Api {
 			return new \WP_Error( 'empty_message', 'El mensaje no puede estar vacío.', [ 'status' => 400 ] );
 		}
 
+		$parent_id = isset( $params['parent_id'] ) ? (int) $params['parent_id'] : 0;
+
 		$user = wp_get_current_user();
 		$user_name = $user && $user->ID ? ( $user->display_name ?: $user->user_login ) : 'Estudiante';
 		$user_role = $is_admin ? 'admin' : ( current_user_can( 'edit_posts' ) ? 'instructor' : 'student' );
@@ -3433,6 +3473,7 @@ class Admin_Api {
 
 		$wpdb->insert( $table_messages, [
 			'channel_id'  => $channel_id,
+			'parent_id'   => $parent_id,
 			'user_id'     => $user_id ?: 1,
 			'user_name'   => $user_name,
 			'user_avatar' => $user_avatar,
@@ -3445,15 +3486,18 @@ class Admin_Api {
 		$new_id = $wpdb->insert_id;
 
 		return rest_ensure_response( [
-			'id'          => (int) $new_id,
-			'channel_id'  => $channel_id,
-			'user_id'     => $user_id ?: 1,
-			'user_name'   => $user_name,
-			'user_avatar' => $user_avatar,
-			'user_role'   => $user_role,
-			'message'     => wp_kses_post( $message_text ),
-			'attachments' => $params['attachments'] ?? [],
-			'created_at'  => current_time( 'mysql' ),
+			'id'            => (int) $new_id,
+			'channel_id'    => $channel_id,
+			'parent_id'     => $parent_id,
+			'user_id'       => $user_id ?: 1,
+			'user_name'     => $user_name,
+			'user_avatar'   => $user_avatar,
+			'user_role'     => $user_role,
+			'message'       => wp_kses_post( $message_text ),
+			'attachments'   => $params['attachments'] ?? [],
+			'reply_count'   => 0,
+			'last_reply_at' => null,
+			'created_at'    => current_time( 'mysql' ),
 		] );
 	}
 
