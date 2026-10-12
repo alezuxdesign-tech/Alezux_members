@@ -52,6 +52,26 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
+			// Motor LMS & Migración
+			register_rest_route( $namespace, '/lms/settings', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_lms_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'save_lms_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/lms/migrate', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'migrate_lms_courses' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
 			// Estudiantes & Accesos
 			register_rest_route( $namespace, '/students', [
 				[
@@ -755,6 +775,38 @@ class Admin_Api {
 		}
 
 		return rest_ensure_response( $modules );
+	}
+
+	/**
+	 * Obtener estado y configuración del motor LMS
+	 */
+	public function get_lms_settings( \WP_REST_Request $request ) {
+		$stats = LMS_Engine::get_lms_stats();
+		return rest_ensure_response( $stats );
+	}
+
+	/**
+	 * Guardar modo preferido del motor LMS ('auto', 'native', 'learndash')
+	 */
+	public function save_lms_settings( \WP_REST_Request $request ) {
+		$params = $request->get_json_params();
+		$mode = isset( $params['mode'] ) ? sanitize_text_field( $params['mode'] ) : 'auto';
+		$ok = LMS_Engine::set_lms_mode( $mode );
+		return rest_ensure_response( [
+			'success'     => $ok,
+			'mode'        => get_option( 'crezca_lms_mode', 'auto' ),
+			'active_mode' => LMS_Engine::get_mode(),
+		] );
+	}
+
+	/**
+	 * Migrar cursos de LearnDash a Crezca LMS nativo
+	 */
+	public function migrate_lms_courses( \WP_REST_Request $request ) {
+		$params = $request->get_json_params();
+		$overwrite = ! empty( $params['overwrite'] );
+		$result = LMS_Engine::migrate_from_learndash( $overwrite );
+		return rest_ensure_response( $result );
 	}
 
 	/**

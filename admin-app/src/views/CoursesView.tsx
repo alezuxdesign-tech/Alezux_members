@@ -31,6 +31,10 @@ import {
   HelpCircle,
   UserPlus,
   UserCheck,
+  Cpu,
+  ArrowRightLeft,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -49,7 +53,9 @@ import {
   CourseQuestion,
   CourseInstructor,
   CourseFileAttachment,
-  FinancePlan
+  FinancePlan,
+  LMSSettingsResponse,
+  LMSMigrationResponse
 } from "../services/api";
 import { ModuleSkeleton } from "../components/arc/skeleton";
 import { FileDropzone, formatFileSize } from "../components/arc/file-dropzone/file-dropzone";
@@ -171,11 +177,84 @@ export function CoursesView() {
   // Modal para Editar Portada de Módulo
   const [editingModuleCover, setEditingModuleCover] = useState<EditingModuleCoverState | null>(null);
 
+  // Estados para Selector de Motor LMS y Migración desde LearnDash
+  const [lmsSettings, setLmsSettings] = useState<LMSSettingsResponse | null>(null);
+  const [isLmsModalOpen, setIsLmsModalOpen] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<LMSMigrationResponse | null>(null);
+
+  const loadLmsSettings = async () => {
+    try {
+      const data = await api.getLMSSettings();
+      setLmsSettings(data);
+    } catch (e) {
+      console.warn("Could not load LMS settings", e);
+    }
+  };
+
+  const loadCourses = async () => {
+    try {
+      setIsLoading(true);
+      const coursesData = await api.getCourses();
+      setCourses(coursesData);
+    } catch (e) {
+      console.warn("Could not refresh courses", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLmsModeChange = async (mode: "auto" | "native" | "learndash") => {
+    try {
+      const res = await api.saveLMSSettings({ mode });
+      if (res.success) {
+        setLmsSettings((prev) => prev ? { 
+          ...prev, 
+          mode, 
+          active_mode: mode === "learndash" ? "learndash" : "native" 
+        } : null);
+        showToast(
+          "success", 
+          "Modo LMS actualizado", 
+          `El motor preferido ahora es: ${mode === "native" ? "Crezca LMS Nativo" : mode === "learndash" ? "LearnDash LMS" : "Detección Automática"}.`
+        );
+        loadCourses();
+      }
+    } catch {
+      showToast("danger", "Error", "No se pudo guardar la preferencia del motor LMS.");
+    }
+  };
+
+  const handleMigrateFromLearnDash = async () => {
+    const confirm = window.confirm(
+      "¿Deseas migrar todos tus cursos de LearnDash a Crezca LMS?\n\nSe crearán copias nativas en Crezca con sus módulos, lecciones, temas y alumnos matriculados. Los cursos originales de LearnDash no se verán afectados."
+    );
+    if (!confirm) return;
+
+    setIsMigrating(true);
+    try {
+      const res = await api.migrateFromLearnDash(true);
+      setMigrationResult(res);
+      if (res.success) {
+        showToast("success", "Migración completada", res.message);
+        await loadLmsSettings();
+        await loadCourses();
+      } else {
+        showToast("warning", "Aviso de migración", res.message);
+      }
+    } catch {
+      showToast("danger", "Error", "Ocurrió un error al migrar los cursos.");
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([api.getCourses(), api.getPlans()])
-      .then(([coursesData, plansData]) => {
+    Promise.all([api.getCourses(), api.getPlans(), api.getLMSSettings()])
+      .then(([coursesData, plansData, lmsData]) => {
         setCourses(coursesData);
         setAvailablePlans(plansData);
+        setLmsSettings(lmsData);
       })
       .finally(() => {
         setIsLoading(false);
@@ -2367,10 +2446,56 @@ export function CoursesView() {
             Administra tus formaciones en cuadrícula, crea módulos y gestiona cada lección con sus videos y recursos.
           </p>
         </div>
-        <Button variant="primary" onClick={() => setIsNewCourseModalOpen(true)}>
-          <Plus size={16} /> Crear Nuevo Curso
-        </Button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Button
+            variant="secondary"
+            onClick={() => setIsLmsModalOpen(true)}
+            title="Configurar motor LMS o migrar cursos desde LearnDash"
+          >
+            <Cpu size={15} />
+            <span>Motor: {lmsSettings?.mode === "native" ? "Crezca LMS" : lmsSettings?.mode === "learndash" ? "LearnDash" : "Auto"}</span>
+          </Button>
+          <Button variant="primary" onClick={() => setIsNewCourseModalOpen(true)}>
+            <Plus size={16} /> Crear Nuevo Curso
+          </Button>
+        </div>
       </div>
+
+      {/* Banner Informativo si LearnDash está presente y no se ha seleccionado modo nativo */}
+      {(lmsSettings?.learndash_courses_count ?? 0) > 0 && lmsSettings?.mode !== "native" && (
+        <div className={styles.lmsCatalogBanner}>
+          <div className={styles.lmsCatalogBannerLeft}>
+            <Sparkles size={22} className={styles.lmsCatalogBannerIcon} />
+            <div>
+              <h4 className={styles.lmsCatalogBannerTitle}>
+                LearnDash Detectado: {lmsSettings?.learndash_courses_count} curso(s) encontrados
+              </h4>
+              <p className={styles.lmsCatalogBannerDesc}>
+                Puedes operar con LearnDash o copiarlos a Crezca LMS nativo con 1 clic para tener mayor velocidad, soporte de sub-clases y total independencia.
+              </p>
+            </div>
+          </div>
+          <div className={styles.lmsCatalogBannerActions}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleMigrateFromLearnDash}
+              disabled={isMigrating}
+            >
+              {isMigrating ? <RefreshCw size={13} /> : <ArrowRightLeft size={13} />}
+              <span>{isMigrating ? "Migrando..." : "Migrar a Crezca LMS"}</span>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsLmsModalOpen(true)}
+            >
+              <Settings size={13} />
+              <span>Configurar Motor</span>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Barra de Controles y Búsqueda */}
       <div className={styles.controlsBar}>
@@ -2588,6 +2713,134 @@ export function CoursesView() {
               <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--foreground)", lineHeight: 1.5 }}>
                 {deleteConfirm.message}
               </p>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de Configuración de Motor LMS y Migración */}
+      {isLmsModalOpen && (
+        <Modal
+          isOpen={true}
+          onClose={() => setIsLmsModalOpen(false)}
+          title="Motor de Cursos (LMS Engine) & Migración"
+          maxWidth="640px"
+          footer={
+            <Button variant="secondary" onClick={() => setIsLmsModalOpen(false)}>
+              Cerrar
+            </Button>
+          }
+        >
+          <div className={styles.lmsModalBody}>
+            {/* Estadísticas de cursos */}
+            <div className={styles.lmsModalHeaderStats}>
+              <div className={styles.lmsModalStatCard}>
+                <span className={styles.lmsModalStatLabel}>LearnDash</span>
+                <span className={styles.lmsModalStatValue} style={{ fontSize: 13, color: lmsSettings?.is_learndash_active ? "#0db879" : "var(--text-muted)" }}>
+                  {lmsSettings?.is_learndash_active ? "● Activo en WP" : "○ No detectado"}
+                </span>
+              </div>
+              <div className={styles.lmsModalStatCard}>
+                <span className={styles.lmsModalStatLabel}>Cursos LearnDash</span>
+                <span className={styles.lmsModalStatValue}>
+                  {lmsSettings?.learndash_courses_count ?? 0}
+                </span>
+              </div>
+              <div className={styles.lmsModalStatCard}>
+                <span className={styles.lmsModalStatLabel}>Cursos Crezca LMS</span>
+                <span className={styles.lmsModalStatValue} style={{ color: "var(--accent)" }}>
+                  {lmsSettings?.native_courses_count ?? 0}
+                </span>
+              </div>
+            </div>
+
+            {/* Selector de Modo */}
+            <div>
+              <label className={styles.label} style={{ marginBottom: 8, display: "block" }}>
+                Selecciona el motor que gestionará tus formaciones:
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div
+                  className={[styles.lmsModeItemMini, lmsSettings?.mode === "native" ? styles.lmsModeItemMiniActive : ""].join(" ")}
+                  onClick={() => handleLmsModeChange("native")}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div className={styles.lmsModeItemMiniTitle}>
+                      <span>Crezca LMS Nativo</span>
+                      <span className={[styles.topicBadge, styles.topicBadgeDesc].join(" ")} style={{ color: "#0db879" }}>Recomendado</span>
+                    </div>
+                    <p className={styles.lmsModeItemMiniDesc}>
+                      Almacena los cursos de forma 100% independiente en tu base de datos (CPT crezca_course). Rápido, seguro y sin plugins adicionales.
+                    </p>
+                  </div>
+                  {lmsSettings?.mode === "native" && <Check size={16} color="var(--accent)" />}
+                </div>
+
+                <div
+                  className={[styles.lmsModeItemMini, lmsSettings?.mode === "auto" ? styles.lmsModeItemMiniActive : ""].join(" ")}
+                  onClick={() => handleLmsModeChange("auto")}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div className={styles.lmsModeItemMiniTitle}>
+                      <span>Detección Automática (Híbrido)</span>
+                    </div>
+                    <p className={styles.lmsModeItemMiniDesc}>
+                      Si LearnDash está instalado y activo, lee sus cursos; de lo contrario activa automáticamente Crezca LMS.
+                    </p>
+                  </div>
+                  {lmsSettings?.mode === "auto" && <Check size={16} color="var(--accent)" />}
+                </div>
+
+                <div
+                  className={[styles.lmsModeItemMini, lmsSettings?.mode === "learndash" ? styles.lmsModeItemMiniActive : ""].join(" ")}
+                  onClick={() => handleLmsModeChange("learndash")}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div className={styles.lmsModeItemMiniTitle}>
+                      <span>Forzar LearnDash LMS</span>
+                    </div>
+                    <p className={styles.lmsModeItemMiniDesc}>
+                      Opera exclusivamente sobre los cursos legados de LearnDash (sfwd-courses).
+                    </p>
+                  </div>
+                  {lmsSettings?.mode === "learndash" && <Check size={16} color="var(--accent)" />}
+                </div>
+              </div>
+            </div>
+
+            {/* Acción de Migración */}
+            <div style={{ background: "var(--surface-muted)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-control)", padding: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div>
+                  <h5 style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>
+                    Migrar Cursos desde LearnDash a Crezca LMS
+                  </h5>
+                  <p style={{ margin: 0, fontSize: 11.5, color: "var(--text-muted)" }}>
+                    Copia cursos, módulos, lecciones, temas y alumnos matriculados al motor nativo sin alterar los originales.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleMigrateFromLearnDash}
+                  disabled={isMigrating || (lmsSettings?.learndash_courses_count ?? 0) === 0}
+                >
+                  {isMigrating ? <RefreshCw size={13} /> : <ArrowRightLeft size={13} />}
+                  <span>{isMigrating ? "Migrando..." : "Iniciar Migración"}</span>
+                </Button>
+              </div>
+
+              {migrationResult && (
+                <div style={{ marginTop: 12 }}>
+                  <Alert
+                    tone={migrationResult.success ? "success" : "warning"}
+                    title="Resultado"
+                    onDismiss={() => setMigrationResult(null)}
+                  >
+                    {migrationResult.message}
+                  </Alert>
+                </div>
+              )}
             </div>
           </div>
         </Modal>

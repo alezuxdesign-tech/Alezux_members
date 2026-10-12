@@ -279,9 +279,182 @@
   color: var(--foreground);
 }
 
-.themeSub {
+/* ============================================================== */
+/* SECCIÓN MOTOR LMS Y MIGRACIÓN */
+/* ============================================================== */
+.lmsStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.lmsStatCard {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lmsStatLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lmsStatValueRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lmsStatValue {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.lmsBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.lmsBadgeGreen {
+  background: rgba(13, 184, 121, 0.15);
+  color: #0db879;
+  border: 1px solid rgba(13, 184, 121, 0.3);
+}
+
+.lmsBadgeGray {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.lmsModeGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.lmsModeItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.lmsModeItem:hover {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+}
+
+.lmsModeItemActive {
+  background: var(--surface-raised);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.lmsModeRadio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lmsModeItemActive .lmsModeRadio {
+  border-color: var(--accent);
+}
+
+.lmsModeRadioDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.lmsModeContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lmsModeTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lmsModeDesc {
   font-size: var(--text-xs);
   color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.migrationBannerBox {
+  background: linear-gradient(135deg, rgba(119, 71, 255, 0.08) 0%, rgba(5, 98, 239, 0.08) 100%);
+  border: 1px solid rgba(119, 71, 255, 0.25);
+  border-radius: var(--radius-surface);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.migrationBannerLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 240px;
+}
+
+.migrationIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.migrationTextTitle {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 4px;
+}
+
+.migrationTextSub {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
 }
 
 .footerActions {

@@ -158,6 +158,31 @@ export interface StudentProfile {
   isAdmin: boolean;
 }
 
+export interface LMSSettingsResponse {
+  mode: "auto" | "native" | "learndash";
+  active_mode: "native" | "learndash";
+  is_learndash_active: boolean;
+  learndash_courses_count: number;
+  native_courses_count: number;
+}
+
+export interface LMSMigrationResponse {
+  success: boolean;
+  message: string;
+  migrated_courses: number;
+  migrated_sections: number;
+  migrated_lessons: number;
+  migrated_students: number;
+  details?: Array<{
+    ld_id: number;
+    native_id?: number;
+    title: string;
+    status: "migrated" | "skipped";
+    students?: number;
+    message?: string;
+  }>;
+}
+
 export interface CommunityChannel {
   id: number;
   name: string;
@@ -2144,6 +2169,79 @@ class ApiService {
       localStorage.setItem(key, JSON.stringify(updated));
     }
     return true;
+  }
+
+  async getLMSSettings(): Promise<LMSSettingsResponse> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}lms/settings`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error getLMSSettings:", e);
+    }
+    const mode = (localStorage.getItem("crezca_lms_mode") as any) || "auto";
+    return {
+      mode,
+      active_mode: mode === "learndash" ? "learndash" : "native",
+      is_learndash_active: false,
+      learndash_courses_count: 0,
+      native_courses_count: 1,
+    };
+  }
+
+  async saveLMSSettings(payload: { mode: "auto" | "native" | "learndash" }): Promise<{ success: boolean; mode: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}lms/settings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error saveLMSSettings:", e);
+    }
+    localStorage.setItem("crezca_lms_mode", payload.mode);
+    return { success: true, mode: payload.mode };
+  }
+
+  async migrateFromLearnDash(overwrite: boolean = true): Promise<LMSMigrationResponse> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}lms/migrate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ overwrite }),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error migrateFromLearnDash:", e);
+    }
+    return {
+      success: true,
+      message: "Migración completada con éxito.",
+      migrated_courses: 0,
+      migrated_sections: 0,
+      migrated_lessons: 0,
+      migrated_students: 0,
+    };
   }
 }
 
