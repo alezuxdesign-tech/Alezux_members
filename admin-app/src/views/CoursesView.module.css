@@ -863,9 +863,18 @@
 }
 
 .moduleCardDragging {
-  opacity: 0.45;
-  border: 1px dashed var(--accent) !important;
-  box-shadow: 0 4px 16px rgba(119, 71, 255, 0.2);
+  opacity: 0.35 !important;
+  border: 2px dashed var(--accent) !important;
+  box-shadow: 0 4px 16px rgba(119, 71, 255, 0.25) !important;
+  transform: scale(0.985);
+}
+
+.moduleCardDropTarget {
+  border: 2px solid var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(119, 71, 255, 0.3), 0 8px 24px rgba(119, 71, 255, 0.2) !important;
+  background: rgba(119, 71, 255, 0.05) !important;
+  transform: scale(1.01);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .moduleDragHandle {
@@ -929,6 +938,13 @@
   padding: var(--space-4);
   background: var(--surface);
   border-bottom: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+
+.moduleHeader:hover {
+  background: var(--surface-raised);
 }
 
 .moduleHeaderOpen {
@@ -1050,6 +1066,19 @@
 .topicRow:hover {
   border-color: var(--border-strong);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.topicRowDragging {
+  opacity: 0.35 !important;
+  border: 1px dashed var(--accent) !important;
+  transform: scale(0.99);
+}
+
+.topicRowDropTarget {
+  border: 2px solid var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(119, 71, 255, 0.3) !important;
+  background: rgba(119, 71, 255, 0.05) !important;
+  transform: scale(1.005);
 }
 
 .dragHandle {

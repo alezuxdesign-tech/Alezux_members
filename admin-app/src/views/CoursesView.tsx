@@ -165,8 +165,15 @@ export function CoursesView() {
   const [editingSubtopicState, setEditingSubtopicState] = useState<EditingSubtopicState | null>(null);
 
   // Drag and Drop state
-  const [draggedLesson, setDraggedLesson] = useState<{ sectionId: string; lessonIndex: number } | null>(null);
+  const [activeDragHandleIndex, setActiveDragHandleIndex] = useState<number | null>(null);
   const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
+  const [dragOverSectionIndex, setDragOverSectionIndex] = useState<number | null>(null);
+
+  const [activeTopicDrag, setActiveTopicDrag] = useState<{ sectionId: string; lessonIndex: number } | null>(null);
+  const [draggedLesson, setDraggedLesson] = useState<{ sectionId: string; lessonIndex: number } | null>(null);
+  const [dragOverTopic, setDragOverTopic] = useState<{ sectionId: string; lessonIndex: number } | null>(null);
+
+  const [isUploadingInstructorAvatar, setIsUploadingInstructorAvatar] = useState(false);
 
   // Modal Detallado de Topic / Lección
   const [editingTopicState, setEditingTopicState] = useState<EditingTopicState | null>(null);
@@ -333,6 +340,28 @@ export function CoursesView() {
     }
   };
 
+  // Subida de imagen de foto de perfil del docente (avatar)
+  const handleUploadInstructorAvatar = async (files: File[]) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const localUrl = URL.createObjectURL(file);
+    setNewInstructorAvatar(localUrl);
+    setIsUploadingInstructorAvatar(true);
+    showToast("info", "Subiendo foto...", "Procesando la imagen del docente.");
+
+    try {
+      const uploadedUrl = await api.uploadMedia(file);
+      if (uploadedUrl) {
+        setNewInstructorAvatar(uploadedUrl);
+        showToast("success", "Foto subida", "La imagen del docente se cargó correctamente.");
+      }
+    } catch {
+      showToast("danger", "Error", "No se pudo subir la foto del docente.");
+    } finally {
+      setIsUploadingInstructorAvatar(false);
+    }
+  };
+
   const handleBackToGrid = () => {
     // Si tenemos cambios locales, refrescamos el curso en la lista principal
     if (selectedCourse) {
@@ -428,9 +457,10 @@ export function CoursesView() {
 
   // --- OPERACIONES DEL CONSTRUCTOR DE MÓDULOS ---
   const handleAddSection = (afterIndex?: number) => {
+    const newSectionId = `sec-${Date.now()}`;
     const newSection: CourseSection = {
-      id: `sec-${Date.now()}`,
-      title: `Nuevo Módulo ${sections.length + 1}`,
+      id: newSectionId,
+      title: "",
       cover: "",
       description: "",
       lessons: [],
@@ -443,6 +473,7 @@ export function CoursesView() {
     } else {
       setSections([...sections, newSection]);
     }
+    setCollapsedSections((prev) => ({ ...prev, [newSectionId]: false }));
     showToast("info", "Módulo añadido", "Se ha creado un nuevo módulo en blanco.");
   };
 
@@ -478,7 +509,7 @@ export function CoursesView() {
       isNew: true,
       topic: {
         id: `top-${Date.now()}`,
-        title: `Lección ${count}: Nueva Clase`,
+        title: "",
         cover: "",
         duration: "15m",
         description: "",
@@ -526,7 +557,7 @@ export function CoursesView() {
       isNew: true,
       subtopic: {
         id: `sub-${Date.now()}`,
-        title: `Parte ${count}: Nueva Sub-clase`,
+        title: "",
         duration: "10m",
         video_url: "",
         description: "",
@@ -736,36 +767,56 @@ export function CoursesView() {
     }
   };
 
-  // --- DRAG AND DROP HANDLERS ---
+  // --- DRAG AND DROP HANDLERS (TOPICS) ---
   const handleDragStart = (sectionId: string, lessonIndex: number) => {
     setDraggedLesson({ sectionId, lessonIndex });
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
+    }
   };
 
   const handleDrop = (targetSectionId: string, targetLessonIndex: number) => {
     if (!draggedLesson) return;
     const { sectionId: sourceSectionId, lessonIndex: sourceLessonIndex } = draggedLesson;
 
+    if (sourceSectionId === targetSectionId && sourceLessonIndex === targetLessonIndex) {
+      setDraggedLesson(null);
+      setDragOverTopic(null);
+      setActiveTopicDrag(null);
+      return;
+    }
+
     const newSections = [...sections];
     const sourceSection = newSections.find((s) => s.id === sourceSectionId);
     const targetSection = newSections.find((s) => s.id === targetSectionId);
 
-    if (!sourceSection || !targetSection) return;
+    if (!sourceSection || !targetSection) {
+      setDraggedLesson(null);
+      setDragOverTopic(null);
+      setActiveTopicDrag(null);
+      return;
+    }
 
     const [movedLesson] = sourceSection.lessons.splice(sourceLessonIndex, 1);
     targetSection.lessons.splice(targetLessonIndex, 0, movedLesson);
 
     setSections(newSections);
     setDraggedLesson(null);
+    setDragOverTopic(null);
+    setActiveTopicDrag(null);
+    showToast("info", "Lección reordenada", `La lección "${movedLesson.title || "sin título"}" fue movida.`);
   };
 
   // --- REORDENACIÓN DE MÓDULOS ---
   const handleDropSection = (targetIndex: number) => {
     if (draggedSectionIndex === null || draggedSectionIndex === targetIndex) {
       setDraggedSectionIndex(null);
+      setDragOverSectionIndex(null);
+      setActiveDragHandleIndex(null);
       return;
     }
     const updated = [...sections];
@@ -773,6 +824,9 @@ export function CoursesView() {
     updated.splice(targetIndex, 0, moved);
     setSections(updated);
     setDraggedSectionIndex(null);
+    setDragOverSectionIndex(null);
+    setActiveDragHandleIndex(null);
+    showToast("info", "Orden de módulos actualizado", `El módulo se movió a la posición ${targetIndex + 1}.`);
   };
 
   const handleMoveSectionUp = (index: number) => {
@@ -936,7 +990,251 @@ export function CoursesView() {
               </Button>
             </div>
 
-            {/* 1. SECCIÓN DE IMÁGENES: PORTADA Y BANNER CON FILEDROPZONE */}
+            {/* 1. INFORMACIÓN DEL CURSO: NOMBRE Y DESCRIPCIÓN */}
+            <div className={styles.settingsGroup}>
+              <h4 className={styles.settingsGroupTitle}>
+                <FileText size={18} /> Información del Curso
+              </h4>
+
+              <div className={styles.formGroup}>
+                <Input
+                  label="Nombre del Curso *"
+                  placeholder="Ej: Master en Marketing Digital & Performance"
+                  value={courseTitle}
+                  onChange={(e) => setCourseTitle(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Descripción Completa del Curso</label>
+                <textarea
+                  placeholder="Describe detalladamente los temas, conocimientos adquiridos y beneficios de este curso..."
+                  value={courseDescription}
+                  onChange={(e) => setCourseDescription(e.target.value)}
+                  className={styles.textarea}
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            {/* 2. COMERCIALIZACIÓN, PRECIO Y ESTADO */}
+            <div className={styles.settingsGroup}>
+              <h4 className={styles.settingsGroupTitle}>
+                <DollarSign size={18} /> Comercialización, Precio y Publicación
+              </h4>
+
+              <div className={styles.pricingAndStatusGrid}>
+                {/* Switch de Curso Gratuito */}
+                <div className={styles.statusToggleBox}>
+                  <label className={styles.label}>Modalidad de Acceso</label>
+                  <div className={styles.switchRow}>
+                    <Switch
+                      checked={isFreeCourse}
+                      onCheckedChange={handleToggleFreeCourse}
+                      id="course-free-switch"
+                    />
+                    <label htmlFor="course-free-switch" className={styles.switchLabel}>
+                      <span className={isFreeCourse ? styles.statusTextActive : styles.statusTextPay}>
+                        {isFreeCourse ? "Curso Gratuito" : "Curso de Pago"}
+                      </span>
+                      <span className={styles.switchSubtext}>
+                        {isFreeCourse
+                          ? "Cualquier alumno registrado puede ingresar sin coste."
+                          : "Requiere un pago para acceder al curso."}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Money Input para Precio del Curso */}
+                <div className={styles.formGroup}>
+                  <MoneyInput
+                    label={`Precio del Curso ${isFreeCourse ? "(Gratuito)" : "($ USD)"}`}
+                    value={Number(coursePrice) || 0}
+                    onChange={(val) => {
+                      setCoursePrice(val);
+                      setPriceInputValue(val.toFixed(2));
+                    }}
+                    disabled={isFreeCourse}
+                    currency="USD"
+                    symbol="$"
+                    placeholder="0.00"
+                    hint={
+                      isFreeCourse
+                        ? "El precio está fijado en $0.00 USD por ser curso gratuito."
+                        : "Formato en USD. Especifica el monto para venta directa."
+                    }
+                  />
+                </div>
+
+                {/* Switch de Publicación en la Plataforma */}
+                <div className={styles.statusToggleBox}>
+                  <label className={styles.label}>Estado en la Plataforma</label>
+                  <div className={styles.switchRow}>
+                    <Switch
+                      checked={courseStatus === "publish"}
+                      onCheckedChange={(checked) => {
+                        const nextStatus = checked ? "publish" : "draft";
+                        setCourseStatus(nextStatus);
+                        showToast(
+                          "info",
+                          checked ? "Curso habilitado" : "Curso en borrador",
+                          checked
+                            ? "El curso ahora está activo y visible para los alumnos."
+                            : "El curso se encuentra en modo borrador y oculto."
+                        );
+                      }}
+                      id="course-status-switch"
+                    />
+                    <label htmlFor="course-status-switch" className={styles.switchLabel}>
+                      <span className={courseStatus === "publish" ? styles.statusTextActive : styles.statusTextDraft}>
+                        {courseStatus === "publish" ? "Habilitado (Público)" : "Deshabilitado (Borrador)"}
+                      </span>
+                      <span className={styles.switchSubtext}>
+                        {courseStatus === "publish"
+                          ? "El curso está activo y disponible para alumnos inscritos."
+                          : "El curso está en modo borrador y oculto en la plataforma."}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. DOCENTES & MENTORES DEL CURSO */}
+            <div className={styles.settingsGroup}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                <h4 className={styles.settingsGroupTitle}>
+                  <Users size={18} /> Docentes & Mentores del Curso ({instructors.length})
+                </h4>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsAddingInstructor(true)}
+                >
+                  <UserPlus size={14} /> Asignar Docente
+                </Button>
+              </div>
+
+              {isAddingInstructor && (
+                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <span className={styles.miniLabel}>Nuevo Docente / Mentor:</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <Input
+                      label="Nombre del Docente *"
+                      placeholder="Ej: Lic. Carlos Gómez"
+                      value={newInstructorName}
+                      onChange={(e) => setNewInstructorName(e.target.value)}
+                    />
+                    <Input
+                      label="Especialidad / Rol"
+                      placeholder="Ej: Especialista en Performance & Growth"
+                      value={newInstructorRole}
+                      onChange={(e) => setNewInstructorRole(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Subida de foto de perfil con File Upload */}
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Foto de Perfil / Avatar del Docente</label>
+                    {newInstructorAvatar ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                        <img
+                          src={newInstructorAvatar}
+                          alt="Avatar preview"
+                          style={{
+                            width: 54,
+                            height: 54,
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                            border: "2px solid var(--border)",
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setNewInstructorAvatar("")}
+                        >
+                          <Trash2 size={13} /> Quitar Foto
+                        </Button>
+                      </div>
+                    ) : null}
+                    <FileDropzone
+                      accept="image/*"
+                      multiple={false}
+                      maxFiles={1}
+                      showList={false}
+                      label={newInstructorAvatar ? "Arrastra otra imagen para reemplazar la foto" : "Arrastra la foto del docente aquí"}
+                      description="o haz clic para buscar en tu equipo (PNG, JPG, WEBP)"
+                      note="Recomendado: Cuadrada (400x400 px)"
+                      onFilesChange={handleUploadInstructorAvatar}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Breve Biografía / Presentación</label>
+                    <textarea
+                      placeholder="Resumen de experiencia profesional o logros del docente..."
+                      value={newInstructorBio}
+                      onChange={(e) => setNewInstructorBio(e.target.value)}
+                      className={styles.textarea}
+                      rows={2}
+                    />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                    <Button variant="ghost" size="sm" onClick={() => { setIsAddingInstructor(false); setNewInstructorAvatar(""); }}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleAddInstructor}
+                      disabled={isUploadingInstructorAvatar}
+                      loading={isUploadingInstructorAvatar}
+                    >
+                      <UserCheck size={14} /> Guardar Docente
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {instructors.length > 0 ? (
+                <div className={styles.instructorsList}>
+                  {instructors.map((inst, idx) => (
+                    <div key={inst.id || idx} className={styles.instructorCard}>
+                      <img
+                        src={inst.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80"}
+                        alt={inst.name}
+                        className={styles.instructorAvatar}
+                      />
+                      <div className={styles.instructorInfo}>
+                        <span className={styles.instructorName}>{inst.name}</span>
+                        <span className={styles.instructorRole}>{inst.role || "Docente"}</span>
+                        {inst.bio && (
+                          <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                            {inst.bio}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.deleteBtn}
+                        onClick={() => handleDeleteInstructor(idx)}
+                        title="Quitar docente"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.switchSubtext}>
+                  No hay docentes asignados a este curso todavía. Haz clic en "Asignar Docente" para añadir al profesor principal.
+                </p>
+              )}
+            </div>
+
+            {/* 4. IMÁGENES PRINCIPALES DEL CURSO: PORTADA Y BANNER */}
             <div className={styles.settingsGroup}>
               <h4 className={styles.settingsGroupTitle}>
                 <ImageIcon size={18} /> Imágenes Principales del Curso
@@ -1035,212 +1333,6 @@ export function CoursesView() {
               </div>
             </div>
 
-            {/* 2. SECCIÓN DE INFORMACIÓN BÁSICA: NOMBRE Y DESCRIPCIÓN */}
-            <div className={styles.settingsGroup}>
-              <h4 className={styles.settingsGroupTitle}>
-                <FileText size={18} /> Información del Curso
-              </h4>
-
-              <div className={styles.formGroup}>
-                <Input
-                  label="Nombre del Curso *"
-                  placeholder="Ej: Master en Marketing Digital & Performance"
-                  value={courseTitle}
-                  onChange={(e) => setCourseTitle(e.target.value)}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Descripción Completa del Curso</label>
-                <textarea
-                  placeholder="Describe detalladamente los temas, conocimientos adquiridos y beneficios de este curso..."
-                  value={courseDescription}
-                  onChange={(e) => setCourseDescription(e.target.value)}
-                  className={styles.textarea}
-                  rows={4}
-                />
-              </div>
-            </div>
-
-            {/* 3. COMERCIALIZACIÓN, PRECIO Y ESTADO */}
-            <div className={styles.settingsGroup}>
-              <h4 className={styles.settingsGroupTitle}>
-                <DollarSign size={18} /> Comercialización, Precio y Publicación
-              </h4>
-
-              <div className={styles.pricingAndStatusGrid}>
-                {/* Switch de Curso Gratuito */}
-                <div className={styles.statusToggleBox}>
-                  <label className={styles.label}>Modalidad de Acceso</label>
-                  <div className={styles.switchRow}>
-                    <Switch
-                      checked={isFreeCourse}
-                      onCheckedChange={handleToggleFreeCourse}
-                      id="course-free-switch"
-                    />
-                    <label htmlFor="course-free-switch" className={styles.switchLabel}>
-                      <span className={isFreeCourse ? styles.statusTextActive : styles.statusTextPay}>
-                        {isFreeCourse ? "Curso Gratuito" : "Curso de Pago"}
-                      </span>
-                      <span className={styles.switchSubtext}>
-                        {isFreeCourse
-                          ? "Cualquier alumno registrado puede ingresar sin coste."
-                          : "Requiere un pago para acceder al curso."}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Money Input para Precio del Curso */}
-                <div className={styles.formGroup}>
-                  <MoneyInput
-                    label={`Precio del Curso ${isFreeCourse ? "(Gratuito)" : "($ USD)"}`}
-                    value={Number(coursePrice) || 0}
-                    onChange={(val) => {
-                      setCoursePrice(val);
-                      setPriceInputValue(val.toFixed(2));
-                    }}
-                    disabled={isFreeCourse}
-                    currency="USD"
-                    symbol="$"
-                    placeholder="0.00"
-                    hint={
-                      isFreeCourse
-                        ? "El precio está fijado en $0.00 USD por ser curso gratuito."
-                        : "Formato en USD. Especifica el monto para venta directa."
-                    }
-                  />
-                </div>
-
-                {/* Switch de Publicación en la Plataforma */}
-                <div className={styles.statusToggleBox}>
-                  <label className={styles.label}>Estado en la Plataforma</label>
-                  <div className={styles.switchRow}>
-                    <Switch
-                      checked={courseStatus === "publish"}
-                      onCheckedChange={(checked) => {
-                        const nextStatus = checked ? "publish" : "draft";
-                        setCourseStatus(nextStatus);
-                        showToast(
-                          "info",
-                          checked ? "Curso habilitado" : "Curso en borrador",
-                          checked
-                            ? "El curso ahora está activo y visible para los alumnos."
-                            : "El curso se encuentra en modo borrador y oculto."
-                        );
-                      }}
-                      id="course-status-switch"
-                    />
-                    <label htmlFor="course-status-switch" className={styles.switchLabel}>
-                      <span className={courseStatus === "publish" ? styles.statusTextActive : styles.statusTextDraft}>
-                        {courseStatus === "publish" ? "Habilitado (Público)" : "Deshabilitado (Borrador)"}
-                      </span>
-                      <span className={styles.switchSubtext}>
-                        {courseStatus === "publish"
-                          ? "El curso está activo y disponible para alumnos inscritos."
-                          : "El curso está en modo borrador y oculto en la plataforma."}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 4. SECCIÓN DE DOCENTES / MENTORES DEL CURSO */}
-            <div className={styles.settingsGroup}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                <h4 className={styles.settingsGroupTitle}>
-                  <Users size={18} /> Docentes & Mentores del Curso ({instructors.length})
-                </h4>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsAddingInstructor(true)}
-                >
-                  <UserPlus size={14} /> Asignar Docente
-                </Button>
-              </div>
-
-              {isAddingInstructor && (
-                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-                  <span className={styles.miniLabel}>Nuevo Docente / Mentor:</span>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <Input
-                      label="Nombre del Docente *"
-                      placeholder="Ej: Lic. Carlos Gómez"
-                      value={newInstructorName}
-                      onChange={(e) => setNewInstructorName(e.target.value)}
-                    />
-                    <Input
-                      label="Especialidad / Rol"
-                      placeholder="Ej: Especialista en Performance & Growth"
-                      value={newInstructorRole}
-                      onChange={(e) => setNewInstructorRole(e.target.value)}
-                    />
-                  </div>
-                  <Input
-                    label="URL de Foto de Perfil / Avatar"
-                    placeholder="https://... (o deja en blanco para avatar predeterminado)"
-                    value={newInstructorAvatar}
-                    onChange={(e) => setNewInstructorAvatar(e.target.value)}
-                  />
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Breve Biografía / Presentación</label>
-                    <textarea
-                      placeholder="Resumen de experiencia profesional o logros del docente..."
-                      value={newInstructorBio}
-                      onChange={(e) => setNewInstructorBio(e.target.value)}
-                      className={styles.textarea}
-                      rows={2}
-                    />
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                    <Button variant="ghost" size="sm" onClick={() => setIsAddingInstructor(false)}>
-                      Cancelar
-                    </Button>
-                    <Button variant="primary" size="sm" onClick={handleAddInstructor}>
-                      <UserCheck size={14} /> Guardar Docente
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {instructors.length > 0 ? (
-                <div className={styles.instructorsList}>
-                  {instructors.map((inst, idx) => (
-                    <div key={inst.id || idx} className={styles.instructorCard}>
-                      <img
-                        src={inst.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80"}
-                        alt={inst.name}
-                        className={styles.instructorAvatar}
-                      />
-                      <div className={styles.instructorInfo}>
-                        <span className={styles.instructorName}>{inst.name}</span>
-                        <span className={styles.instructorRole}>{inst.role || "Docente"}</span>
-                        {inst.bio && (
-                          <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                            {inst.bio}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className={styles.deleteBtn}
-                        onClick={() => handleDeleteInstructor(idx)}
-                        title="Quitar docente"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className={styles.switchSubtext}>
-                  No hay docentes asignados a este curso todavía. Haz clic en "Asignar Docente" para añadir al profesor principal.
-                </p>
-              )}
-            </div>
-
             {/* Footer con botón de guardado */}
             <div className={styles.settingsFooter}>
               <Button variant="secondary" onClick={() => setBuilderTab("curriculum")}>
@@ -1268,12 +1360,42 @@ export function CoursesView() {
                   className={[
                     styles.moduleCard,
                     draggedSectionIndex === sIdx ? styles.moduleCardDragging : "",
-                  ].join(" ")}
-                  onDragOver={(e) => {
-                    if (draggedSectionIndex !== null) e.preventDefault();
+                    dragOverSectionIndex === sIdx && draggedSectionIndex !== sIdx ? styles.moduleCardDropTarget : "",
+                  ].filter(Boolean).join(" ")}
+                  draggable={activeDragHandleIndex === sIdx}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", `${sIdx}`);
+                    e.dataTransfer.effectAllowed = "move";
+                    setDraggedSectionIndex(sIdx);
                   }}
-                  onDrop={() => {
-                    if (draggedSectionIndex !== null) handleDropSection(sIdx);
+                  onDragOver={(e) => {
+                    if (draggedSectionIndex !== null) {
+                      e.preventDefault();
+                      if (e.dataTransfer) {
+                        e.dataTransfer.dropEffect = "move";
+                      }
+                      if (dragOverSectionIndex !== sIdx) {
+                        setDragOverSectionIndex(sIdx);
+                      }
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverSectionIndex === sIdx) {
+                      setDragOverSectionIndex(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggedSectionIndex !== null) {
+                      handleDropSection(sIdx);
+                    }
+                    setDragOverSectionIndex(null);
+                    setActiveDragHandleIndex(null);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedSectionIndex(null);
+                    setDragOverSectionIndex(null);
+                    setActiveDragHandleIndex(null);
                   }}
                 >
                   {/* Encabezado del Módulo con Portada de Módulo */}
@@ -1282,18 +1404,27 @@ export function CoursesView() {
                       styles.moduleHeader,
                       !isCollapsed ? styles.moduleHeaderOpen : "",
                     ].join(" ")}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (
+                        target.closest("input") ||
+                        target.closest("button") ||
+                        target.closest(`.${styles.moduleHeaderCover}`) ||
+                        target.closest(`.${styles.moduleDragHandle}`) ||
+                        target.closest(`.${styles.reorderButtons}`)
+                      ) {
+                        return;
+                      }
+                      toggleSectionCollapse(section.id);
+                    }}
                   >
                     <div className={styles.moduleHeaderLeft}>
                       {/* Drag Handle para reordenar módulo */}
                       <div
                         className={styles.moduleDragHandle}
-                        draggable
-                        onDragStart={(e) => {
-                          e.stopPropagation();
-                          setDraggedSectionIndex(sIdx);
-                        }}
-                        onDragEnd={() => setDraggedSectionIndex(null)}
-                        title="Arrastrar para cambiar el orden de este módulo"
+                        onMouseDown={() => setActiveDragHandleIndex(sIdx)}
+                        onMouseUp={() => setActiveDragHandleIndex(null)}
+                        title="Mantén presionado y arrastra para cambiar el orden de este módulo"
                       >
                         <GripVertical size={16} />
                       </div>
@@ -1323,7 +1454,10 @@ export function CoursesView() {
                       <button
                         type="button"
                         className={styles.collapseBtn}
-                        onClick={() => toggleSectionCollapse(section.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSectionCollapse(section.id);
+                        }}
                         title={isCollapsed ? "Expandir módulo" : "Colapsar módulo"}
                       >
                         {isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
@@ -1403,15 +1537,53 @@ export function CoursesView() {
                         section.lessons.map((lesson, lIdx) => (
                           <div key={lesson.id} className={styles.topicItemGroup}>
                             <div
-                              className={styles.topicRow}
-                              draggable
-                            onDragStart={() => handleDragStart(section.id, lIdx)}
-                            onDragOver={handleDragOver}
-                            onDrop={() => handleDrop(section.id, lIdx)}
-                          >
-                            <div className={styles.dragHandle} title="Arrastrar para reordenar">
-                              <GripVertical size={16} />
-                            </div>
+                              className={[
+                                styles.topicRow,
+                                draggedLesson?.sectionId === section.id && draggedLesson?.lessonIndex === lIdx
+                                  ? styles.topicRowDragging
+                                  : "",
+                                dragOverTopic?.sectionId === section.id && dragOverTopic?.lessonIndex === lIdx
+                                  ? styles.topicRowDropTarget
+                                  : "",
+                              ].filter(Boolean).join(" ")}
+                              draggable={activeTopicDrag?.sectionId === section.id && activeTopicDrag?.lessonIndex === lIdx}
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData("text/plain", `${section.id}:${lIdx}`);
+                                e.dataTransfer.effectAllowed = "move";
+                                handleDragStart(section.id, lIdx);
+                              }}
+                              onDragOver={(e) => {
+                                if (draggedLesson) {
+                                  e.preventDefault();
+                                  if (e.dataTransfer) {
+                                    e.dataTransfer.dropEffect = "move";
+                                  }
+                                  setDragOverTopic({ sectionId: section.id, lessonIndex: lIdx });
+                                }
+                              }}
+                              onDragLeave={() => {
+                                setDragOverTopic(null);
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                handleDrop(section.id, lIdx);
+                                setDragOverTopic(null);
+                                setActiveTopicDrag(null);
+                              }}
+                              onDragEnd={() => {
+                                setDraggedLesson(null);
+                                setDragOverTopic(null);
+                                setActiveTopicDrag(null);
+                              }}
+                            >
+                              <div
+                                className={styles.dragHandle}
+                                onMouseDown={() => setActiveTopicDrag({ sectionId: section.id, lessonIndex: lIdx })}
+                                onMouseUp={() => setActiveTopicDrag(null)}
+                                title="Mantén presionado y arrastra para reordenar"
+                              >
+                                <GripVertical size={16} />
+                              </div>
 
                             {/* Portada / Miniatura del Topic */}
                             {lesson.cover ? (
