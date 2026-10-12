@@ -31,7 +31,6 @@ import {
   HelpCircle,
   UserPlus,
   UserCheck,
-  Cpu,
   ArrowRightLeft,
   Sparkles,
   RefreshCw,
@@ -2449,15 +2448,16 @@ export function CoursesView() {
             Administra tus formaciones en cuadrícula, crea módulos y gestiona cada lección con sus videos y recursos.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Button
-            variant="secondary"
-            onClick={() => setIsLmsModalOpen(true)}
-            title="Configurar motor LMS o migrar cursos desde LearnDash"
-          >
-            <Cpu size={15} />
-            <span>Motor: {lmsSettings?.mode === "native" ? "Crezca LMS" : lmsSettings?.mode === "learndash" ? "LearnDash" : "Auto"}</span>
-          </Button>
+        <div className={styles.topHeaderActions}>
+          <div className={styles.searchWrap}>
+            <Input
+              sizeVariant="md"
+              leftIcon={<Search size={16} />}
+              placeholder="Buscar curso por nombre o descripción..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <Button variant="primary" onClick={() => setIsNewCourseModalOpen(true)}>
             <Plus size={16} /> Crear Nuevo Curso
           </Button>
@@ -2500,42 +2500,29 @@ export function CoursesView() {
         </div>
       )}
 
-      {/* Barra de Controles y Búsqueda */}
-      <div className={styles.controlsBar}>
-        <div className={styles.searchBox}>
-          <Search size={16} className={styles.searchIcon} />
-          <input
-            type="text"
-            placeholder="Buscar curso por nombre o descripción..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={styles.searchInput}
-          />
-        </div>
-
-        <div className={styles.filterTabs}>
-          <button
-            type="button"
-            className={[styles.filterBtn, statusFilter === "all" ? styles.filterTabActive : ""].join(" ")}
-            onClick={() => setStatusFilter("all")}
-          >
-            Todos ({courses.length})
-          </button>
-          <button
-            type="button"
-            className={[styles.filterBtn, statusFilter === "publish" ? styles.filterTabActive : ""].join(" ")}
-            onClick={() => setStatusFilter("publish")}
-          >
-            Publicados ({courses.filter((c) => c.status === "publish").length})
-          </button>
-          <button
-            type="button"
-            className={[styles.filterBtn, statusFilter === "draft" ? styles.filterTabActive : ""].join(" ")}
-            onClick={() => setStatusFilter("draft")}
-          >
-            Borradores ({courses.filter((c) => c.status === "draft").length})
-          </button>
-        </div>
+      {/* Pestañas de Filtro de Estado (Tags sueltos sin card) */}
+      <div className={styles.filterTabs}>
+        <button
+          type="button"
+          className={[styles.filterBtn, statusFilter === "all" ? styles.filterTabActive : ""].join(" ")}
+          onClick={() => setStatusFilter("all")}
+        >
+          Todos ({courses.length})
+        </button>
+        <button
+          type="button"
+          className={[styles.filterBtn, statusFilter === "publish" ? styles.filterTabActive : ""].join(" ")}
+          onClick={() => setStatusFilter("publish")}
+        >
+          Publicados ({courses.filter((c) => c.status === "publish").length})
+        </button>
+        <button
+          type="button"
+          className={[styles.filterBtn, statusFilter === "draft" ? styles.filterTabActive : ""].join(" ")}
+          onClick={() => setStatusFilter("draft")}
+        >
+          Borradores ({courses.filter((c) => c.status === "draft").length})
+        </button>
       </div>
 
       {/* Grid de Tarjetas de Cursos */}

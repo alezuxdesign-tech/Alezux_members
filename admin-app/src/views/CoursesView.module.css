@@ -34,58 +34,27 @@
 /* ==========================================================================
    VISTA 1: CATÁLOGO EN GRID DE CURSOS
    ========================================================================== */
-.controlsBar {
+.topHeaderActions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3);
   flex-wrap: wrap;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  padding: var(--space-3) var(--space-4);
 }
 
-.searchBox {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  background: var(--surface-muted);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-control);
-  padding: 0 var(--space-3);
-  height: 40px;
+.searchWrap {
   width: 320px;
   max-width: 100%;
 }
 
-.searchIcon {
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.searchInput {
-  background: transparent;
-  border: none;
-  color: var(--foreground);
-  font-size: var(--text-sm);
-  width: 100%;
-  outline: none;
-  font-family: inherit;
-}
-
-.searchInput::placeholder {
-  color: var(--text-muted);
-}
-
 .filterTabs {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   background: var(--surface-muted);
   border-radius: var(--radius-pill);
   padding: 3px;
   border: 1px solid var(--border-subtle);
+  width: fit-content;
 }
 
 .filterBtn {
