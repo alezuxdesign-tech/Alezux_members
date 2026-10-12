@@ -432,7 +432,7 @@ export function InstructorsView() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setDeleteConfirm({ id: inst.id, name: inst.name })}
+                      onClick={() => setDeleteConfirm({ id: inst.id, name: inst.name || "este docente" })}
                       title="Eliminar docente"
                     >
                       <Trash2 size={13} />
@@ -673,7 +673,7 @@ export function InstructorsView() {
             </div>
             <div>
               <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--foreground)", lineHeight: 1.5 }}>
-                ¿Estás seguro de que deseas desvincular a <strong>{deleteConfirm.name}</strong> del directorio de docentes?
+                ¿Estás seguro de que deseas desvincular a {deleteConfirm.name?.trim() ? <strong>"{deleteConfirm.name}"</strong> : "este docente"} del directorio de docentes?
                 Esta acción no eliminará los cursos que imparte, pero dejará de figurar como mentor oficial.
               </p>
             </div>
