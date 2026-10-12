@@ -1451,7 +1451,8 @@
   display: grid;
   grid-template-columns: 1fr 380px;
   flex: 1;
-  align-items: start;
+  align-items: stretch;
+  min-height: calc(100vh - 60px);
 }
 
 @media (max-width: 1024px) {
@@ -1544,12 +1545,12 @@
 /* Fila de Título y Acción de la Lección */
 .topicActionHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
   flex-wrap: wrap;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border);
 }
 
 .topicMetaInfo {
@@ -1558,29 +1559,54 @@
   gap: 4px;
 }
 
-.topicModuleSubtitle {
-  font-size: 12px;
-  color: var(--accent, #7747ff);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .activeTopicTitle {
   font-size: 24px;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--foreground);
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
-.topicDurationBadge {
+/* Grupo unificado de botones de acción en la cabecera */
+.topicActionsButtonGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.classroomNavBtn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #94a3b8;
-  margin-top: 4px;
+  gap: 6px;
+  padding: 9px 16px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 8px);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast, 0.15s) ease;
+}
+
+.classroomNavBtn:hover {
+  background: var(--surface-raised);
+  color: var(--foreground);
+  border-color: var(--border-strong);
+}
+
+.classroomNavBtnNext {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.classroomNavBtnNext:hover {
+  opacity: 0.92;
+  border-color: var(--accent);
+  color: #ffffff;
 }
 
 /* Botón de Marcar Completado */
@@ -1588,15 +1614,15 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 9px 16px;
   background: var(--surface-muted);
   color: var(--foreground);
   border: 1px solid var(--border);
   border-radius: var(--radius-control, 8px);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 0.15s) ease;
 }
 
 .completeToggleBtn:hover {
@@ -1608,75 +1634,23 @@
   background: rgba(13, 184, 121, 0.12);
   border-color: rgba(13, 184, 121, 0.35);
   color: #0db879;
-}
-
-/* Fila Anterior / Siguiente */
-.prevNextNavRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.prevNextBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: #12141a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 10px 16px;
-  color: #ffffff;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  max-width: 280px;
-}
-
-.prevNextBtn:hover {
-  background: #1a1e27;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.prevNextBtnInfo {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-}
-
-.prevNextBtnInfo small {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: #94a3b8;
-  letter-spacing: 0.04em;
-}
-
-.prevNextBtnInfo span {
-  font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 220px;
 }
 
-.nextBtn .prevNextBtnInfo {
-  align-items: flex-end;
-  text-align: right;
-}
-
-/* Tabs de Descripción y Archivos */
+/* Tabs de Descripción y Archivos (Arc Design Tokens) */
 .topicTabsContainer {
-  background: #11141c;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel, 14px);
   overflow: hidden;
+  box-shadow: var(--shadow-resting);
 }
 
 .topicTabsList {
   display: flex;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: #161923;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-muted);
+  overflow-x: auto;
 }
 
 .topicTabBtn {
@@ -1687,36 +1661,40 @@
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast, 0.15s) ease;
+  white-space: nowrap;
 }
 
 .topicTabBtn:hover {
-  color: #ffffff;
+  color: var(--foreground);
+  background: var(--surface-raised);
 }
 
 .topicTabBtnActive {
-  color: var(--accent, #7747ff);
-  border-bottom-color: var(--accent, #7747ff);
-  background: rgba(255, 255, 255, 0.02);
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+  background: var(--surface) !important;
+  font-weight: 600;
 }
 
 .topicTabBody {
   padding: 24px;
+  background: var(--surface);
 }
 
 .topicDescriptionBox p {
-  color: #cbd5e1;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.65;
   margin: 0;
 }
 
 .noContentText {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 13px;
   font-style: italic;
   margin: 0;
@@ -1732,26 +1710,26 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #1a1e27;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 8px);
   padding: 12px 16px;
-  color: #ffffff;
+  color: var(--foreground);
   text-decoration: none;
   transition: all 0.15s ease;
 }
 
 .fileDownloadItem:hover {
-  background: #222632;
-  border-color: var(--accent, #7747ff);
+  background: var(--surface-raised);
+  border-color: var(--accent);
 }
 
 .fileIconWrapper {
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  background: var(--accent-subtle, rgba(119, 71, 255, 0.15));
-  color: var(--accent, #7747ff);
+  background: rgba(var(--accent-rgb, 119, 71, 255), 0.12);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1765,11 +1743,12 @@
 .fileName {
   font-size: 13px;
   font-weight: 600;
+  color: var(--foreground);
 }
 
 .fileSize {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 /* Columna Lateral Derecha (Temario del Módulo) */
@@ -1782,8 +1761,10 @@
   gap: 14px;
   position: sticky;
   top: 60px;
-  max-height: calc(100vh - 60px);
+  height: calc(100vh - 60px);
+  min-height: calc(100vh - 60px);
   overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .sidebarHeaderCard {
@@ -1794,6 +1775,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .sidebarHeaderTop {
@@ -2034,9 +2016,11 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
-  border-radius: var(--radius-control, 10px);
+  border-radius: var(--radius-control, 12px);
   overflow: hidden;
   background: var(--surface-muted);
+  flex: 1;
+  min-height: 240px;
 }
 
 .topicAccordionHeader {
@@ -2047,6 +2031,7 @@
   cursor: pointer;
   transition: background 0.15s ease;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .topicAccordionHeader:hover {
@@ -2087,9 +2072,25 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 6px 8px 10px;
+  padding: 8px;
   border-top: 1px solid var(--border-subtle);
   background: var(--surface);
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Tarjeta contenedora para temas simples SIN subtopics */
+.topicSimpleListCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 12px);
+  background: var(--surface);
+  padding: 8px;
+  flex: 1;
+  min-height: 240px;
+  overflow-y: auto;
 }
 
 /* Otros Módulos */
