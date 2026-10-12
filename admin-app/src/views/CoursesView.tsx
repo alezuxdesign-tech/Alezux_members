@@ -225,24 +225,27 @@ export function CoursesView() {
     }
   };
 
-  const handleMigrateFromLearnDash = async () => {
-    const confirm = window.confirm(
-      "¿Deseas migrar todos tus cursos de LearnDash a Crezca LMS?\n\nSe crearán copias nativas en Crezca con sus módulos, lecciones, temas y alumnos matriculados. Los cursos originales de LearnDash no se verán afectados."
-    );
-    if (!confirm) return;
+  const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
 
+  const handleOpenMigrateModal = () => {
+    setIsMigrationModalOpen(true);
+  };
+
+  const confirmAndExecuteMigration = async () => {
     setIsMigrating(true);
     try {
       const res = await api.migrateFromLearnDash(true);
       setMigrationResult(res);
+      setIsMigrationModalOpen(false);
       if (res.success) {
-        showToast("success", "Migración completada", res.message);
+        showToast("success", "Migración completada con éxito", res.message);
         await loadLmsSettings();
         await loadCourses();
       } else {
         showToast("warning", "Aviso de migración", res.message);
       }
     } catch {
+      setIsMigrationModalOpen(false);
       showToast("danger", "Error", "Ocurrió un error al migrar los cursos.");
     } finally {
       setIsMigrating(false);
@@ -2479,7 +2482,7 @@ export function CoursesView() {
             <Button
               variant="primary"
               size="sm"
-              onClick={handleMigrateFromLearnDash}
+              onClick={handleOpenMigrateModal}
               disabled={isMigrating}
             >
               {isMigrating ? <RefreshCw size={13} /> : <ArrowRightLeft size={13} />}
@@ -2822,7 +2825,7 @@ export function CoursesView() {
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={handleMigrateFromLearnDash}
+                  onClick={handleOpenMigrateModal}
                   disabled={isMigrating || (lmsSettings?.learndash_courses_count ?? 0) === 0}
                 >
                   {isMigrating ? <RefreshCw size={13} /> : <ArrowRightLeft size={13} />}
@@ -2841,6 +2844,72 @@ export function CoursesView() {
                   </Alert>
                 </div>
               )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Arc de Confirmación de Migración de Cursos */}
+      {isMigrationModalOpen && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            if (!isMigrating) setIsMigrationModalOpen(false);
+          }}
+          title="Migrar Cursos a Crezca LMS"
+          maxWidth="520px"
+          footer={
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => setIsMigrationModalOpen(false)}
+                disabled={isMigrating}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={confirmAndExecuteMigration}
+                disabled={isMigrating}
+              >
+                {isMigrating ? (
+                  <>
+                    <RefreshCw size={14} className="spin" /> Migrando cursos...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightLeft size={14} /> Confirmar e Iniciar
+                  </>
+                )}
+              </Button>
+            </>
+          }
+        >
+          <div className={styles.migrationConfirmBody}>
+            <div className={styles.migrationConfirmIconWrap}>
+              <ArrowRightLeft size={22} />
+            </div>
+            <div className={styles.migrationConfirmContent}>
+              <h4 className={styles.migrationConfirmTitle}>
+                ¿Deseas migrar todos tus cursos de LearnDash a Crezca LMS?
+              </h4>
+              <p className={styles.migrationConfirmDesc}>
+                Se crearán copias nativas en Crezca con sus módulos, lecciones, temas y alumnos matriculados. Los cursos originales de LearnDash <strong>no se verán afectados ni se borrarán</strong>.
+              </p>
+              <div className={styles.migrationConfirmList}>
+                <div className={styles.migrationConfirmItem}>
+                  <Check size={14} className={styles.migrationConfirmItemIcon} />
+                  <span>Conserva videos, descripciones y archivos descargables</span>
+                </div>
+                <div className={styles.migrationConfirmItem}>
+                  <Check size={14} className={styles.migrationConfirmItemIcon} />
+                  <span>Transfiere el progreso de lecciones de los estudiantes</span>
+                </div>
+                <div className={styles.migrationConfirmItem}>
+                  <Check size={14} className={styles.migrationConfirmItemIcon} />
+                  <span>Permite operar de forma 100% independiente sin LearnDash</span>
+                </div>
+              </div>
             </div>
           </div>
         </Modal>

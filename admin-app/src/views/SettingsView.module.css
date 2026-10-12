@@ -473,3 +473,68 @@
   width: calc(100% - 48px);
   pointer-events: auto;
 }
+
+.migrationConfirmBody {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 8px 0;
+}
+
+.migrationConfirmIconWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-control, 10px);
+  background: rgba(119, 71, 255, 0.15);
+  color: var(--accent, #7747ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(119, 71, 255, 0.3);
+}
+
+.migrationConfirmContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.migrationConfirmTitle {
+  font-size: var(--text-base, 15px);
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.migrationConfirmDesc {
+  font-size: var(--text-sm, 13px);
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.migrationConfirmList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 10px 14px;
+  background: var(--surface-muted, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-control, 8px);
+}
+
+.migrationConfirmItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--foreground, #e2e8f0);
+}
+
+.migrationConfirmItemIcon {
+  color: #0db879;
+  flex-shrink: 0;
+}
