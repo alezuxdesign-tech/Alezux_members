@@ -36,6 +36,19 @@
   min-width: 76px;
 }
 
+:global(body.transparent-sidebar) .sidebar {
+  background: rgba(18, 18, 24, 0.72) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+:global(body.transparent-sidebar[data-theme="light"]) .sidebar,
+:global(html[data-theme="light"] body.transparent-sidebar) .sidebar {
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
 .collapsedHeaderBtn {
   display: flex;
   align-items: center;

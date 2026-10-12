@@ -210,6 +210,14 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     localStorage.setItem("crezca_theme", theme);
     localStorage.setItem("crezca_accent", accent);
 
+    const isTransparent = localStorage.getItem("crezca_transparent_sidebar") === "true";
+    document.body.classList.toggle("transparent-sidebar", isTransparent);
+
+    const tableDensity = localStorage.getItem("crezca_table_density");
+    if (tableDensity) {
+      document.body.dataset.tableDensity = tableDensity;
+    }
+
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
