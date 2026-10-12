@@ -1,14 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { 
   Play, 
   Lock, 
-  Search, 
+  Unlock, 
   BookOpen, 
-  CheckCircle2, 
-  Sparkles, 
-  ArrowRight,
-  ShieldCheck,
-  Eye,
+  CreditCard,
   GraduationCap
 } from "lucide-react";
 import { Course, StudentProfile } from "../../services/api";
@@ -18,71 +14,31 @@ interface StudentCatalogViewProps {
   courses: Course[];
   profile: StudentProfile;
   onSelectCourse: (course: Course) => void;
-  onOpenProfile: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
   courses,
   profile,
   onSelectCourse,
-  onOpenProfile,
 }) => {
-  const [search, setSearch] = useState("");
-
-  const filteredCourses = courses.filter((c) =>
-    c.title.toLowerCase().includes(search.toLowerCase()) ||
-    c.description?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const myCourses = filteredCourses.filter((c) => c.hasAccess);
-  const catalogCourses = filteredCourses.filter((c) => !c.hasAccess);
+  const myCourses = courses.filter((c) => c.hasAccess);
+  const catalogCourses = courses.filter((c) => !c.hasAccess);
 
   return (
     <div className={styles.catalogContainer}>
-      {/* Banner de Bienvenida del Campus */}
-      <div className={styles.heroWelcomeCard}>
-        <div className={styles.heroWelcomeContent}>
-          <div className={styles.welcomeTag}>
-            <GraduationCap size={15} />
-            <span>Campus Virtual</span>
-          </div>
-          <h1 className={styles.welcomeTitle}>
-            ¡Hola, {profile.name}! Continúa tu aprendizaje hoy
-          </h1>
-          <p className={styles.welcomeDesc}>
-            Accede a tus formaciones habilitadas, visualiza las lecciones y descarga los materiales de estudio.
-          </p>
-
-          <div className={styles.searchBarWrapper}>
-            <Search size={16} className={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder="Buscar curso, temario o lección..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className={styles.catalogSearchInput}
-            />
-          </div>
+      {/* Encabezado Limpio del Campus Virtual */}
+      <div className={styles.catalogCleanHeader}>
+        <div className={styles.welcomeTag}>
+          <GraduationCap size={15} />
+          <span>Campus Virtual</span>
         </div>
-
-        <div className={styles.heroWelcomeBadge}>
-          <div className={styles.membershipPill}>
-            <ShieldCheck size={16} className={styles.shieldIcon} />
-            <span>{profile.planName}</span>
-          </div>
-          <button 
-            type="button" 
-            className={styles.profileShortcutBtn}
-            onClick={onOpenProfile}
-          >
-            <img 
-              src={profile.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"} 
-              alt={profile.name} 
-              className={styles.shortcutAvatar} 
-            />
-            <span>Mi Perfil</span>
-          </button>
-        </div>
+        <h1 className={styles.welcomeTitle}>
+          Hola, {profile.name}, completa tu aprendizaje hoy
+        </h1>
+        <p className={styles.welcomeDesc}>
+          Accede a tus formaciones habilitadas, visualiza las lecciones y descarga los materiales de estudio.
+        </p>
       </div>
 
       {/* 1. SECCIÓN: MIS CURSOS ACTIVOS (Habilitados) */}
@@ -100,7 +56,7 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
         {myCourses.length === 0 ? (
           <div className={styles.emptyCard}>
             <BookOpen size={36} className={styles.emptyIcon} />
-            <h3>No tienes cursos habilitados con este criterio de búsqueda</h3>
+            <h3>Aún no tienes cursos activos</h3>
             <p>Revisa el catálogo disponible a continuación para inscribirte en nuevas formaciones.</p>
           </div>
         ) : (
@@ -115,9 +71,8 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
                       alt={course.title}
                       className={styles.courseCoverImg}
                     />
-                    <div className={styles.coverBadgeUnlocked}>
-                      <CheckCircle2 size={13} />
-                      <span>Acceso Habilitado</span>
+                    <div className={`${styles.coverLockCircle} ${styles.unlocked}`} title="Acceso Habilitado">
+                      <Unlock size={16} />
                     </div>
                   </div>
 
@@ -148,7 +103,7 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
                         onClick={() => onSelectCourse(course)}
                       >
                         <Play size={14} fill="currentColor" />
-                        <span>Continuar Curso</span>
+                        <span>Continuar con el curso</span>
                       </button>
                     </div>
                   </div>
@@ -183,15 +138,9 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
                       alt={course.title}
                       className={styles.courseCoverImg}
                     />
-                    <div className={styles.coverBadgeLocked}>
-                      <Lock size={13} />
-                      <span>Acceso Disponible</span>
+                    <div className={`${styles.coverLockCircle} ${styles.locked}`} title="Acceso no habilitado">
+                      <Lock size={16} />
                     </div>
-                    {course.price ? (
-                      <span className={styles.pricePill}>
-                        ${course.price} USD
-                      </span>
-                    ) : null}
                   </div>
 
                   <div className={styles.courseBody}>
@@ -206,31 +155,34 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
                         <span>{moduleCount} {moduleCount === 1 ? "módulo" : "módulos"}</span>
                       </span>
                       <span className={styles.previewNotice}>
-                        Temario visible para explorar
+                        Temario disponible
+                      </span>
+                    </div>
+
+                    {/* Precio del Curso */}
+                    <div className={styles.coursePriceContainer}>
+                      <span className={styles.coursePriceLabel}>Precio del curso:</span>
+                      <span className={styles.coursePriceValue}>
+                        ${course.price || 49} USD
                       </span>
                     </div>
 
                     <div className={styles.courseFooterLocked}>
                       <button
                         type="button"
-                        className={styles.exploreCurriculumBtn}
-                        onClick={() => onSelectCourse(course)}
+                        className={styles.buyCourseBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (course.checkoutUrl) {
+                            window.open(course.checkoutUrl, "_blank");
+                          } else {
+                            onSelectCourse(course);
+                          }
+                        }}
                       >
-                        <Eye size={14} />
-                        <span>Ver contenido</span>
+                        <CreditCard size={14} />
+                        <span>Comprar curso</span>
                       </button>
-                      {course.checkoutUrl && (
-                        <a
-                          href={course.checkoutUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={styles.buyShortcutBtn}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span>Comprar</span>
-                          <ArrowRight size={13} />
-                        </a>
-                      )}
                     </div>
                   </div>
                 </div>
