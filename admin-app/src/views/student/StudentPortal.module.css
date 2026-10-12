@@ -3457,16 +3457,16 @@
 }
 
 /* ============================================================== */
-/* NUEVOS ESTILOS DEL DASHBOARD DEL ESTUDIANTE                    */
+/* NUEVOS ESTILOS DEL DASHBOARD DEL ESTUDIANTE (ARC SYSTEM)       */
 /* ============================================================== */
 
-/* 1. Encabezado Limpio de Bienvenida (Sin contenedor pesado) */
+/* 1. Encabezado Limpio de Bienvenida (Idéntico a PageHeader del Admin) */
 .cleanGreetingHeader {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
-  padding: 4px 0 8px;
+  gap: var(--space-4, 16px);
+  padding-bottom: var(--space-2, 8px);
   flex-wrap: wrap;
 }
 
@@ -3476,52 +3476,64 @@
 }
 
 .cleanGreetingTitle {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--foreground, #ffffff);
-  margin: 0 0 6px;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: var(--text-2xl, 24px);
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: var(--tracking-display, -0.02em);
+  line-height: 1.25;
 }
 
 .cleanGreetingSubtitle {
-  font-size: 14px;
-  color: var(--text-muted, #94a3b8);
-  margin: 0;
-  line-height: 1.5;
+  margin: 8px 0 0;
+  font-size: var(--text-sm, 14px);
+  color: var(--text-muted);
+  line-height: var(--leading-body, 1.5);
 }
 
 .studentPlanCleanBadge {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 18px;
-  background: var(--surface, #12141a);
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-surface, 12px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-resting);
 }
 
-/* 2. Tarjeta Destacada: Última Clase Vista (Continuar donde lo dejaste) */
+.badgeShieldIcon {
+  color: var(--accent);
+}
+
+/* 2. Grid de Métricas con Arc MetricCard (Exactamente como en el Admin) */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--space-4, 16px);
+}
+
+/* 3. Tarjeta Destacada: Última Clase Vista (Continuar donde lo dejaste) */
 .lastLessonCard {
-  background: var(--surface, #12141a);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  border-left: 4px solid var(--accent, #7747ff);
-  border-radius: var(--radius-surface, 16px);
-  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  padding: var(--space-5, 20px) var(--space-6, 24px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  gap: var(--space-5, 20px);
+  box-shadow: var(--shadow-resting);
   position: relative;
   overflow: hidden;
   flex-wrap: wrap;
-  transition: border-color var(--duration-fast, 150ms);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
 }
 
 .lastLessonCard:hover {
-  border-color: var(--border-strong, rgba(255, 255, 255, 0.2));
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-raised);
 }
 
 .lastLessonMain {
@@ -3535,11 +3547,12 @@
 .lastLessonCoverWrap {
   width: 120px;
   aspect-ratio: 16 / 9;
-  border-radius: var(--radius-control, 8px);
+  border-radius: var(--radius-control);
   overflow: hidden;
   position: relative;
   flex-shrink: 0;
-  background: #000000;
+  background: var(--background);
+  border: 1px solid var(--border-subtle);
 }
 
 .lastLessonCoverImg {
@@ -3563,49 +3576,27 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--accent, #7747ff);
+  color: var(--accent);
 }
 
 .lastLessonTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--foreground, #ffffff);
+  font-size: var(--text-base, 16px);
+  font-weight: 600;
+  color: var(--foreground);
   margin: 0;
   line-height: 1.3;
 }
 
 .lastLessonCourseName {
-  font-size: 12.5px;
-  color: var(--text-muted, #94a3b8);
+  font-size: var(--text-xs, 12px);
+  color: var(--text-muted);
 }
 
-.lastLessonActionBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 22px;
-  background: var(--accent, #7747ff);
-  color: #ffffff;
-  border: none;
-  border-radius: var(--radius-control, 8px);
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 14px var(--accent-subtle, rgba(119, 71, 255, 0.35));
-  transition: all var(--duration-fast, 150ms);
-  flex-shrink: 0;
-}
-
-.lastLessonActionBtn:hover {
-  filter: brightness(1.12);
-  transform: translateY(-1px);
-}
-
-/* 3. Panel de Dos Columnas: Pomodoro & Eventos */
+/* 4. Panel de Dos Columnas: Pomodoro & Eventos */
 .dashboardSplitGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 22px;
+  grid-template-columns: 1.15fr 1fr;
+  gap: var(--space-5, 20px);
 }
 
 @media (max-width: 960px) {
@@ -3614,16 +3605,21 @@
   }
 }
 
-/* 4. Modo Pomodoro */
+/* 5. Modo Pomodoro Arc */
 .pomodoroCard {
-  background: var(--surface, #12141a);
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-surface, 16px);
-  padding: 22px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  padding: var(--space-6, 24px);
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  gap: var(--space-4, 16px);
+  box-shadow: var(--shadow-resting);
+  transition: border-color var(--duration-fast);
+}
+
+.pomodoroCard:hover {
+  border-color: var(--border-strong);
 }
 
 .pomodoroHeader {
@@ -3641,26 +3637,27 @@
 }
 
 .pomodoroIconWrap {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-control, 8px);
-  background: rgba(243, 173, 32, 0.15);
-  color: #f3ad20;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .pomodoroTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--foreground, #ffffff);
+  font-size: var(--text-base, 16px);
+  font-weight: 600;
+  color: var(--foreground);
   margin: 0;
 }
 
 .pomodoroSubtitle {
-  font-size: 12px;
-  color: var(--text-muted, #94a3b8);
+  font-size: var(--text-xs, 12px);
+  color: var(--text-muted);
   margin: 2px 0 0;
 }
 
@@ -3668,27 +3665,27 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: var(--surface-muted, #1a1e27);
+  background: var(--surface-muted);
   padding: 3px;
-  border-radius: var(--radius-pill, 9999px);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
 }
 
 .pomodoroTabBtn {
   background: transparent;
   border: none;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted);
   font-size: 11.5px;
   font-weight: 600;
   padding: 5px 12px;
-  border-radius: var(--radius-pill, 9999px);
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: all var(--duration-fast, 150ms);
+  transition: all var(--duration-fast);
 }
 
 .pomodoroTabBtnActive {
-  background: var(--accent, #7747ff);
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--accent-foreground, #ffffff);
 }
 
 .pomodoroBody {
@@ -3705,18 +3702,58 @@
   gap: 4px;
 }
 
+.pomodoroClockRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
 .pomodoroClockNumber {
-  font-size: 46px;
+  font-size: 48px;
   font-weight: 800;
-  color: var(--foreground, #ffffff);
+  color: var(--foreground);
   letter-spacing: -0.02em;
   line-height: 1;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+.pomodoroAdjustBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.pomodoroAdjustBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.pomodoroAdjustBtn:hover:not(:disabled) {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+  color: var(--foreground);
+}
+
+.pomodoroAdjustBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .pomodoroPhaseTag {
   font-size: 12px;
-  color: var(--accent, #7747ff);
+  color: var(--accent);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -3729,50 +3766,9 @@
   gap: 10px;
 }
 
-.pomodoroBtnPlay {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 22px;
-  background: var(--accent, #7747ff);
-  color: #ffffff;
-  border: none;
-  border-radius: var(--radius-control, 8px);
-  font-size: 13.5px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all var(--duration-fast, 150ms);
-  box-shadow: 0 4px 14px var(--accent-subtle, rgba(119, 71, 255, 0.35));
-}
-
-.pomodoroBtnPlay:hover {
-  filter: brightness(1.15);
-  transform: translateY(-1px);
-}
-
-.pomodoroBtnSecondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  background: var(--surface-raised, #1f1f23);
-  color: var(--foreground, #ffffff);
-  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16));
-  border-radius: var(--radius-control, 8px);
-  cursor: pointer;
-  transition: all var(--duration-fast, 150ms);
-}
-
-.pomodoroBtnSecondary:hover {
-  background: var(--surface-muted, #252830);
-  border-color: var(--accent, #7747ff);
-  color: var(--accent, #7747ff);
-}
-
 .pomodoroTrack {
   height: 6px;
-  background: var(--surface-muted, #1a1e27);
+  background: var(--surface-muted);
   border-radius: 9999px;
   overflow: hidden;
   width: 100%;
@@ -3780,7 +3776,7 @@
 
 .pomodoroFill {
   height: 100%;
-  background: var(--accent, #7747ff);
+  background: var(--accent);
   border-radius: 9999px;
   transition: width 0.4s ease;
 }
@@ -3790,20 +3786,67 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 12px;
-  color: var(--text-muted, #94a3b8);
+  font-size: var(--text-xs, 12px);
+  color: var(--text-muted);
 }
 
-/* 5. Próximos Eventos de la Academia */
+/* Modal o Formulario de Personalización de Tiempo */
+.pomodoroCustomForm {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pomodoroPresetPills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pomodoroPresetBtn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.pomodoroPresetBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pomodoroPresetBtnActive {
+  background: var(--accent);
+  color: var(--accent-foreground, #ffffff);
+  border-color: var(--accent);
+}
+
+/* 6. Próximos Eventos de la Academia */
 .eventsCard {
-  background: var(--surface, #12141a);
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-surface, 16px);
-  padding: 22px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  padding: var(--space-6, 24px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  gap: var(--space-4, 16px);
+  box-shadow: var(--shadow-resting);
+  transition: border-color var(--duration-fast);
+}
+
+.eventsCard:hover {
+  border-color: var(--border-strong);
 }
 
 .eventsHeader {
@@ -3820,56 +3863,57 @@
 }
 
 .eventsIconWrap {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-control, 8px);
-  background: rgba(119, 71, 255, 0.15);
-  color: var(--accent, #7747ff);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .eventsTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--foreground, #ffffff);
+  font-size: var(--text-base, 16px);
+  font-weight: 600;
+  color: var(--foreground);
   margin: 0;
 }
 
 .eventsSubtitle {
-  font-size: 12px;
-  color: var(--text-muted, #94a3b8);
+  font-size: var(--text-xs, 12px);
+  color: var(--text-muted);
   margin: 2px 0 0;
 }
 
 .eventsList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
 }
 
 .eventItem {
-  background: var(--surface-muted, #1a1e27);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
-  border-radius: var(--radius-surface, 12px);
-  padding: 14px 16px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  transition: border-color var(--duration-fast, 150ms);
+  transition: border-color var(--duration-fast);
 }
 
 .eventItem:hover {
-  border-color: var(--accent, #7747ff);
+  border-color: var(--border-strong);
 }
 
 .eventItemInfo {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
 }
 
@@ -3881,7 +3925,7 @@
 }
 
 .eventDateText {
-  color: var(--accent, #7747ff);
+  color: var(--accent);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -3890,8 +3934,8 @@
 
 .eventItemTitle {
   font-size: 13.5px;
-  font-weight: 700;
-  color: var(--foreground, #ffffff);
+  font-weight: 600;
+  color: var(--foreground);
   margin: 0;
   line-height: 1.3;
 }
@@ -3901,7 +3945,7 @@
   align-items: center;
   gap: 6px;
   font-size: 11.5px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted);
 }
 
 .eventItemInstructorImg {
@@ -3911,27 +3955,5 @@
   object-fit: cover;
 }
 
-.eventJoinBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: var(--surface-raised, #1f1f23);
-  color: var(--foreground, #ffffff);
-  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16));
-  border-radius: var(--radius-control, 8px);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--duration-fast, 150ms);
-  text-decoration: none;
-  flex-shrink: 0;
-}
-
-.eventJoinBtn:hover {
-  background: var(--accent, #7747ff);
-  color: #ffffff;
-  border-color: var(--accent, #7747ff);
-}
 
 

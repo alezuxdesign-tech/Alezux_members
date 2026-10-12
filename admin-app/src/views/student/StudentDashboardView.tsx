@@ -15,9 +15,14 @@ import {
   BookOpen,
   Calendar,
   Flame,
-  ExternalLink,
-  Timer
+  Plus,
+  Minus,
+  Sliders,
+  Check
 } from "lucide-react";
+import { MetricCard } from "../../components/arc/metric-card/metric-card";
+import { Button } from "../../components/arc/button/button";
+import { Badge } from "../../components/arc/badge/badge";
 import { Course, CourseSection, CourseLesson, CourseTopic, StudentProfile, AcademyEvent, api } from "../../services/api";
 import styles from "./StudentPortal.module.css";
 
@@ -38,12 +43,6 @@ interface LastLessonItem {
 }
 
 type PomodoroMode = "focus" | "short_break" | "long_break";
-
-const MODE_DURATIONS: Record<PomodoroMode, number> = {
-  focus: 25 * 60,       // 25 minutos
-  short_break: 5 * 60,   // 5 minutos
-  long_break: 15 * 60,   // 15 minutos
-};
 
 export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
   profile,
@@ -137,11 +136,36 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
     }
   };
 
-  // --- MODO POMODORO (CONCENTRACIÓN & ENFOQUE) ---
+  // --- MODO POMODORO (PERSONALIZABLE & CONCENTRACIÓN) ---
+  const [customFocusMinutes, setCustomFocusMinutes] = useState<number>(() => {
+    const saved = localStorage.getItem(`crezca_pomodoro_focus_min_${profile.id}`);
+    return saved ? Math.max(1, parseInt(saved, 10)) : 25;
+  });
+
+  const [customBreakMinutes, setCustomBreakMinutes] = useState<number>(() => {
+    const saved = localStorage.getItem(`crezca_pomodoro_break_min_${profile.id}`);
+    return saved ? Math.max(1, parseInt(saved, 10)) : 5;
+  });
+
+  const [customLongBreakMinutes, setCustomLongBreakMinutes] = useState<number>(() => {
+    const saved = localStorage.getItem(`crezca_pomodoro_long_break_min_${profile.id}`);
+    return saved ? Math.max(1, parseInt(saved, 10)) : 15;
+  });
+
+  const getDurationForMode = (mode: PomodoroMode) => {
+    if (mode === "focus") return customFocusMinutes * 60;
+    if (mode === "short_break") return customBreakMinutes * 60;
+    return customLongBreakMinutes * 60;
+  };
+
   const [pomodoroMode, setPomodoroMode] = useState<PomodoroMode>("focus");
-  const [timeLeft, setTimeLeft] = useState<number>(MODE_DURATIONS.focus);
+  const [timeLeft, setTimeLeft] = useState<number>(() => customFocusMinutes * 60);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [pomodoroNotice, setPomodoroNotice] = useState<string | null>(null);
+
+  // Modo edición de tiempo
+  const [isEditingTime, setIsEditingTime] = useState<boolean>(false);
+  const [customInputVal, setCustomInputVal] = useState<string>(String(customFocusMinutes));
 
   const [completedPomodoros, setCompletedPomodoros] = useState<number>(() => {
     const today = new Date().toDateString();
@@ -183,47 +207,124 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
         setCompletedPomodoros(nextCount);
         const today = new Date().toDateString();
         localStorage.setItem(`crezca_pomodoro_count_${profile.id}_${today}`, String(nextCount));
-        setPomodoroNotice("¡Tiempo de enfoque cumplido! Descansa 5 minutos para recargar energías.");
+        setPomodoroNotice("¡Tiempo de enfoque cumplido! Descansa unos minutos para recargar energías.");
         setPomodoroMode("short_break");
-        setTimeLeft(MODE_DURATIONS.short_break);
+        setTimeLeft(customBreakMinutes * 60);
       } else {
         setPomodoroNotice("¡Descanso terminado! ¿Listo para sumergirte en otra sesión?");
         setPomodoroMode("focus");
-        setTimeLeft(MODE_DURATIONS.focus);
+        setTimeLeft(customFocusMinutes * 60);
       }
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, timeLeft, pomodoroMode, completedPomodoros, profile.id]);
+  }, [isRunning, timeLeft, pomodoroMode, completedPomodoros, customBreakMinutes, customFocusMinutes, profile.id]);
 
   const handleSwitchPomodoroMode = (mode: PomodoroMode) => {
     setPomodoroMode(mode);
-    setTimeLeft(MODE_DURATIONS[mode]);
     setIsRunning(false);
     setPomodoroNotice(null);
+    setIsEditingTime(false);
+    const dur = mode === "focus" 
+      ? customFocusMinutes 
+      : mode === "short_break" 
+      ? customBreakMinutes 
+      : customLongBreakMinutes;
+    setTimeLeft(dur * 60);
+    setCustomInputVal(String(dur));
   };
 
   const handleTogglePomodoro = () => {
     setIsRunning(!isRunning);
     setPomodoroNotice(null);
+    setIsEditingTime(false);
   };
 
   const handleResetPomodoro = () => {
     setIsRunning(false);
-    setTimeLeft(MODE_DURATIONS[pomodoroMode]);
     setPomodoroNotice(null);
+    setIsEditingTime(false);
+    setTimeLeft(getDurationForMode(pomodoroMode));
   };
 
   const handleSkipPomodoroPhase = () => {
     setIsRunning(false);
     setPomodoroNotice(null);
+    setIsEditingTime(false);
     if (pomodoroMode === "focus") {
       setPomodoroMode("short_break");
-      setTimeLeft(MODE_DURATIONS.short_break);
+      setTimeLeft(customBreakMinutes * 60);
+      setCustomInputVal(String(customBreakMinutes));
     } else {
       setPomodoroMode("focus");
-      setTimeLeft(MODE_DURATIONS.focus);
+      setTimeLeft(customFocusMinutes * 60);
+      setCustomInputVal(String(customFocusMinutes));
+    }
+  };
+
+  // Ajuste rápido de tiempo (+5 min / -5 min / +1 min / -1 min)
+  const handleAdjustMinutes = (delta: number) => {
+    setPomodoroNotice(null);
+    if (pomodoroMode === "focus") {
+      const next = Math.max(1, Math.min(180, customFocusMinutes + delta));
+      setCustomFocusMinutes(next);
+      setCustomInputVal(String(next));
+      localStorage.setItem(`crezca_pomodoro_focus_min_${profile.id}`, String(next));
+      if (!isRunning) {
+        setTimeLeft(next * 60);
+      } else {
+        setTimeLeft((prev) => Math.max(1, prev + delta * 60));
+      }
+    } else if (pomodoroMode === "short_break") {
+      const next = Math.max(1, Math.min(60, customBreakMinutes + delta));
+      setCustomBreakMinutes(next);
+      setCustomInputVal(String(next));
+      localStorage.setItem(`crezca_pomodoro_break_min_${profile.id}`, String(next));
+      if (!isRunning) {
+        setTimeLeft(next * 60);
+      } else {
+        setTimeLeft((prev) => Math.max(1, prev + delta * 60));
+      }
+    } else {
+      const next = Math.max(1, Math.min(90, customLongBreakMinutes + delta));
+      setCustomLongBreakMinutes(next);
+      setCustomInputVal(String(next));
+      localStorage.setItem(`crezca_pomodoro_long_break_min_${profile.id}`, String(next));
+      if (!isRunning) {
+        setTimeLeft(next * 60);
+      } else {
+        setTimeLeft((prev) => Math.max(1, prev + delta * 60));
+      }
+    }
+  };
+
+  // Aplicar minutos desde presets rápidos
+  const handleSetPresetMinutes = (mins: number) => {
+    setPomodoroNotice(null);
+    setIsEditingTime(false);
+    if (pomodoroMode === "focus") {
+      setCustomFocusMinutes(mins);
+      setCustomInputVal(String(mins));
+      localStorage.setItem(`crezca_pomodoro_focus_min_${profile.id}`, String(mins));
+    } else if (pomodoroMode === "short_break") {
+      setCustomBreakMinutes(mins);
+      setCustomInputVal(String(mins));
+      localStorage.setItem(`crezca_pomodoro_break_min_${profile.id}`, String(mins));
+    } else {
+      setCustomLongBreakMinutes(mins);
+      setCustomInputVal(String(mins));
+      localStorage.setItem(`crezca_pomodoro_long_break_min_${profile.id}`, String(mins));
+    }
+    setTimeLeft(mins * 60);
+    setIsRunning(false);
+  };
+
+  // Aplicar minutos personalizados desde el input numérico
+  const handleSaveCustomMinutes = () => {
+    const val = parseInt(customInputVal, 10);
+    if (!isNaN(val) && val >= 1 && val <= 180) {
+      handleSetPresetMinutes(val);
     }
   };
 
@@ -233,8 +334,10 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
-  const pomodoroProgressPercent = Math.round(
-    ((MODE_DURATIONS[pomodoroMode] - timeLeft) / MODE_DURATIONS[pomodoroMode]) * 100
+  const totalModeDuration = getDurationForMode(pomodoroMode);
+  const pomodoroProgressPercent = Math.min(
+    100,
+    Math.max(0, Math.round(((totalModeDuration - timeLeft) / totalModeDuration) * 100))
   );
 
   // --- PRÓXIMOS EVENTOS DE LA ACADEMIA ---
@@ -261,13 +364,9 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
 
   return (
     <div className={styles.studentDashboardContainer}>
-      {/* 1. MENSAJE DE BIENVENIDA (Limpio y directo, sin contenedor pesado) */}
+      {/* 1. ENCABEZADO LIMPIO DE BIENVENIDA (Idéntico a PageHeader del Admin) */}
       <div className={styles.cleanGreetingHeader}>
         <div className={styles.cleanGreetingLeft}>
-          <div className={styles.dashboardTag}>
-            <Sparkles size={14} />
-            <span>Panel del Estudiante</span>
-          </div>
           <h1 className={styles.cleanGreetingTitle}>
             ¡Hola, {profile.name}! 👋
           </h1>
@@ -276,62 +375,46 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
           </p>
         </div>
 
-        <div className={styles.cleanGreetingRight}>
-          <div className={styles.studentPlanCleanBadge}>
-            <ShieldCheck size={18} className={styles.badgeShieldIcon} />
-            <div className={styles.planInfoText}>
-              <span className={styles.planLabel}>Membresía</span>
-              <strong className={styles.planNameText}>{profile.planName || "Activa"}</strong>
-            </div>
+        <div className={styles.studentPlanCleanBadge}>
+          <ShieldCheck size={16} className={styles.badgeShieldIcon} />
+          <div className={styles.planInfoText}>
+            <span className={styles.planLabel}>Membresía</span>
+            <strong className={styles.planNameText}>{profile.planName || "Activa"}</strong>
           </div>
         </div>
       </div>
 
-      {/* 2. REJILLA DE KPIS / MÉTRICAS DEL ESTUDIANTE */}
-      <div className={styles.studentStatsGrid}>
-        <div className={styles.statMetricCard}>
-          <div className={styles.statIconWrap} style={{ background: "rgba(119, 71, 255, 0.12)", color: "var(--accent, #7747ff)" }}>
-            <GraduationCap size={22} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Cursos Inscritos</span>
-            <span className={styles.statValue}>{enrolledCourses.length}</span>
-            <span className={styles.statDesc}>Formaciones habilitadas</span>
-          </div>
-        </div>
+      {/* 2. REJILLA DE KPIS (100% IDÉNTICOS A LOS METRICCARD DEL ADMINISTRADOR) */}
+      <div className={styles.metricsGrid}>
+        <MetricCard
+          label="Cursos Inscritos"
+          value={enrolledCourses.length}
+          context="Formaciones habilitadas con acceso"
+          icon={<GraduationCap size={16} />}
+        />
 
-        <div className={styles.statMetricCard}>
-          <div className={styles.statIconWrap} style={{ background: "rgba(5, 98, 239, 0.12)", color: "#0562ef" }}>
-            <TrendingUp size={22} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Progreso Promedio</span>
-            <span className={styles.statValue}>{avgProgress}%</span>
-            <span className={styles.statDesc}>Avance general en tus cursos</span>
-          </div>
-        </div>
+        <MetricCard
+          label="Progreso Promedio"
+          value={avgProgress}
+          suffix="%"
+          context="Avance acumulado en tus formaciones"
+          icon={<TrendingUp size={16} />}
+        />
 
-        <div className={styles.statMetricCard}>
-          <div className={styles.statIconWrap} style={{ background: "rgba(243, 173, 32, 0.12)", color: "#f3ad20" }}>
-            <Clock size={22} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Tiempo Dedicado</span>
-            <span className={styles.statValue}>{estimatedHours}h</span>
-            <span className={styles.statDesc}>Horas estimadas de formación</span>
-          </div>
-        </div>
+        <MetricCard
+          label="Tiempo Dedicado"
+          value={estimatedHours}
+          suffix="h"
+          context="Horas estimadas de formación"
+          icon={<Clock size={16} />}
+        />
 
-        <div className={styles.statMetricCard}>
-          <div className={styles.statIconWrap} style={{ background: "rgba(13, 184, 121, 0.12)", color: "#0db879" }}>
-            <CheckCircle2 size={22} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Lecciones Finalizadas</span>
-            <span className={styles.statValue}>{totalCompleted}</span>
-            <span className={styles.statDesc}>Temas completados con éxito</span>
-          </div>
-        </div>
+        <MetricCard
+          label="Lecciones Finalizadas"
+          value={totalCompleted}
+          context="Temas completados con éxito"
+          icon={<CheckCircle2 size={16} />}
+        />
       </div>
 
       {/* 3. ÚLTIMA CLASE QUE VIO / CONTINUAR DONDE LO DEJASTE */}
@@ -359,29 +442,29 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            className={styles.lastLessonActionBtn}
+          <Button
+            variant="primary"
+            size="md"
             onClick={handleResumeLastLesson}
           >
             <Play size={15} fill="currentColor" />
             <span>Reanudar clase</span>
-          </button>
+          </Button>
         </div>
       )}
 
-      {/* 4. BLOQUE INTERACTIVO: MODO POMODORO & PRÓXIMOS EVENTOS DE LA ACADEMIA */}
+      {/* 4. BLOQUE INTERACTIVO: MODO POMODORO PERSONALIZABLE & PRÓXIMOS EVENTOS */}
       <div className={styles.dashboardSplitGrid}>
-        {/* WIDGET: MODO POMODORO */}
+        {/* WIDGET: MODO POMODORO CON PERSONALIZACIÓN DE TIEMPO */}
         <div className={styles.pomodoroCard}>
           <div className={styles.pomodoroHeader}>
             <div className={styles.pomodoroTitleRow}>
               <div className={styles.pomodoroIconWrap}>
-                <Timer size={20} />
+                <Clock size={18} />
               </div>
               <div>
-                <h3 className={styles.pomodoroTitle}>Modo Pomodoro · Enfoque</h3>
-                <p className={styles.pomodoroSubtitle}>Bloques de estudio concentrado para maximizar tu aprendizaje</p>
+                <h3 className={styles.pomodoroTitle}>Modo Pomodoro</h3>
+                <p className={styles.pomodoroSubtitle}>Enfoque y descansos para maximizar tu retención</p>
               </div>
             </div>
 
@@ -391,75 +474,164 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                 className={`${styles.pomodoroTabBtn} ${pomodoroMode === "focus" ? styles.pomodoroTabBtnActive : ""}`}
                 onClick={() => handleSwitchPomodoroMode("focus")}
               >
-                Enfoque (25m)
+                Enfoque ({customFocusMinutes}m)
               </button>
               <button
                 type="button"
                 className={`${styles.pomodoroTabBtn} ${pomodoroMode === "short_break" ? styles.pomodoroTabBtnActive : ""}`}
                 onClick={() => handleSwitchPomodoroMode("short_break")}
               >
-                Descanso (5m)
+                Descanso ({customBreakMinutes}m)
               </button>
               <button
                 type="button"
                 className={`${styles.pomodoroTabBtn} ${pomodoroMode === "long_break" ? styles.pomodoroTabBtnActive : ""}`}
                 onClick={() => handleSwitchPomodoroMode("long_break")}
               >
-                Largo (15m)
+                Largo ({customLongBreakMinutes}m)
               </button>
             </div>
           </div>
 
+          {/* Formulario de personalización de tiempo expandible */}
+          {isEditingTime && (
+            <div className={styles.pomodoroCustomForm}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
+                  Duración ({pomodoroMode === "focus" ? "Enfoque" : "Descanso"}):
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={180}
+                  value={customInputVal}
+                  onChange={(e) => setCustomInputVal(e.target.value)}
+                  style={{
+                    width: 60,
+                    height: 32,
+                    background: "var(--background)",
+                    color: "var(--foreground)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-control)",
+                    padding: "0 8px",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    outline: "none",
+                  }}
+                />
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>minutos</span>
+                <Button variant="primary" size="sm" onClick={handleSaveCustomMinutes}>
+                  <Check size={13} /> Aplicar
+                </Button>
+              </div>
+
+              {pomodoroMode === "focus" && (
+                <div className={styles.pomodoroPresetPills}>
+                  {[15, 25, 30, 45, 60].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      className={`${styles.pomodoroPresetBtn} ${customFocusMinutes === mins ? styles.pomodoroPresetBtnActive : ""}`}
+                      onClick={() => handleSetPresetMinutes(mins)}
+                    >
+                      {mins}m
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className={styles.pomodoroBody}>
             <div className={styles.pomodoroTimerBox}>
-              <span className={styles.pomodoroClockNumber}>{formatTimerNumber(timeLeft)}</span>
-              <span className={styles.pomodoroPhaseTag}>
-                <Sparkles size={13} />
-                {pomodoroMode === "focus"
-                  ? "Bloque de Concentración Máxima"
-                  : pomodoroMode === "short_break"
-                  ? "Descanso Corto (Pausa activa)"
-                  : "Descanso Extendido"}
-              </span>
+              <div className={styles.pomodoroClockRow}>
+                <span className={styles.pomodoroClockNumber}>{formatTimerNumber(timeLeft)}</span>
+                <span className={styles.pomodoroPhaseTag}>
+                  <Sparkles size={13} />
+                  {pomodoroMode === "focus"
+                    ? "Enfoque Total"
+                    : pomodoroMode === "short_break"
+                    ? "Pausa Activa"
+                    : "Descanso Extendido"}
+                </span>
+              </div>
+
+              {/* Botones de ajuste directo de tiempo (+ / -) */}
+              <div className={styles.pomodoroAdjustBar}>
+                <button
+                  type="button"
+                  className={styles.pomodoroAdjustBtn}
+                  onClick={() => handleAdjustMinutes(-5)}
+                  title="Restar 5 minutos"
+                >
+                  <Minus size={11} /> 5 min
+                </button>
+                <button
+                  type="button"
+                  className={styles.pomodoroAdjustBtn}
+                  onClick={() => handleAdjustMinutes(5)}
+                  title="Añadir 5 minutos"
+                >
+                  <Plus size={11} /> 5 min
+                </button>
+                <button
+                  type="button"
+                  className={styles.pomodoroAdjustBtn}
+                  onClick={() => handleAdjustMinutes(1)}
+                  title="Añadir 1 minuto"
+                >
+                  <Plus size={11} /> 1 min
+                </button>
+                <button
+                  type="button"
+                  className={styles.pomodoroAdjustBtn}
+                  onClick={() => setIsEditingTime(!isEditingTime)}
+                  title="Configurar minutos exactos"
+                  style={{ marginLeft: 4 }}
+                >
+                  <Sliders size={12} /> {isEditingTime ? "Ocultar" : "Personalizar"}
+                </button>
+              </div>
             </div>
 
             <div className={styles.pomodoroControls}>
-              <button
-                type="button"
-                className={styles.pomodoroBtnPlay}
+              <Button
+                variant={isRunning ? "secondary" : "primary"}
+                size="md"
                 onClick={handleTogglePomodoro}
-                title={isRunning ? "Pausar temporizador" : "Iniciar temporizador"}
+                title={isRunning ? "Pausar sesión" : "Iniciar sesión"}
               >
                 {isRunning ? (
                   <>
-                    <Pause size={16} />
+                    <Pause size={15} />
                     <span>Pausar</span>
                   </>
                 ) : (
                   <>
-                    <Play size={16} fill="currentColor" />
+                    <Play size={15} fill="currentColor" />
                     <span>Iniciar</span>
                   </>
                 )}
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                className={styles.pomodoroBtnSecondary}
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={handleResetPomodoro}
                 title="Reiniciar temporizador"
               >
                 <RotateCcw size={15} />
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                className={styles.pomodoroBtnSecondary}
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={handleSkipPomodoroPhase}
                 title="Saltar a la siguiente fase"
               >
                 <SkipForward size={15} />
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -469,10 +641,10 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
 
           <div className={styles.pomodoroStatsRow}>
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Flame size={14} color="#f97316" />
+              <Flame size={14} color="var(--accent)" />
               <span>{completedPomodoros} {completedPomodoros === 1 ? "sesión completada" : "sesiones completadas"} hoy</span>
             </span>
-            <span>{pomodoroNotice || "¡Sin distracciones, enfócate en tu clase!"}</span>
+            <span>{pomodoroNotice || "Estudia concentrado y sin distracciones"}</span>
           </div>
         </div>
 
@@ -481,11 +653,11 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
           <div className={styles.eventsHeader}>
             <div className={styles.eventsTitleRow}>
               <div className={styles.eventsIconWrap}>
-                <Calendar size={20} />
+                <Calendar size={18} />
               </div>
               <div>
-                <h3 className={styles.eventsTitle}>Próximos Eventos & Clases en Vivo</h3>
-                <p className={styles.eventsSubtitle}>Mentorías grupales, talleres y sesiones con docentes</p>
+                <h3 className={styles.eventsTitle}>Próximos Eventos</h3>
+                <p className={styles.eventsSubtitle}>Mentorías, talleres y clases en vivo de la academia</p>
               </div>
             </div>
           </div>
@@ -501,9 +673,9 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                         {formatEventDate(evt.date, evt.time)}
                       </span>
                       {evt.badge && (
-                        <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(119,71,255,0.15)", color: "var(--accent, #7747ff)", fontWeight: 700 }}>
+                        <Badge variant="accent" size="sm">
                           {evt.badge}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                     <h4 className={styles.eventItemTitle}>{evt.title}</h4>
@@ -518,16 +690,15 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                   </div>
 
                   {evt.meeting_url ? (
-                    <a
-                      href={evt.meeting_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.eventJoinBtn}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => window.open(evt.meeting_url, "_blank")}
                       title="Unirse a la sesión en vivo"
                     >
                       <Video size={13} />
                       <span>Unirse</span>
-                    </a>
+                    </Button>
                   ) : null}
                 </div>
               ))
@@ -590,14 +761,14 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      className={styles.continueCourseBtn}
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={() => onSelectCourse(c)}
                     >
                       <Play size={14} fill="currentColor" />
                       <span>{prog > 0 ? "Continuar lección" : "Comenzar curso"}</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );
@@ -610,14 +781,14 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
             <p className={styles.emptyStateDesc}>
               Explora el catálogo para acceder a las formaciones de la academia.
             </p>
-            <button
-              type="button"
-              className={styles.dashboardPrimaryBtn}
+            <Button
+              variant="primary"
+              size="md"
               onClick={() => onNavigateTab("courses")}
             >
               <BookOpen size={16} />
               <span>Explorar catálogo</span>
-            </button>
+            </Button>
           </div>
         )}
       </section>
@@ -636,14 +807,14 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            className={styles.dashboardPrimaryBtn}
+          <Button
+            variant="primary"
+            size="md"
             onClick={() => onNavigateTab("courses")}
           >
             <span>Ver catálogo completo</span>
             <ArrowRight size={16} />
-          </button>
+          </Button>
         </section>
       )}
     </div>
