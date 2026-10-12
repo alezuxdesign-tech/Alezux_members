@@ -148,6 +148,7 @@ export interface CourseSection {
   lessons: CourseLesson[];
   topics?: CourseTopic[];
   is_separator?: boolean;
+  hide_card_labels?: boolean;
 }
 
 export interface Course {
@@ -171,6 +172,7 @@ export interface Course {
   progress?: number;
   totalTopics?: number;
   completedTopics?: number;
+  show_card_labels?: boolean;
 }
 
 export interface StudentProfile {

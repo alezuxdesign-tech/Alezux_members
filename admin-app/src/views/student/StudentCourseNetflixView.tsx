@@ -1,9 +1,6 @@
 import React, { useRef, useState, useMemo } from "react";
 import { 
   ArrowLeft, 
-  MessageCircle, 
-  Users, 
-  Video, 
   ChevronLeft, 
   ChevronRight, 
   Lock, 
@@ -12,7 +9,6 @@ import {
   Sparkles,
   ExternalLink,
   ShieldAlert,
-  ArrowRight
 } from "lucide-react";
 import { Course, CourseSection, CourseLesson, CourseTopic } from "../../services/api";
 import styles from "./StudentPortal.module.css";
@@ -147,7 +143,7 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
           </div>
         </div>
 
-        {/* Botón de Regresar al aula estilo imagen del usuario */}
+        {/* Botón de Regresar al aula */}
         <div className={styles.heroBackButtonRow}>
           <button 
             type="button" 
@@ -157,101 +153,6 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
             <ArrowLeft size={16} />
             <span>Regresar al aula</span>
           </button>
-        </div>
-
-        {/* 2. FILA DE WIDGETS FLOTANTES: PROGRESO Y COMUNIDAD (WHATSAPP, SLACK, ZOOM) */}
-        <div className={styles.heroWidgetsRow}>
-          {/* Widget 1: Progreso del Curso */}
-          <div className={styles.heroWidgetCard}>
-            <div className={styles.progressHeaderRow}>
-              <span className={styles.widgetTitle}>Curso Completo</span>
-              <span className={styles.widgetPercentage}>{progress}%</span>
-            </div>
-            <div className={styles.heroProgressTrack}>
-              <div 
-                className={styles.heroProgressFill} 
-                style={{ width: `${progress}%` }} 
-              />
-            </div>
-          </div>
-
-          {/* Widget 2: Grupo de WhatsApp */}
-          <a
-            href={course.whatsapp_url || "#"}
-            target={course.whatsapp_url ? "_blank" : undefined}
-            rel="noopener noreferrer"
-            className={styles.heroCommunityCard}
-            onClick={(e) => {
-              if (!course.whatsapp_url) {
-                e.preventDefault();
-                alert("El enlace del Grupo de WhatsApp aún no ha sido configurado.");
-              }
-            }}
-          >
-            <div className={styles.communityIconWrapperWhatsapp}>
-              <MessageCircle size={22} className={styles.whatsappIcon} />
-            </div>
-            <div className={styles.communityInfo}>
-              <h4 className={styles.communityTitle}>Grupo de WhatsApp</h4>
-              <p className={styles.communitySub}>Aquí solo se publicará noticias</p>
-              <span className={styles.communityActionLink}>
-                <span>Acceder Ahora</span>
-                <ArrowRight size={13} />
-              </span>
-            </div>
-          </a>
-
-          {/* Widget 3: Grupo de Slack */}
-          <a
-            href={course.slack_url || "#"}
-            target={course.slack_url ? "_blank" : undefined}
-            rel="noopener noreferrer"
-            className={styles.heroCommunityCard}
-            onClick={(e) => {
-              if (!course.slack_url) {
-                e.preventDefault();
-                alert("El enlace del Grupo de Slack aún no ha sido configurado.");
-              }
-            }}
-          >
-            <div className={styles.communityIconWrapperSlack}>
-              <Users size={22} className={styles.slackIcon} />
-            </div>
-            <div className={styles.communityInfo}>
-              <h4 className={styles.communityTitle}>Grupo de Slack</h4>
-              <p className={styles.communitySub}>Este es nuestro canal principal</p>
-              <span className={styles.communityActionLink}>
-                <span>Acceder Ahora</span>
-                <ArrowRight size={13} />
-              </span>
-            </div>
-          </a>
-
-          {/* Widget 4: Link de Zoom */}
-          <a
-            href={course.zoom_url || "#"}
-            target={course.zoom_url ? "_blank" : undefined}
-            rel="noopener noreferrer"
-            className={styles.heroCommunityCard}
-            onClick={(e) => {
-              if (!course.zoom_url) {
-                e.preventDefault();
-                alert("El enlace de Zoom aún no ha sido configurado.");
-              }
-            }}
-          >
-            <div className={styles.communityIconWrapperZoom}>
-              <Video size={22} className={styles.zoomIcon} />
-            </div>
-            <div className={styles.communityInfo}>
-              <h4 className={styles.communityTitle}>Link de Zoom</h4>
-              <p className={styles.communitySub}>Reuniones y mentorías en vivo</p>
-              <span className={styles.communityActionLink}>
-                <span>Acceder Ahora</span>
-                <ArrowRight size={13} />
-              </span>
-            </div>
-          </a>
         </div>
       </div>
 
@@ -321,6 +222,7 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                   const lessonsCount = lessons.length;
                   const cover = moduleSection.cover || course.thumbnail;
                   const trackTag = `${lessonsCount} ${lessonsCount === 1 ? "Clase" : "Clases"}`;
+                  const showLabels = course.show_card_labels !== false && !moduleSection.hide_card_labels;
 
                   return (
                     <div
@@ -330,6 +232,7 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                         !hasAccess ? styles.netflixCardLocked : "",
                       ].join(" ")}
                       onClick={() => handleCardClick(moduleSection, moduleNumber)}
+                      title={moduleSection.title || `Módulo ${moduleNumber}`}
                     >
                       {/* Fondo de Portada con Imagen o Gradiente */}
                       <div 
@@ -339,13 +242,15 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                         }}
                       />
 
-                      {/* Degradado vertical de lectura */}
-                      <div className={styles.posterGradientOverlay} />
+                      {/* Degradado vertical de lectura (limpio si las etiquetas están ocultas) */}
+                      <div className={showLabels ? styles.posterGradientOverlay : styles.posterGradientOverlayClean} />
 
-                      {/* Tag Superior: Módulo 1, Módulo 2... */}
-                      <div className={styles.posterTopBadge}>
-                        <span>Módulo {moduleNumber}</span>
-                      </div>
+                      {/* Tag Superior: Módulo 1, Módulo 2... (solo si las etiquetas están activas) */}
+                      {showLabels && (
+                        <div className={styles.posterTopBadge}>
+                          <span>Módulo {moduleNumber}</span>
+                        </div>
+                      )}
 
                       {/* Overlay de Bloqueo si no tiene acceso */}
                       {!hasAccess && (
@@ -354,15 +259,17 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                         </div>
                       )}
 
-                      {/* Contenido Inferior: Cantidad de clases y Título del módulo */}
-                      <div className={styles.posterBottomContent}>
-                        <span className={styles.posterTrackTag}>
-                          {trackTag}
-                        </span>
-                        <h4 className={styles.posterTitle}>
-                          {moduleSection.title || `Módulo ${moduleNumber}`}
-                        </h4>
-                      </div>
+                      {/* Contenido Inferior: Cantidad de clases y Título del módulo (solo si las etiquetas están activas) */}
+                      {showLabels && (
+                        <div className={styles.posterBottomContent}>
+                          <span className={styles.posterTrackTag}>
+                            {trackTag}
+                          </span>
+                          <h4 className={styles.posterTitle}>
+                            {moduleSection.title || `Módulo ${moduleNumber}`}
+                          </h4>
+                        </div>
+                      )}
 
                       {/* Hover Play Button Glow */}
                       {hasAccess && (

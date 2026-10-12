@@ -718,7 +718,7 @@
 .netflixHeroBanner {
   position: relative;
   width: 100%;
-  min-height: 520px;
+  min-height: 280px;
   background-size: cover;
   background-position: center top;
   display: flex;
@@ -777,30 +777,33 @@
 .heroBackButtonRow {
   position: relative;
   z-index: 10;
-  margin-top: 140px;
-  margin-bottom: 24px;
+  margin-top: 40px;
+  margin-bottom: 0px;
 }
 
-/* Botón Regresar al aula estilo screenshot del usuario */
+/* Botón Regresar al aula estilo Arc UI */
 .backToHallBtn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #f3ad20; /* Color mostaza/dorado de la imagen */
-  color: #090a0f;
-  border: none;
+  background: var(--surface-raised, #1c202a);
+  color: var(--foreground, #ffffff);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
   padding: 10px 20px;
   border-radius: 9999px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(243, 173, 32, 0.35);
-  transition: transform 0.15s ease, filter 0.15s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .backToHallBtn:hover {
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border-color: var(--accent, #7747ff);
   transform: translateY(-2px);
-  filter: brightness(1.08);
+  box-shadow: 0 8px 20px rgba(119, 71, 255, 0.35);
 }
 
 /* Fila de Widgets Flotantes: Curso Completo, WhatsApp, Slack, Zoom */
@@ -969,8 +972,8 @@
   max-width: 1380px;
   margin: 20px auto 0;
   padding: 16px 24px;
-  background: rgba(243, 173, 32, 0.12);
-  border: 1px solid rgba(243, 173, 32, 0.35);
+  background: rgba(119, 71, 255, 0.12);
+  border: 1px solid rgba(119, 71, 255, 0.3);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -986,7 +989,7 @@
 }
 
 .lockedBannerIcon {
-  color: #f3ad20;
+  color: var(--accent, #7747ff);
   flex-shrink: 0;
 }
 
@@ -1006,15 +1009,22 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #f3ad20;
-  color: #090a0f;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
   border-radius: 8px;
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(243, 173, 32, 0.3);
+  box-shadow: 0 4px 14px rgba(119, 71, 255, 0.35);
+  transition: all 0.2s ease;
+}
+
+.unlockCourseBtn:hover {
+  background: var(--accent-hover, #6432f5);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(119, 71, 255, 0.45);
 }
 
 /* Lista de Secciones y Carruseles Tipo Netflix */
@@ -1053,25 +1063,28 @@
   gap: 8px;
 }
 
-/* Botones circulares < y > estilo captura de referencia */
+/* Botones circulares < y > estilo Arc UI */
 .carouselArrowBtn {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #b59223; /* Tono dorado/oliva de los controles en la captura */
-  color: #000000;
-  border: none;
+  background: var(--surface-raised, #1c202a);
+  color: var(--foreground, #ffffff);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .carouselArrowBtn:hover {
-  transform: scale(1.1);
-  filter: brightness(1.15);
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border-color: var(--accent, #7747ff);
+  transform: scale(1.08);
+  box-shadow: 0 4px 14px rgba(119, 71, 255, 0.4);
 }
 
 /* Fila de carrusel horizontal */
@@ -1109,8 +1122,8 @@
 
 .netflixPosterCard:hover {
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(243, 173, 32, 0.2);
-  border-color: rgba(243, 173, 32, 0.6);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(119, 71, 255, 0.25);
+  border-color: var(--accent, #7747ff);
 }
 
 .netflixCardLocked {
@@ -1122,8 +1135,7 @@
   inset: 0;
   background-size: cover;
   background-position: center;
-  /* Fondo atmosférico cálido como el gradiente naranja de la foto */
-  background: linear-gradient(145deg, #e65c00 0%, #f9d423 100%);
+  background: linear-gradient(145deg, #181c26 0%, #252a38 100%);
   z-index: 1;
   transition: transform 0.4s ease;
 }
@@ -1141,6 +1153,19 @@
     rgba(0, 0, 0, 0.0) 40%,
     rgba(0, 0, 0, 0.75) 75%,
     rgba(0, 0, 0, 0.95) 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+.posterGradientOverlayClean {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.0) 60%,
+    rgba(0, 0, 0, 0.35) 100%
   );
   z-index: 2;
   pointer-events: none;
@@ -1178,7 +1203,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #f3ad20;
+  color: var(--accent, #7747ff);
 }
 
 /* Textos inferiores de la portada */
@@ -1193,7 +1218,7 @@
 .posterTrackTag {
   font-size: 10px;
   font-weight: 700;
-  color: #ffd27d;
+  color: var(--accent, #7747ff);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -1215,15 +1240,15 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: #f3ad20;
-  color: #090a0f;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transform: scale(0.8);
   transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(243, 173, 32, 0.5);
+  box-shadow: 0 4px 16px rgba(119, 71, 255, 0.5);
 }
 
 .netflixPosterCard:hover .posterHoverPlay {

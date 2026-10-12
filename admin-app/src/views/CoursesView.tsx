@@ -82,6 +82,7 @@ interface EditingModuleCoverState {
   sectionId: string;
   sectionTitle: string;
   cover: string;
+  hide_card_labels?: boolean;
 }
 
 interface ToastState {
@@ -152,6 +153,7 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
   const [priceInputValue, setPriceInputValue] = useState<string>("0.00");
   const [courseStatus, setCourseStatus] = useState<"publish" | "draft">("publish");
   const [courseLinkedPlanId, setCourseLinkedPlanId] = useState<number | null>(null);
+  const [showCardLabels, setShowCardLabels] = useState<boolean>(true);
 
   // Docentes / Mentores del Curso
   const [instructors, setInstructors] = useState<CourseInstructor[]>([]);
@@ -308,11 +310,34 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
     );
     setCourseStatus(course.status || "publish");
     setCourseLinkedPlanId(course.linkedPlanId ?? null);
+    setShowCardLabels(course.show_card_labels !== false);
     setInstructors(course.instructors || []);
     setSections(course.sections || []);
     setBuilderTab("curriculum");
     setSavedSuccess(false);
     setViewMode("builder");
+  };
+
+  // Manejador del Switch de visibilidad de textos en tarjetas de módulos
+  const handleToggleCardLabels = async (checked: boolean) => {
+    setShowCardLabels(checked);
+    if (selectedCourse) {
+      const updated = { ...selectedCourse, show_card_labels: checked };
+      setSelectedCourse(updated);
+      setCourses((prev) => prev.map((c) => (c.id === selectedCourse.id ? updated : c)));
+      try {
+        await api.saveCourse(selectedCourse.id, { show_card_labels: checked }, sections);
+        showToast(
+          "info",
+          checked ? "Textos en tarjetas activados" : "Textos en tarjetas desactivados",
+          checked
+            ? "Se mostrarán las etiquetas automáticas ('Módulo X', clases y título)."
+            : "Las portadas se mostrarán limpias sin textos automáticos superpuestos."
+        );
+      } catch (e) {
+        console.warn("Could not save card labels setting", e);
+      }
+    }
   };
 
   // Manejador del Switch de Curso Gratuito
@@ -398,6 +423,7 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                 price: Number(coursePrice) || 0,
                 status: courseStatus,
                 linkedPlanId: courseLinkedPlanId,
+                show_card_labels: showCardLabels,
                 instructors,
                 sections,
               }
@@ -423,6 +449,7 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
         price: finalPrice,
         status: courseStatus,
         linkedPlanId: null,
+        show_card_labels: showCardLabels,
         instructors,
         sections,
       };
@@ -453,9 +480,19 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
 
   const handleSaveModuleCoverModal = () => {
     if (!editingModuleCover) return;
-    handleUpdateSectionCover(editingModuleCover.sectionId, editingModuleCover.cover);
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === editingModuleCover.sectionId
+          ? {
+              ...s,
+              cover: editingModuleCover.cover,
+              hide_card_labels: !!editingModuleCover.hide_card_labels,
+            }
+          : s
+      )
+    );
     setEditingModuleCover(null);
-    showToast("success", "Portada actualizada", "La portada del módulo se guardó correctamente.");
+    showToast("success", "Portada actualizada", "La configuración de la portada del módulo se guardó correctamente.");
   };
 
   // --- CREACIÓN DE NUEVO CURSO ---
@@ -1560,6 +1597,32 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
               </div>
             </div>
 
+            {/* Opción de Superposición de textos en tarjetas de módulos */}
+            <div className={styles.settingsGroup}>
+              <div className={styles.settingsGroupHeader}>
+                <h4 className={styles.settingsGroupTitle}>
+                  <Layers size={16} /> Portadas y Textos en Campus (Netflix)
+                </h4>
+                <p className={styles.pageSubtitle}>
+                  Configura si deseas que el campus superponga los textos automáticos sobre las tarjetas.
+                </p>
+              </div>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-panel)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "20px" }}>
+                <div>
+                  <strong style={{ fontSize: "14px", color: "var(--foreground)", display: "block" }}>
+                    Superponer etiquetas y textos automáticos en las portadas
+                  </strong>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginTop: "4px" }}>
+                    Muestra el tag superior ("Módulo 1"), el contador de clases y el nombre del módulo sobre la imagen. Desactívalo si utilizas imágenes con diseño gráfico personalizado que ya traen su propio texto integrado.
+                  </span>
+                </div>
+                <Switch
+                  checked={showCardLabels}
+                  onCheckedChange={handleToggleCardLabels}
+                />
+              </div>
+            </div>
+
             {/* Footer con botón de guardado */}
             <div className={styles.settingsFooter}>
               <Button variant="secondary" onClick={() => setBuilderTab("curriculum")}>
@@ -1588,6 +1651,14 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                 </span>
               </div>
               <div className={styles.curriculumActions}>
+                <div className={styles.cardLabelsSwitchWrap} title="Activa o desactiva la superposición de etiquetas ('Módulo X', clases y título) en Campus">
+                  <span>Textos en tarjetas</span>
+                  <Switch
+                    checked={showCardLabels}
+                    onCheckedChange={handleToggleCardLabels}
+                    size="sm"
+                  />
+                </div>
                 <Button variant="secondary" size="sm" onClick={() => handleAddSection()}>
                   <Plus size={15} /> Nuevo Módulo
                 </Button>
@@ -1834,6 +1905,7 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                             sectionId: section.id,
                             sectionTitle: section.title,
                             cover: section.cover || "",
+                            hide_card_labels: !!section.hide_card_labels,
                           })
                         }
                         title="Clic para cambiar portada de este módulo"
@@ -2250,6 +2322,21 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                     reader.readAsDataURL(file);
                   }
                 }}
+              />
+            </div>
+
+            <div style={{ marginTop: "16px", padding: "12px 14px", background: "var(--surface-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "14px" }}>
+              <div>
+                <strong style={{ fontSize: "13px", color: "var(--foreground)", display: "block" }}>
+                  Ocultar textos automáticos en esta portada
+                </strong>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>
+                  No muestra la etiqueta "Módulo X", contador de clases ni título sobre esta tarjeta (útil si tu imagen ya tiene el texto incorporado).
+                </span>
+              </div>
+              <Switch
+                checked={!!editingModuleCover.hide_card_labels}
+                onCheckedChange={(checked) => setEditingModuleCover({ ...editingModuleCover, hide_card_labels: checked })}
               />
             </div>
           </Modal>
