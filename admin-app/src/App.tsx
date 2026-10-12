@@ -884,6 +884,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                         setSelectedLesson(les);
                         setSelectedTopic(top || null);
                       }}
+                      academyLogo={academyLogo}
                     />
                   )}
                 </>

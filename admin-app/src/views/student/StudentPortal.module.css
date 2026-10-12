@@ -1368,8 +1368,8 @@
 
 .classroomContainer {
   min-height: 100vh;
-  background-color: #090a0f;
-  color: #ffffff;
+  background-color: var(--background);
+  color: var(--foreground);
   display: flex;
   flex-direction: column;
 }
@@ -1380,8 +1380,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #11141c;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -1397,9 +1397,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #1a1e27;
-  color: #cbd5e1;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
   padding: 6px 14px;
   border-radius: 9999px;
   font-size: 12px;
@@ -1409,8 +1409,9 @@
 }
 
 .classroomBackBtn:hover {
-  background: #252830;
-  color: #ffffff;
+  background: var(--surface-raised);
+  color: var(--foreground);
+  border-color: var(--border-strong);
 }
 
 .classroomBreadcrumb {
@@ -1448,7 +1449,7 @@
 
 .classroomLayout {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 380px;
   flex: 1;
   align-items: start;
 }
@@ -1588,10 +1589,10 @@
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: #1a1e27;
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 8px);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -1599,13 +1600,13 @@
 }
 
 .completeToggleBtn:hover {
-  background: #252830;
+  background: var(--surface-raised);
   border-color: #0db879;
 }
 
 .completeToggleBtnDone {
-  background: rgba(13, 184, 121, 0.15);
-  border-color: #0db879;
+  background: rgba(13, 184, 121, 0.12);
+  border-color: rgba(13, 184, 121, 0.35);
   color: #0db879;
 }
 
@@ -1773,23 +1774,23 @@
 
 /* Columna Lateral Derecha (Temario del Módulo) */
 .classroomSidebar {
-  background: #0f121a;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  gap: 16px;
+  padding: 16px;
+  gap: 14px;
   position: sticky;
-  top: 0;
+  top: 60px;
   max-height: calc(100vh - 60px);
   overflow-y: auto;
 }
 
 .sidebarHeaderCard {
-  background: #161923;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 12px);
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1798,35 +1799,59 @@
 .sidebarHeaderTop {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
-.sidebarBookIcon {
-  color: var(--accent, #7747ff);
+.sidebarHeaderTitleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .sidebarModuleTitle {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  color: #ffffff;
-  margin: 0;
-}
-
-.sidebarModuleSub {
-  font-size: 12px;
-  color: #94a3b8;
+  color: var(--foreground);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.sidebarModuleCounter {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin: 0;
+}
+
+.sidebarModuleToggleBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.sidebarModuleToggleBtn:hover {
+  color: var(--foreground);
+  background: var(--surface-raised);
+}
+
 .sidebarProgressBarTrack {
   height: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-subtle, rgba(255, 255, 255, 0.08));
   border-radius: 9999px;
   overflow: hidden;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .sidebarProgressBarFill {
@@ -1844,91 +1869,234 @@
   flex: 1;
 }
 
-.topicListItem {
+/* Tarjeta de clase (Class Item Card) inspirada en la referencia */
+.classItemCard {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  background: #141721;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.topicListItem:hover {
-  background: #1a1e2a;
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.topicListItemActive {
-  background: rgba(119, 71, 255, 0.15);
-  border-color: var(--accent, #7747ff);
-}
-
-.topicItemLeft {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-
-.topicItemCheckBtn {
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius-control, 10px);
   background: transparent;
-  border: none;
-  padding: 0;
+  border: 1px solid transparent;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+}
+
+.classItemCard:hover {
+  background: var(--surface-muted);
+}
+
+.classItemCardActive {
+  background: var(--surface-muted) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+/* Barra vertical activa en el lateral izquierdo */
+.classActiveBar {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3.5px;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+}
+
+/* Miniatura 16:9 con esquinas redondeadas */
+.classThumbWrap {
+  width: 104px;
+  min-width: 104px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: var(--surface-raised, #18181b);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
-  cursor: pointer;
-  color: #64748b;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-.checkDoneIcon {
-  color: #0db879;
+.classThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.checkPendingIcon {
-  color: #475569;
-}
-
-.topicItemMeta {
+/* Fallback con logo de la academia en escala de grises / B&W */
+.classThumbLogoFallback {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
+  justify-content: center;
+  padding: 8px;
+  background: var(--surface-muted);
+  box-sizing: border-box;
 }
 
-.topicIndexNumber {
-  font-size: 11px;
+.classThumbLogoImg {
+  max-width: 65%;
+  max-height: 65%;
+  object-fit: contain;
+  filter: grayscale(100%) opacity(0.5);
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.classItemCard:hover .classThumbLogoImg,
+.classItemCardActive .classThumbLogoImg {
+  filter: grayscale(100%) opacity(0.85);
+}
+
+.classThumbInitial {
+  font-size: 18px;
   font-weight: 700;
-  color: #64748b;
-  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
-.topicItemTitle {
-  font-size: 12px;
-  font-weight: 600;
+/* Círculo indicador de checkmark en la miniatura */
+.classCheckCircle {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.classCheckCircle:hover {
+  border-color: #ffffff;
   color: #ffffff;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.classCheckCircleDone {
+  background: rgba(13, 184, 121, 0.95) !important;
+  border-color: #0db879 !important;
+  color: #ffffff !important;
+}
+
+/* Información de la clase a la derecha de la miniatura */
+.classInfoWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.classItemTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.3;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.classItemCardActive .classItemTitle {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.classItemAuthor {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.25;
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.topicItemDuration {
-  font-size: 11px;
-  color: #94a3b8;
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+/* Acordeón para temas que TIENEN subtopics */
+.topicAccordionWrapper {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 10px);
+  overflow: hidden;
+  background: var(--surface-muted);
+}
+
+.topicAccordionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+
+.topicAccordionHeader:hover {
+  background: var(--surface-raised);
+}
+
+.topicAccordionHeaderActive {
+  border-left: 3px solid var(--accent);
+}
+
+.topicAccordionMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.topicAccordionTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.topicAccordionCounter {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.topicAccordionChevron {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topicAccordionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px 10px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface);
 }
 
 /* Otros Módulos */
 .otherModulesSection {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1938,7 +2106,7 @@
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-muted);
   letter-spacing: 0.05em;
   margin: 0 0 4px;
 }
@@ -1954,10 +2122,10 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: #141721;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
-  color: #cbd5e1;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 6px);
+  color: var(--text-secondary);
   font-size: 12px;
   cursor: pointer;
   text-align: left;
@@ -1965,14 +2133,14 @@
 }
 
 .otherModuleBtn:hover {
-  background: #1d212e;
-  color: #ffffff;
+  background: var(--surface-raised);
+  color: var(--foreground);
 }
 
 .otherModuleBtnActive {
-  background: rgba(119, 71, 255, 0.15);
-  border-color: var(--accent, #7747ff);
-  color: #ffffff;
+  background: var(--surface-raised);
+  border-color: var(--accent);
+  color: var(--foreground);
   font-weight: 600;
 }
 

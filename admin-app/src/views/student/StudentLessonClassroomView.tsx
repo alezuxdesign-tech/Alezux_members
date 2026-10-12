@@ -44,6 +44,7 @@ interface StudentLessonClassroomViewProps {
   onToggleCompleteTopic: (topicId: string) => void;
   onBackToCourse: () => void;
   onSwitchModule: (sec: CourseSection, les: CourseLesson, top?: CourseTopic) => void;
+  academyLogo?: string;
 }
 
 interface PlayableItem {
@@ -70,7 +71,11 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
   onToggleCompleteTopic,
   onBackToCourse,
   onSwitchModule,
+  academyLogo,
 }) => {
+  const effectiveLogo = academyLogo || localStorage.getItem("crezca_academy_logo") || "";
+  const authorName = course.instructors?.[0]?.name || "Docente Titular";
+  const [isOtherModulesOpen, setIsOtherModulesOpen] = useState(false);
   // Obtener lista completa de topics de la lección/módulo actual
   const topics: CourseTopic[] = useMemo(() => {
     if (currentLesson.topics && currentLesson.topics.length > 0) {
@@ -442,22 +447,9 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
           {/* Fila de Título y Acciones de la Lección */}
           <div className={styles.topicActionHeader}>
             <div className={styles.topicMetaInfo}>
-              <span className={styles.topicModuleSubtitle}>
-                {currentSection.title} • {currentLesson.title}
-                {currentItem?.isSubtopic && currentItem.parentTopicTitle && ` • ${currentItem.parentTopicTitle}`}
-              </span>
               <h1 className={styles.activeTopicTitle}>
                 {currentItem?.title || "Lección del módulo"}
               </h1>
-              {currentItem?.duration && (
-                <div className={styles.topicDurationBadge}>
-                  <Clock size={13} />
-                  <span>{currentItem.duration}</span>
-                  {currentItem.isSubtopic && (
-                    <span className={styles.subtopicCountBadge}>Sub-clase</span>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Botón de Marcar como Completado */}
@@ -774,12 +766,32 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
 
         {/* COLUMNA DERECHA: SIDEBAR DE TOPICS DEL MÓDULO */}
         <aside className={styles.classroomSidebar}>
+          {/* Cabecera del Temario / Módulo Activo */}
           <div className={styles.sidebarHeaderCard}>
             <div className={styles.sidebarHeaderTop}>
-              <BookOpen size={16} className={styles.sidebarBookIcon} />
-              <h3 className={styles.sidebarModuleTitle}>Temario del Módulo</h3>
+              <div className={styles.sidebarHeaderTitleWrap}>
+                <h3 className={styles.sidebarModuleTitle}>{currentLesson.title}</h3>
+                <span className={styles.sidebarModuleCounter}>
+                  {completedInModule}/{allPlayableItems.length} terminado
+                </span>
+              </div>
+              {course.sections && course.sections.length > 1 && (
+                <button
+                  type="button"
+                  className={styles.sidebarModuleToggleBtn}
+                  onClick={() => setIsOtherModulesOpen(!isOtherModulesOpen)}
+                  title="Cambiar de módulo"
+                >
+                  <ChevronDown
+                    size={18}
+                    style={{
+                      transform: isOtherModulesOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
+                </button>
+              )}
             </div>
-            <p className={styles.sidebarModuleSub}>{currentLesson.title}</p>
             <div className={styles.sidebarProgressBarTrack}>
               <div 
                 className={styles.sidebarProgressBarFill} 
@@ -788,179 +800,10 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
             </div>
           </div>
 
-          {/* Lista de Topics y Subtopics */}
-          <div className={styles.topicsScrollList}>
-            {topics.map((top, idx) => {
-              const hasSubtopics = top.subtopics && top.subtopics.length > 0;
-              const numberStr = String(idx + 1).padStart(2, "0");
-              const isExpanded = !!expandedTopicIds[top.id];
-
-              if (hasSubtopics) {
-                const subtopics = top.subtopics!;
-                const completedSubs = subtopics.filter((s) => completedTopicIds.includes(s.id)).length;
-                const allSubsDone = completedSubs === subtopics.length;
-                const isParentActive = currentItem?.id === top.id;
-
-                return (
-                  <div key={top.id} className={styles.topicGroupWrapper}>
-                    {/* Cabecera del Topic con Sub-clases */}
-                    <div
-                      className={[
-                        styles.topicListItem,
-                        styles.topicItemWithSubs,
-                        isParentActive ? styles.topicListItemActive : "",
-                        allSubsDone ? styles.topicListItemCompleted : "",
-                      ].join(" ")}
-                      onClick={() => {
-                        if (top.video_url && top.video_url.trim() !== "") {
-                          setActiveItemId(top.id);
-                        } else if (subtopics.length > 0) {
-                          setActiveItemId(subtopics[0].id);
-                        }
-                        toggleTopicExpanded(top.id);
-                      }}
-                    >
-                      <div className={styles.topicItemLeft}>
-                        <button
-                          type="button"
-                          className={styles.topicItemCheckBtn}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleCompleteTopic(top.id);
-                          }}
-                          title={allSubsDone ? "Todas las sub-clases completadas" : "Progreso de sub-clases"}
-                        >
-                          {allSubsDone ? (
-                            <CheckCircle2 size={16} className={styles.checkDoneIcon} />
-                          ) : (
-                            <Circle size={16} className={styles.checkPendingIcon} />
-                          )}
-                        </button>
-
-                        <div className={styles.topicItemMeta}>
-                          <span className={styles.topicIndexNumber}>{numberStr}.</span>
-                          <span className={styles.topicItemTitle}>{top.title}</span>
-                          <span className={styles.subtopicCountBadge}>
-                            {completedSubs}/{subtopics.length}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        className={styles.topicChevronBtn}
-                        onClick={(e) => toggleTopicExpanded(top.id, e)}
-                        title={isExpanded ? "Colapsar sub-clases" : "Desplegar sub-clases"}
-                      >
-                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
-                      </button>
-                    </div>
-
-                    {/* Lista desplegable de Subtopics */}
-                    {isExpanded && (
-                      <div className={styles.subtopicsTreeContainer}>
-                        {subtopics.map((sub, sIdx) => {
-                          const isSubActive = currentItem?.id === sub.id;
-                          const isSubDone = completedTopicIds.includes(sub.id);
-
-                          return (
-                            <div
-                              key={sub.id}
-                              className={[
-                                styles.subtopicListItem,
-                                isSubActive ? styles.subtopicListItemActive : "",
-                                isSubDone ? styles.subtopicListItemCompleted : "",
-                              ].join(" ")}
-                              onClick={() => setActiveItemId(sub.id)}
-                            >
-                              <div className={styles.topicItemLeft}>
-                                <button
-                                  type="button"
-                                  className={styles.topicItemCheckBtn}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onToggleCompleteTopic(sub.id);
-                                  }}
-                                  title={isSubDone ? "Sub-clase completada" : "Marcar completada"}
-                                >
-                                  {isSubDone ? (
-                                    <CheckCircle2 size={14} className={styles.checkDoneIcon} />
-                                  ) : (
-                                    <Circle size={14} className={styles.checkPendingIcon} />
-                                  )}
-                                </button>
-
-                                <div className={styles.subtopicPlayIcon}>
-                                  <Play size={10} />
-                                </div>
-
-                                <span className={styles.subtopicTitle}>
-                                  {numberStr}.{sIdx + 1} {sub.title}
-                                </span>
-                              </div>
-
-                              {sub.duration && (
-                                <span className={styles.subtopicDuration}>{sub.duration}</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              // Topic simple sin sub-clases
-              const isActive = currentItem?.id === top.id;
-              const isCompleted = completedTopicIds.includes(top.id);
-
-              return (
-                <div
-                  key={top.id}
-                  className={[
-                    styles.topicListItem,
-                    isActive ? styles.topicListItemActive : "",
-                    isCompleted ? styles.topicListItemCompleted : "",
-                  ].join(" ")}
-                  onClick={() => setActiveItemId(top.id)}
-                >
-                  <div className={styles.topicItemLeft}>
-                    {/* Indicador de Estado */}
-                    <button
-                      type="button"
-                      className={styles.topicItemCheckBtn}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleCompleteTopic(top.id);
-                      }}
-                      title={isCompleted ? "Completada" : "Marcar completada"}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle2 size={16} className={styles.checkDoneIcon} />
-                      ) : (
-                        <Circle size={16} className={styles.checkPendingIcon} />
-                      )}
-                    </button>
-
-                    <div className={styles.topicItemMeta}>
-                      <span className={styles.topicIndexNumber}>{numberStr}.</span>
-                      <span className={styles.topicItemTitle}>{top.title}</span>
-                    </div>
-                  </div>
-
-                  {top.duration && (
-                    <span className={styles.topicItemDuration}>{top.duration}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Acordeón para saltar a otros módulos del mismo curso sin salir */}
-          {course.sections && course.sections.length > 1 && (
+          {/* Menú desplegable para saltar a otros módulos del curso */}
+          {isOtherModulesOpen && course.sections && course.sections.length > 1 && (
             <div className={styles.otherModulesSection}>
-              <h4 className={styles.otherModulesHeading}>Otros Módulos del Curso</h4>
+              <h4 className={styles.otherModulesHeading}>Módulos del Curso</h4>
               <div className={styles.otherModulesList}>
                 {course.sections.map((sec) => {
                   const secLessons = sec.lessons || [];
@@ -978,6 +821,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                           if (!isCurrent) {
                             const first = les.topics && les.topics.length > 0 ? les.topics[0] : (les as unknown as CourseTopic);
                             onSwitchModule(sec, les, first);
+                            setIsOtherModulesOpen(false);
                           }
                         }}
                       >
@@ -990,8 +834,188 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
               </div>
             </div>
           )}
+
+          {/* Lista de Topics y Subtopics */}
+          <div className={styles.topicsScrollList}>
+            {topics.map((top) => {
+              const hasSubtopics = top.subtopics && top.subtopics.length > 0;
+              const isExpanded = !!expandedTopicIds[top.id];
+
+              if (hasSubtopics) {
+                const subtopics = top.subtopics!;
+                const completedSubs = subtopics.filter((s) => completedTopicIds.includes(s.id)).length;
+                const isParentActive = currentItem?.id === top.id || subtopics.some((s) => s.id === currentItem?.id);
+
+                return (
+                  <div key={top.id} className={styles.topicAccordionWrapper}>
+                    {/* Cabecera del Acordeón para temas con sub-clases */}
+                    <div
+                      className={[
+                        styles.topicAccordionHeader,
+                        isParentActive ? styles.topicAccordionHeaderActive : "",
+                      ].join(" ")}
+                      onClick={() => toggleTopicExpanded(top.id)}
+                    >
+                      <div className={styles.topicAccordionMeta}>
+                        <h4 className={styles.topicAccordionTitle}>{top.title}</h4>
+                        <span className={styles.topicAccordionCounter}>
+                          {completedSubs}/{subtopics.length} terminado
+                        </span>
+                      </div>
+                      <div className={styles.topicAccordionChevron}>
+                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRightIcon size={16} />}
+                      </div>
+                    </div>
+
+                    {/* Contenido expandible del acordeón */}
+                    {isExpanded && (
+                      <div className={styles.topicAccordionBody}>
+                        {/* Si el topic padre tiene video propio */}
+                        {top.video_url && top.video_url.trim() !== "" && (
+                          <ClassCardItem
+                            id={top.id}
+                            title={top.title}
+                            cover={top.cover}
+                            author={authorName}
+                            isActive={currentItem?.id === top.id}
+                            isCompleted={completedTopicIds.includes(top.id)}
+                            effectiveLogo={effectiveLogo}
+                            courseTitle={course.title}
+                            onClick={() => setActiveItemId(top.id)}
+                            onToggleComplete={() => onToggleCompleteTopic(top.id)}
+                          />
+                        )}
+
+                        {/* Subtopics hijos renderizados como class cards */}
+                        {subtopics.map((sub) => (
+                          <ClassCardItem
+                            key={sub.id}
+                            id={sub.id}
+                            title={sub.title}
+                            cover={sub.cover}
+                            author={authorName}
+                            isActive={currentItem?.id === sub.id}
+                            isCompleted={completedTopicIds.includes(sub.id)}
+                            effectiveLogo={effectiveLogo}
+                            courseTitle={course.title}
+                            onClick={() => setActiveItemId(sub.id)}
+                            onToggleComplete={() => onToggleCompleteTopic(sub.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Tema SIN subtopics: Renderizado directo como tarjeta de clase (SIN acordeón)
+              const isActive = currentItem?.id === top.id;
+              const isCompleted = completedTopicIds.includes(top.id);
+
+              return (
+                <ClassCardItem
+                  key={top.id}
+                  id={top.id}
+                  title={top.title}
+                  cover={top.cover}
+                  author={authorName}
+                  isActive={isActive}
+                  isCompleted={isCompleted}
+                  effectiveLogo={effectiveLogo}
+                  courseTitle={course.title}
+                  onClick={() => setActiveItemId(top.id)}
+                  onToggleComplete={() => onToggleCompleteTopic(top.id)}
+                />
+              );
+            })}
+          </div>
         </aside>
       </div>
     </div>
   );
 };
+
+interface ClassCardItemProps {
+  id: string;
+  title: string;
+  cover?: string;
+  author: string;
+  isActive: boolean;
+  isCompleted: boolean;
+  effectiveLogo: string;
+  courseTitle: string;
+  onClick: () => void;
+  onToggleComplete: () => void;
+}
+
+function ClassCardItem({
+  title,
+  cover,
+  author,
+  isActive,
+  isCompleted,
+  effectiveLogo,
+  courseTitle,
+  onClick,
+  onToggleComplete,
+}: ClassCardItemProps) {
+  return (
+    <div
+      className={[
+        styles.classItemCard,
+        isActive ? styles.classItemCardActive : "",
+      ].join(" ")}
+      onClick={onClick}
+    >
+      {/* Barra vertical de acento para la clase activa */}
+      {isActive && <div className={styles.classActiveBar} />}
+
+      {/* Miniatura horizontal 16:9 */}
+      <div className={styles.classThumbWrap}>
+        {/* Checkmark circular */}
+        <button
+          type="button"
+          className={[
+            styles.classCheckCircle,
+            isCompleted ? styles.classCheckCircleDone : "",
+          ].join(" ")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleComplete();
+          }}
+          title={isCompleted ? "Clase completada" : "Marcar como completada"}
+        >
+          <Check size={11} strokeWidth={2.5} />
+        </button>
+
+        {cover && cover.trim() !== "" ? (
+          <img src={cover} alt={title} className={styles.classThumbImg} />
+        ) : (
+          <div className={styles.classThumbLogoFallback}>
+            {effectiveLogo ? (
+              <img
+                src={effectiveLogo}
+                alt="Academy Logo"
+                className={styles.classThumbLogoImg}
+              />
+            ) : (
+              <span className={styles.classThumbInitial}>
+                {courseTitle ? courseTitle.charAt(0).toUpperCase() : "C"}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Textos: Título de la clase y Autor */}
+      <div className={styles.classInfoWrap}>
+        <h4 className={styles.classItemTitle} title={title}>
+          {title}
+        </h4>
+        <span className={styles.classItemAuthor}>
+          {author}
+        </span>
+      </div>
+    </div>
+  );
+}
