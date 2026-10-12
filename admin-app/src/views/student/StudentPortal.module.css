@@ -2019,8 +2019,8 @@
   border-radius: var(--radius-control, 12px);
   overflow: hidden;
   background: var(--surface-muted);
-  flex: 1;
-  min-height: 240px;
+  transition: border-color 0.15s ease;
+  flex-shrink: 0;
 }
 
 .topicAccordionHeader {
@@ -2075,8 +2075,6 @@
   padding: 8px;
   border-top: 1px solid var(--border-subtle);
   background: var(--surface);
-  flex: 1;
-  overflow-y: auto;
 }
 
 /* Tarjeta contenedora para temas simples SIN subtopics */
@@ -2088,9 +2086,6 @@
   border-radius: var(--radius-control, 12px);
   background: var(--surface);
   padding: 8px;
-  flex: 1;
-  min-height: 240px;
-  overflow-y: auto;
 }
 
 /* Otros Módulos */

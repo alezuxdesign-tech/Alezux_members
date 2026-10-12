@@ -835,123 +835,97 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
 
           {/* Lista de Topics y Subtopics */}
           <div className={styles.topicsScrollList}>
-            {topics.some((t) => t.subtopics && t.subtopics.length > 0) ? (
-              topics.map((top) => {
-                const hasSubtopics = top.subtopics && top.subtopics.length > 0;
-                const isExpanded = !!expandedTopicIds[top.id];
+            {topics.map((top) => {
+              const hasSubtopics = top.subtopics && top.subtopics.length > 0;
+              const isExpanded = !!expandedTopicIds[top.id];
 
-                if (hasSubtopics) {
-                  const subtopics = top.subtopics!;
-                  const completedSubs = subtopics.filter((s) => completedTopicIds.includes(s.id)).length;
-                  const isParentActive = currentItem?.id === top.id || subtopics.some((s) => s.id === currentItem?.id);
-
-                  return (
-                    <div key={top.id} className={styles.topicAccordionWrapper}>
-                      {/* Cabecera del Acordeón para temas con sub-clases */}
-                      <div
-                        className={[
-                          styles.topicAccordionHeader,
-                          isParentActive ? styles.topicAccordionHeaderActive : "",
-                        ].join(" ")}
-                        onClick={() => toggleTopicExpanded(top.id)}
-                      >
-                        <div className={styles.topicAccordionMeta}>
-                          <h4 className={styles.topicAccordionTitle}>{top.title}</h4>
-                          <span className={styles.topicAccordionCounter}>
-                            {completedSubs}/{subtopics.length} terminado
-                          </span>
-                        </div>
-                        <div className={styles.topicAccordionChevron}>
-                          {isExpanded ? <ChevronDown size={16} /> : <ChevronRightIcon size={16} />}
-                        </div>
-                      </div>
-
-                      {/* Contenido expandible del acordeón */}
-                      {isExpanded && (
-                        <div className={styles.topicAccordionBody}>
-                          {/* Si el topic padre tiene video propio */}
-                          {top.video_url && top.video_url.trim() !== "" && (
-                            <ClassCardItem
-                              id={top.id}
-                              title={top.title}
-                              cover={top.cover}
-                              author={authorName}
-                              isActive={currentItem?.id === top.id}
-                              isCompleted={completedTopicIds.includes(top.id)}
-                              effectiveLogo={effectiveLogo}
-                              courseTitle={course.title}
-                              onClick={() => setActiveItemId(top.id)}
-                              onToggleComplete={() => onToggleCompleteTopic(top.id)}
-                            />
-                          )}
-
-                          {/* Subtopics hijos renderizados como class cards */}
-                          {subtopics.map((sub) => (
-                            <ClassCardItem
-                              key={sub.id}
-                              id={sub.id}
-                              title={sub.title}
-                              cover={sub.cover}
-                              author={authorName}
-                              isActive={currentItem?.id === sub.id}
-                              isCompleted={completedTopicIds.includes(sub.id)}
-                              effectiveLogo={effectiveLogo}
-                              courseTitle={course.title}
-                              onClick={() => setActiveItemId(sub.id)}
-                              onToggleComplete={() => onToggleCompleteTopic(sub.id)}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                // Tema SIN subtopics dentro de lista mixta
-                const isActive = currentItem?.id === top.id;
-                const isCompleted = completedTopicIds.includes(top.id);
+              if (hasSubtopics) {
+                const subtopics = top.subtopics!;
+                const completedSubs = subtopics.filter((s) => completedTopicIds.includes(s.id)).length;
+                const isParentActive = currentItem?.id === top.id || subtopics.some((s) => s.id === currentItem?.id);
 
                 return (
-                  <ClassCardItem
-                    key={top.id}
-                    id={top.id}
-                    title={top.title}
-                    cover={top.cover}
-                    author={authorName}
-                    isActive={isActive}
-                    isCompleted={isCompleted}
-                    effectiveLogo={effectiveLogo}
-                    courseTitle={course.title}
-                    onClick={() => setActiveItemId(top.id)}
-                    onToggleComplete={() => onToggleCompleteTopic(top.id)}
-                  />
-                );
-              })
-            ) : (
-              /* Si ningún topic tiene subtopics, envolver en tarjeta que se extiende hasta abajo */
-              <div className={styles.topicSimpleListCard}>
-                {topics.map((top) => {
-                  const isActive = currentItem?.id === top.id;
-                  const isCompleted = completedTopicIds.includes(top.id);
+                  <div key={top.id} className={styles.topicAccordionWrapper}>
+                    {/* Cabecera del Acordeón para temas con sub-clases */}
+                    <div
+                      className={[
+                        styles.topicAccordionHeader,
+                        isParentActive ? styles.topicAccordionHeaderActive : "",
+                      ].join(" ")}
+                      onClick={() => toggleTopicExpanded(top.id)}
+                    >
+                      <div className={styles.topicAccordionMeta}>
+                        <h4 className={styles.topicAccordionTitle}>{top.title}</h4>
+                        <span className={styles.topicAccordionCounter}>
+                          {completedSubs}/{subtopics.length} terminado
+                        </span>
+                      </div>
+                      <div className={styles.topicAccordionChevron}>
+                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRightIcon size={16} />}
+                      </div>
+                    </div>
 
-                  return (
-                    <ClassCardItem
-                      key={top.id}
-                      id={top.id}
-                      title={top.title}
-                      cover={top.cover}
-                      author={authorName}
-                      isActive={isActive}
-                      isCompleted={isCompleted}
-                      effectiveLogo={effectiveLogo}
-                      courseTitle={course.title}
-                      onClick={() => setActiveItemId(top.id)}
-                      onToggleComplete={() => onToggleCompleteTopic(top.id)}
-                    />
-                  );
-                })}
-              </div>
-            )}
+                    {/* Contenido expandible del acordeón */}
+                    {isExpanded && (
+                      <div className={styles.topicAccordionBody}>
+                        {/* Si el topic padre tiene video propio */}
+                        {top.video_url && top.video_url.trim() !== "" && (
+                          <ClassCardItem
+                            id={top.id}
+                            title={top.title}
+                            cover={top.cover}
+                            author={authorName}
+                            isActive={currentItem?.id === top.id}
+                            isCompleted={completedTopicIds.includes(top.id)}
+                            effectiveLogo={effectiveLogo}
+                            courseTitle={course.title}
+                            onClick={() => setActiveItemId(top.id)}
+                            onToggleComplete={() => onToggleCompleteTopic(top.id)}
+                          />
+                        )}
+
+                        {/* Subtopics hijos renderizados como class cards */}
+                        {subtopics.map((sub) => (
+                          <ClassCardItem
+                            key={sub.id}
+                            id={sub.id}
+                            title={sub.title}
+                            cover={sub.cover}
+                            author={authorName}
+                            isActive={currentItem?.id === sub.id}
+                            isCompleted={completedTopicIds.includes(sub.id)}
+                            effectiveLogo={effectiveLogo}
+                            courseTitle={course.title}
+                            onClick={() => setActiveItemId(sub.id)}
+                            onToggleComplete={() => onToggleCompleteTopic(sub.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Tema SIN subtopics
+              const isActive = currentItem?.id === top.id;
+              const isCompleted = completedTopicIds.includes(top.id);
+
+              return (
+                <ClassCardItem
+                  key={top.id}
+                  id={top.id}
+                  title={top.title}
+                  cover={top.cover}
+                  author={authorName}
+                  isActive={isActive}
+                  isCompleted={isCompleted}
+                  effectiveLogo={effectiveLogo}
+                  courseTitle={course.title}
+                  onClick={() => setActiveItemId(top.id)}
+                  onToggleComplete={() => onToggleCompleteTopic(top.id)}
+                />
+              );
+            })}
           </div>
         </aside>
       </div>
