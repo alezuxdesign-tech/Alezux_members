@@ -35,6 +35,7 @@ import {
   ArrowRightLeft,
   Sparkles,
   RefreshCw,
+  Rows,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -484,6 +485,7 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
       cover: "",
       description: "",
       lessons: [],
+      is_separator: false,
     };
 
     if (typeof afterIndex === "number") {
@@ -497,15 +499,39 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
     showToast("info", "Módulo añadido", "Se ha creado un nuevo módulo en blanco.");
   };
 
+  const handleAddSeparator = (afterIndex?: number) => {
+    const newSeparatorId = `sep-${Date.now()}`;
+    const newSeparator: CourseSection = {
+      id: newSeparatorId,
+      title: "",
+      cover: "",
+      description: "",
+      lessons: [],
+      is_separator: true,
+    };
+
+    if (typeof afterIndex === "number") {
+      const updated = [...sections];
+      updated.splice(afterIndex + 1, 0, newSeparator);
+      setSections(updated);
+    } else {
+      setSections([...sections, newSeparator]);
+    }
+    showToast("info", "Separador añadido", "Se ha insertado un nuevo separador para crear otra fila de carrusel en Campus.");
+  };
+
   const handleDeleteSection = (sectionId: string) => {
     const sec = sections.find((s) => s.id === sectionId);
+    const isSep = !!sec?.is_separator;
     setDeleteConfirm({
-      title: "Eliminar Módulo",
-      message: `¿Estás seguro de que deseas eliminar "${sec?.title || "este módulo"}" y todas sus lecciones? Esta acción no se puede deshacer.`,
+      title: isSep ? "Eliminar Separador" : "Eliminar Módulo",
+      message: isSep
+        ? `¿Estás seguro de que deseas eliminar este separador de carrusel? Los módulos que estaban debajo se integrarán en la fila anterior.`
+        : `¿Estás seguro de que deseas eliminar "${sec?.title || "este módulo"}" y todas sus lecciones? Esta acción no se puede deshacer.`,
       onConfirm: () => {
         setSections(sections.filter((s) => s.id !== sectionId));
         setDeleteConfirm(null);
-        showToast("info", "Módulo eliminado", `El módulo "${sec?.title || ""}" ha sido eliminado.`);
+        showToast("info", isSep ? "Separador eliminado" : "Módulo eliminado", isSep ? "El separador de carrusel fue eliminado." : `El módulo "${sec?.title || ""}" ha sido eliminado.`);
       },
     });
   };
@@ -1551,13 +1577,149 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
            ========================================================================= */}
         {builderTab === "curriculum" && (
           <div className={styles.modulesContainer}>
-            {sections.map((section, sIdx) => {
-              const isCollapsed = !!collapsedSections[section.id];
-              const topicsCount = section.lessons ? section.lessons.length : 0;
+            {/* Barra superior de herramientas del temario */}
+            <div className={styles.curriculumToolbar}>
+              <div className={styles.curriculumStats}>
+                <span className={styles.curriculumCountPill}>
+                  {sections.filter((s) => !s.is_separator).length} {sections.filter((s) => !s.is_separator).length === 1 ? "Módulo" : "Módulos"}
+                </span>
+                <span className={styles.curriculumRowsPill}>
+                  {sections.filter((s) => s.is_separator).length + 1} {sections.filter((s) => s.is_separator).length + 1 === 1 ? "Fila de Carrusel" : "Filas de Carrusel"} en Campus
+                </span>
+              </div>
+              <div className={styles.curriculumActions}>
+                <Button variant="secondary" size="sm" onClick={() => handleAddSection()}>
+                  <Plus size={15} /> Nuevo Módulo
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => handleAddSeparator()}>
+                  <Rows size={15} /> Añadir Separador
+                </Button>
+              </div>
+            </div>
 
-              return (
-                <div
-                  key={section.id}
+            {(() => {
+              let actualModuleIndex = 0;
+              return sections.map((section, sIdx) => {
+                const isSeparator = !!section.is_separator;
+                if (!isSeparator) {
+                  actualModuleIndex++;
+                }
+
+                if (isSeparator) {
+                  return (
+                    <div
+                      key={section.id}
+                      className={[
+                        styles.separatorCard,
+                        draggedSectionIndex === sIdx ? styles.moduleCardDragging : "",
+                        dragOverSectionIndex === sIdx && draggedSectionIndex !== sIdx ? styles.moduleCardDropTarget : "",
+                      ].filter(Boolean).join(" ")}
+                      draggable={activeDragHandleIndex === sIdx}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", `${sIdx}`);
+                        e.dataTransfer.effectAllowed = "move";
+                        setDraggedSectionIndex(sIdx);
+                      }}
+                      onDragOver={(e) => {
+                        if (draggedSectionIndex !== null) {
+                          e.preventDefault();
+                          if (e.dataTransfer) {
+                            e.dataTransfer.dropEffect = "move";
+                          }
+                          if (dragOverSectionIndex !== sIdx) {
+                            setDragOverSectionIndex(sIdx);
+                          }
+                        }
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverSectionIndex === sIdx) {
+                          setDragOverSectionIndex(null);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (draggedSectionIndex !== null) {
+                          handleDropSection(sIdx);
+                        }
+                        setDragOverSectionIndex(null);
+                        setActiveDragHandleIndex(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedSectionIndex(null);
+                        setDragOverSectionIndex(null);
+                        setActiveDragHandleIndex(null);
+                      }}
+                    >
+                      <div className={styles.separatorCardLeft}>
+                        {/* Drag Handle para reordenar separador */}
+                        <div
+                          className={styles.moduleDragHandle}
+                          onMouseDown={() => setActiveDragHandleIndex(sIdx)}
+                          onMouseUp={() => setActiveDragHandleIndex(null)}
+                          title="Mantén presionado y arrastra para reubicar este separador"
+                        >
+                          <GripVertical size={16} />
+                        </div>
+
+                        {/* Botones de subida y bajada de orden */}
+                        <div className={styles.reorderButtons}>
+                          <button
+                            type="button"
+                            className={styles.reorderBtn}
+                            onClick={() => handleMoveSectionUp(sIdx)}
+                            disabled={sIdx === 0}
+                            title="Mover separador hacia arriba"
+                          >
+                            <ArrowUp size={11} />
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.reorderBtn}
+                            onClick={() => handleMoveSectionDown(sIdx)}
+                            disabled={sIdx === sections.length - 1}
+                            title="Mover separador hacia abajo"
+                          >
+                            <ArrowDown size={11} />
+                          </button>
+                        </div>
+
+                        {/* Badge de Separador */}
+                        <div className={styles.separatorTag}>
+                          <Rows size={13} />
+                          <span>Separador · Nueva Fila de Carrusel</span>
+                        </div>
+
+                        {/* Título de la fila opcional */}
+                        <input
+                          type="text"
+                          value={section.title}
+                          onChange={(e) => handleUpdateSectionTitle(section.id, e.target.value)}
+                          className={styles.separatorTitleInput}
+                          placeholder="Nombre de la fila en Campus (opcional, ej: Fase 2: Escalamiento...)"
+                        />
+                      </div>
+
+                      <div className={styles.separatorCardRight}>
+                        <button
+                          type="button"
+                          className={styles.deleteBtn}
+                          onClick={() => handleDeleteSection(section.id)}
+                          title="Eliminar separador"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const currentModuleNum = actualModuleIndex;
+                const isCollapsed = !!collapsedSections[section.id];
+                const topicsCount = section.lessons ? section.lessons.length : 0;
+
+                return (
+                  <div
+                    key={section.id}
                   className={[
                     styles.moduleCard,
                     draggedSectionIndex === sIdx ? styles.moduleCardDragging : "",
@@ -1696,7 +1858,7 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                         </div>
                       </div>
 
-                      <span className={styles.moduleIndexPill}>Módulo {sIdx + 1}</span>
+                      <span className={styles.moduleIndexPill}>Módulo {currentModuleNum}</span>
 
                       <input
                         type="text"
@@ -1985,18 +2147,28 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                 )}
               </div>
             );
-          })}
+          });
+        })()}
 
-            {/* Botón único de Nuevo Módulo al final de todos los módulos */}
+            {/* Botones de Nuevo Módulo y Separador al final de todos los módulos */}
             <div className={styles.addModuleBelowWrapper}>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => handleAddSection()}
                 className={styles.addModuleBelowBtn}
-                title="Añadir un nuevo módulo al final del curso"
+                title="Añadir un nuevo módulo al temario"
               >
                 <Plus size={15} /> Nuevo Módulo
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleAddSeparator()}
+                className={styles.addSeparatorBelowBtn}
+                title="Añadir un separador para crear otra fila de carrusel en Campus"
+              >
+                <Rows size={15} /> Separador de Carrusel
               </Button>
             </div>
 

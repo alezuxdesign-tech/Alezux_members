@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import { 
   ArrowLeft, 
   MessageCircle, 
@@ -16,6 +16,15 @@ import {
 } from "lucide-react";
 import { Course, CourseSection, CourseLesson, CourseTopic } from "../../services/api";
 import styles from "./StudentPortal.module.css";
+
+interface CarouselRow {
+  id: string;
+  title: string;
+  modules: {
+    section: CourseSection;
+    moduleNumber: number;
+  }[];
+}
 
 interface StudentCourseNetflixViewProps {
   course: Course;
@@ -39,11 +48,53 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
   const progress = course.progress ?? 0;
   const hasAccess = !!course.hasAccess;
 
-  // Refs para hacer scroll horizontal con las flechas < y > en cada sección
+  // Agrupar los módulos del temario en filas de carrusel delimitadas por separadores
+  const carouselRows: CarouselRow[] = useMemo(() => {
+    const rows: CarouselRow[] = [];
+    let currentRow: CarouselRow = {
+      id: "row-initial",
+      title: "Módulos del Curso",
+      modules: [],
+    };
+    let moduleCounter = 0;
+
+    sections.forEach((sec, idx) => {
+      if (sec.is_separator) {
+        if (currentRow.modules.length > 0) {
+          rows.push(currentRow);
+          currentRow = {
+            id: sec.id || `row-${idx}`,
+            title: sec.title.trim() || `Fila ${rows.length + 1}`,
+            modules: [],
+          };
+        } else {
+          // Si el separador está al inicio antes de cualquier módulo, da título a la primera fila
+          currentRow.id = sec.id || `row-${idx}`;
+          if (sec.title.trim()) {
+            currentRow.title = sec.title.trim();
+          }
+        }
+      } else {
+        moduleCounter++;
+        currentRow.modules.push({
+          section: sec,
+          moduleNumber: moduleCounter,
+        });
+      }
+    });
+
+    if (currentRow.modules.length > 0) {
+      rows.push(currentRow);
+    }
+
+    return rows;
+  }, [sections]);
+
+  // Refs para hacer scroll horizontal con las flechas < y > en cada fila de carrusel
   const scrollContainers = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const scrollSection = (secId: string, direction: "left" | "right") => {
-    const el = scrollContainers.current[secId];
+  const scrollSection = (rowId: string, direction: "left" | "right") => {
+    const el = scrollContainers.current[rowId];
     if (el) {
       const scrollAmount = 380;
       el.scrollBy({
@@ -53,15 +104,23 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
     }
   };
 
-  const handleCardClick = (sec: CourseSection, les: CourseLesson) => {
+  const handleCardClick = (sec: CourseSection, moduleNumber: number) => {
     if (!hasAccess) {
-      setLockedItemName(les.title);
+      setLockedItemName(sec.title || `Módulo ${moduleNumber}`);
       setPurchaseModalOpen(true);
       return;
     }
-    // Si tiene acceso, abrir el reproductor en este módulo
-    const firstTopic = les.topics && les.topics.length > 0 ? les.topics[0] : (les as unknown as CourseTopic);
-    onSelectModule(sec, les, firstTopic);
+    const lessons = sec.lessons || [];
+    if (lessons.length === 0) {
+      alert(`El módulo "${sec.title || `Módulo ${moduleNumber}`}" aún no tiene lecciones creadas.`);
+      return;
+    }
+    // Si tiene acceso, abrir el reproductor en la primera clase de este módulo
+    const firstLesson = lessons[0];
+    const firstTopic = firstLesson.topics && firstLesson.topics.length > 0 
+      ? firstLesson.topics[0] 
+      : (firstLesson as unknown as CourseTopic);
+    onSelectModule(sec, firstLesson, firstTopic);
   };
 
   return (
@@ -222,22 +281,21 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
 
       {/* 3. SECCIONES Y CARRUSELES DE MÓDULOS (PORTADAS TIPO NETFLIX) */}
       <div className={styles.sectionsList}>
-        {sections.map((section, secIdx) => {
-          const lessons = section.lessons || [];
-          const secKey = section.id || `sec-${secIdx}`;
+        {carouselRows.map((row, rowIdx) => {
+          const rowKey = row.id || `row-${rowIdx}`;
 
           return (
-            <section key={secKey} className={styles.netflixSection}>
-              {/* Encabezado de la Sección con Flechas de Navegación < y > */}
+            <section key={rowKey} className={styles.netflixSection}>
+              {/* Encabezado de la Fila con Flechas de Navegación < y > */}
               <div className={styles.netflixSectionHeader}>
                 <h3 className={styles.netflixSectionTitle}>
-                  {section.title || `Sección ${secIdx + 1}`}
+                  {row.title || `Fila ${rowIdx + 1}`}
                 </h3>
                 <div className={styles.carouselNavControls}>
                   <button
                     type="button"
                     className={styles.carouselArrowBtn}
-                    onClick={() => scrollSection(secKey, "left")}
+                    onClick={() => scrollSection(rowKey, "left")}
                     aria-label="Desplazar hacia la izquierda"
                   >
                     <ChevronLeft size={20} />
@@ -245,7 +303,7 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                   <button
                     type="button"
                     className={styles.carouselArrowBtn}
-                    onClick={() => scrollSection(secKey, "right")}
+                    onClick={() => scrollSection(rowKey, "right")}
                     aria-label="Desplazar hacia la derecha"
                   >
                     <ChevronRight size={20} />
@@ -253,26 +311,27 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                 </div>
               </div>
 
-              {/* Fila Horizontal Desplazable de Tarjetas Tipo Portada (Poster 2:3) */}
+              {/* Fila Horizontal Desplazable de Tarjetas Tipo Portada de Módulo (Poster 2:3) */}
               <div 
-                ref={(el) => (scrollContainers.current[secKey] = el)}
+                ref={(el) => (scrollContainers.current[rowKey] = el)}
                 className={styles.netflixCarouselRow}
               >
-                {lessons.map((lesson, lesIdx) => {
-                  const moduleNumber = lesIdx + 1;
-                  const cover = lesson.cover || section.cover || course.thumbnail;
-                  const trackTag = section.title.toUpperCase();
+                {row.modules.map(({ section: moduleSection, moduleNumber }) => {
+                  const lessons = moduleSection.lessons || [];
+                  const lessonsCount = lessons.length;
+                  const cover = moduleSection.cover || course.thumbnail;
+                  const trackTag = `${lessonsCount} ${lessonsCount === 1 ? "Clase" : "Clases"}`;
 
                   return (
                     <div
-                      key={lesson.id || `les-${lesIdx}`}
+                      key={moduleSection.id}
                       className={[
                         styles.netflixPosterCard,
                         !hasAccess ? styles.netflixCardLocked : "",
                       ].join(" ")}
-                      onClick={() => handleCardClick(section, lesson)}
+                      onClick={() => handleCardClick(moduleSection, moduleNumber)}
                     >
-                      {/* Fondo de Portada con Imagen o Gradiente Vibrante */}
+                      {/* Fondo de Portada con Imagen o Gradiente */}
                       <div 
                         className={styles.posterBgImage}
                         style={{
@@ -283,7 +342,7 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                       {/* Degradado vertical de lectura */}
                       <div className={styles.posterGradientOverlay} />
 
-                      {/* Tag Superior: Modulo 1, Modulo 2... */}
+                      {/* Tag Superior: Módulo 1, Módulo 2... */}
                       <div className={styles.posterTopBadge}>
                         <span>Módulo {moduleNumber}</span>
                       </div>
@@ -295,19 +354,19 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                         </div>
                       )}
 
-                      {/* Contenido Inferior: Subtítulo de categoría y Título del módulo */}
+                      {/* Contenido Inferior: Cantidad de clases y Título del módulo */}
                       <div className={styles.posterBottomContent}>
                         <span className={styles.posterTrackTag}>
-                          {trackTag || course.title.toUpperCase()}
+                          {trackTag}
                         </span>
                         <h4 className={styles.posterTitle}>
-                          {lesson.title}
+                          {moduleSection.title || `Módulo ${moduleNumber}`}
                         </h4>
                       </div>
 
                       {/* Hover Play Button Glow */}
                       {hasAccess && (
-                        <div className={styles.posterHoverPlay}>
+                        <div className={styles.posterHoverPlay} title="Comenzar a ver este módulo">
                           <Play size={20} fill="currentColor" />
                         </div>
                       )}

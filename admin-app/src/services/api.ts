@@ -147,6 +147,7 @@ export interface CourseSection {
   description?: string;
   lessons: CourseLesson[];
   topics?: CourseTopic[];
+  is_separator?: boolean;
 }
 
 export interface Course {
@@ -542,6 +543,44 @@ const MOCK_COURSES: Course[] = [
           },
         ],
       },
+      {
+        id: "sep-1",
+        title: "Fase 2: Optimización y Escalamiento Avanzado",
+        is_separator: true,
+        lessons: [],
+      },
+      {
+        id: "sec-3-extra",
+        title: "Módulo 3: Métricas Avanzadas y Atribución",
+        cover: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80",
+        lessons: [
+          {
+            id: "les-extra-1",
+            title: "Modelos de Atribución Multitáctil",
+            duration: "22m",
+            cover: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80",
+            description: "Aprende a medir el impacto real de cada touchpoint en el embudo.",
+            video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            files: []
+          }
+        ]
+      },
+      {
+        id: "sec-4-extra",
+        title: "Módulo 4: Automatización de Campañas y Reglas",
+        cover: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
+        lessons: [
+          {
+            id: "les-extra-2",
+            title: "Reglas Automatizadas para Protección de Presupuesto",
+            duration: "30m",
+            cover: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
+            description: "Cómo apagar anuncios no rentables automáticamente sin estar 24/7 pegado a la pantalla.",
+            video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            files: []
+          }
+        ]
+      }
     ],
   },
   {

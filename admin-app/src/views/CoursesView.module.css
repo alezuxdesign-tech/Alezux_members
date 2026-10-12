@@ -836,6 +836,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  gap: 12px;
   margin-top: 16px;
   margin-bottom: 24px;
   padding-left: 2px;
@@ -851,6 +852,140 @@
 
 .addModuleBelowBtn:hover {
   transform: translateY(-1px);
+}
+
+.addSeparatorBelowBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  transition: all var(--duration-fast);
+}
+
+.addSeparatorBelowBtn:hover {
+  transform: translateY(-1px);
+}
+
+/* Barra de herramientas superior del temario */
+.curriculumToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  margin-bottom: var(--space-1);
+}
+
+.curriculumStats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.curriculumCountPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.curriculumRowsPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: rgba(119, 71, 255, 0.1);
+  border: 1px solid rgba(119, 71, 255, 0.25);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.curriculumActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Separador de Fila (Campus Netflix) */
+.separatorCard {
+  background: var(--surface-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-panel);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all var(--duration-fast);
+  position: relative;
+}
+
+.separatorCard:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.separatorCardLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.separatorTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(119, 71, 255, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(119, 71, 255, 0.25);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.separatorTitleInput {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  flex: 1;
+  transition: all var(--duration-fast);
+  min-width: 140px;
+}
+
+.separatorTitleInput:hover {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.separatorTitleInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.separatorCardRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .moduleCard {
