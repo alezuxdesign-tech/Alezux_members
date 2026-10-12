@@ -248,6 +248,21 @@ export interface CreateCommunityChannelPayload {
   is_announcement?: boolean;
 }
 
+export interface AcademyEvent {
+  id: string;
+  title: string;
+  description: string;
+  instructor?: string;
+  instructor_avatar?: string;
+  date: string;
+  time: string;
+  timezone?: string;
+  type: "live" | "workshop" | "qna" | "webinar";
+  meeting_url?: string;
+  badge?: string;
+  is_active?: boolean;
+}
+
 export type PlanType = "one_time" | "installments" | "subscription";
 
 export interface FinancePlan {
@@ -2371,6 +2386,88 @@ class ApiService {
       migrated_lessons: 0,
       migrated_students: 0,
     };
+  }
+
+  // --- ACADEMY EVENTS / SESIONES EN VIVO ---
+  async getAcademyEvents(): Promise<AcademyEvent[]> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}academy/events`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.events)) {
+            return data.events;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("API Error getAcademyEvents:", e);
+    }
+
+    const saved = localStorage.getItem("crezca_academy_events");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+
+    // Eventos por defecto
+    const defaultEvents: AcademyEvent[] = [
+      {
+        id: "evt-1",
+        title: "Mentoría Grupal en Vivo: Q&A y Revisión de Casos",
+        description: "Sesión en tiempo real con los tutores principales para resolver preguntas, revisar proyectos y dar feedback en directo.",
+        instructor: "Equipo Docente Crezca",
+        instructor_avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+        date: new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0],
+        time: "19:00",
+        timezone: "GMT-5",
+        type: "live",
+        meeting_url: "https://zoom.us",
+        badge: "En Vivo",
+        is_active: true,
+      },
+      {
+        id: "evt-2",
+        title: "Taller Práctico: Implementación Paso a Paso",
+        description: "Laboratorio práctico interactivo donde pondremos a prueba estrategias reales de los módulos avanzados.",
+        instructor: "Docente Titular",
+        instructor_avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+        date: new Date(Date.now() + 6 * 86400000).toISOString().split("T")[0],
+        time: "18:30",
+        timezone: "GMT-5",
+        type: "workshop",
+        meeting_url: "https://zoom.us",
+        badge: "Taller Práctico",
+        is_active: true,
+      },
+    ];
+
+    return defaultEvents;
+  }
+
+  async saveAcademyEvents(events: AcademyEvent[]): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}academy/events`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ events }),
+        });
+        if (res.ok) {
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn("API Error saveAcademyEvents:", e);
+    }
+    localStorage.setItem("crezca_academy_events", JSON.stringify(events));
+    return true;
   }
 }
 

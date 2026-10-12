@@ -301,6 +301,20 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'student_permissions_check' ],
 			] );
 
+			// Eventos de la Academia (Sesiones en vivo, webinars, mentorías)
+			register_rest_route( $namespace, '/academy/events', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_academy_events' ],
+					'permission_callback' => '__return_true',
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'save_academy_events' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
 			// Comunidad & Canales tipo Discord
 			register_rest_route( $namespace, '/community/channels', [
 				[
@@ -3442,6 +3456,65 @@ class Admin_Api {
 
 		$wpdb->delete( $table_messages, [ 'id' => $message_id ] );
 		return rest_ensure_response( [ 'success' => true, 'deleted_id' => $message_id ] );
+	}
+
+	/**
+	 * Obtener eventos y clases en vivo de la academia
+	 */
+	public function get_academy_events() {
+		$events = get_option( '_alezux_academy_events', null );
+		if ( empty( $events ) || ! is_array( $events ) ) {
+			// Eventos predeterminados con fechas próximas dinámicas
+			$events = [
+				[
+					'id'                => 'evt-1',
+					'title'             => 'Mentoría Grupal en Vivo: Q&A y Análisis de Casos',
+					'description'       => 'Sesión en tiempo real con docentes para resolver dudas, revisar avances y dar feedback personalizado.',
+					'instructor'        => 'Equipo Docente Crezca',
+					'instructor_avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+					'date'              => date( 'Y-m-d', strtotime( '+3 days' ) ),
+					'time'              => '19:00',
+					'timezone'          => 'GMT-5',
+					'type'              => 'live',
+					'meeting_url'       => 'https://zoom.us',
+					'badge'             => 'En Vivo',
+					'is_active'         => true,
+				],
+				[
+					'id'                => 'evt-2',
+					'title'             => 'Taller Práctico: Implementación y Proyectos Reales',
+					'description'       => 'Laboratorio intensivo guiado para construir proyectos aplicados de los módulos principales.',
+					'instructor'        => 'Docente Titular',
+					'instructor_avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+					'date'              => date( 'Y-m-d', strtotime( '+6 days' ) ),
+					'time'              => '18:30',
+					'timezone'          => 'GMT-5',
+					'type'              => 'workshop',
+					'meeting_url'       => 'https://zoom.us',
+					'badge'             => 'Taller Práctico',
+					'is_active'         => true,
+				],
+			];
+		}
+
+		return rest_ensure_response( [
+			'success' => true,
+			'events'  => $events,
+		] );
+	}
+
+	/**
+	 * Guardar eventos de la academia
+	 */
+	public function save_academy_events( $request ) {
+		$params = $request->get_json_params();
+		$events = isset( $params['events'] ) && is_array( $params['events'] ) ? $params['events'] : [];
+		update_option( '_alezux_academy_events', $events );
+		return rest_ensure_response( [
+			'success' => true,
+			'events'  => $events,
+			'message' => 'Eventos de la academia guardados correctamente.',
+		] );
 	}
 }
 

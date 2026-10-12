@@ -39,7 +39,7 @@ import styles from "./App.module.css";
 import studentStyles from "./views/student/StudentPortal.module.css";
 
 type AdminTabId = "overview" | "courses" | "students" | "instructors" | "finance" | "marketing" | "community" | "settings";
-type StudentTabId = "dashboard" | "courses" | "achievements" | "community";
+type StudentTabId = "dashboard" | "courses" | "community";
 
 interface NavItemConfig<T extends string = string> {
   id: T;
@@ -153,11 +153,10 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     { id: "settings", label: "Configuración", icon: <Sliders size={18} /> },
   ];
 
-  // Navegación para el Estudiante (Dashboard, Cursos, Logros, Comunidad)
+  // Navegación para el Estudiante (Dashboard, Cursos, Comunidad)
   const studentNavItems: NavItemConfig<StudentTabId>[] = [
     { id: "dashboard", label: "Dashboard", icon: <BarChart3 size={18} /> },
     { id: "courses", label: "Cursos", icon: <GraduationCap size={18} /> },
-    { id: "achievements", label: "Logros", icon: <Award size={18} /> },
     { id: "community", label: "Comunidad", icon: <Users size={18} /> },
   ];
 
@@ -351,6 +350,17 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     setSelectedSection(sec);
     setSelectedLesson(les);
     setSelectedTopic(top || null);
+    if (mainAreaRef.current) {
+      mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleResumeLesson = (course: Course, sec?: CourseSection | null, les?: CourseLesson | null, top?: CourseTopic | null) => {
+    setSelectedCourse(course);
+    setSelectedSection(sec || null);
+    setSelectedLesson(les || null);
+    setSelectedTopic(top || null);
+    setActiveStudentTab("courses");
     if (mainAreaRef.current) {
       mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -607,7 +617,6 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             ) : (
               <>
                 {activeStudentTab === "dashboard" && <span className={styles.headerTitle}>Dashboard</span>}
-                {activeStudentTab === "achievements" && <span className={styles.headerTitle}>Logros</span>}
                 {activeStudentTab === "community" && <span className={styles.headerTitle}>Comunidad</span>}
                 {activeStudentTab === "courses" && (
                   !selectedCourse ? (
@@ -724,6 +733,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                   profile={studentProfile || defaultStudentProfile}
                   courses={studentCourses}
                   onSelectCourse={handleSelectCourse}
+                  onResumeLesson={handleResumeLesson}
                   onNavigateTab={(tab) => setActiveStudentTab(tab)}
                 />
               )}
@@ -769,12 +779,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 </>
               )}
 
-              {/* 3. Logros del Estudiante (Requerimiento explícito: Dejar la vista en blanco por ahora) */}
-              {activeStudentTab === "achievements" && (
-                <div className={studentStyles.blankAchievementsView} />
-              )}
-
-              {/* 4. Comunidad del Estudiante */}
+              {/* 3. Comunidad del Estudiante */}
               {activeStudentTab === "community" && (
                 <StudentCommunityView
                   courses={studentCourses}

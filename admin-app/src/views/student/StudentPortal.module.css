@@ -3456,3 +3456,482 @@
   line-height: 1.5;
 }
 
+/* ============================================================== */
+/* NUEVOS ESTILOS DEL DASHBOARD DEL ESTUDIANTE                    */
+/* ============================================================== */
+
+/* 1. Encabezado Limpio de Bienvenida (Sin contenedor pesado) */
+.cleanGreetingHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 0 8px;
+  flex-wrap: wrap;
+}
+
+.cleanGreetingLeft {
+  flex: 1;
+  min-width: 280px;
+}
+
+.cleanGreetingTitle {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--foreground, #ffffff);
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.cleanGreetingSubtitle {
+  font-size: 14px;
+  color: var(--text-muted, #94a3b8);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.studentPlanCleanBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: var(--surface, #12141a);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-surface, 12px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+/* 2. Tarjeta Destacada: Última Clase Vista (Continuar donde lo dejaste) */
+.lastLessonCard {
+  background: var(--surface, #12141a);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-left: 4px solid var(--accent, #7747ff);
+  border-radius: var(--radius-surface, 16px);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+  flex-wrap: wrap;
+  transition: border-color var(--duration-fast, 150ms);
+}
+
+.lastLessonCard:hover {
+  border-color: var(--border-strong, rgba(255, 255, 255, 0.2));
+}
+
+.lastLessonMain {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.lastLessonCoverWrap {
+  width: 120px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-control, 8px);
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  background: #000000;
+}
+
+.lastLessonCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lastLessonInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.lastLessonTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent, #7747ff);
+}
+
+.lastLessonTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.lastLessonCourseName {
+  font-size: 12.5px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.lastLessonActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-control, 8px);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px var(--accent-subtle, rgba(119, 71, 255, 0.35));
+  transition: all var(--duration-fast, 150ms);
+  flex-shrink: 0;
+}
+
+.lastLessonActionBtn:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+/* 3. Panel de Dos Columnas: Pomodoro & Eventos */
+.dashboardSplitGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+@media (max-width: 960px) {
+  .dashboardSplitGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 4. Modo Pomodoro */
+.pomodoroCard {
+  background: var(--surface, #12141a);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-surface, 16px);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.pomodoroHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pomodoroTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pomodoroIconWrap {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control, 8px);
+  background: rgba(243, 173, 32, 0.15);
+  color: #f3ad20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pomodoroTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0;
+}
+
+.pomodoroSubtitle {
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  margin: 2px 0 0;
+}
+
+.pomodoroTabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-muted, #1a1e27);
+  padding: 3px;
+  border-radius: var(--radius-pill, 9999px);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.pomodoroTabBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill, 9999px);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms);
+}
+
+.pomodoroTabBtnActive {
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+}
+
+.pomodoroBody {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.pomodoroTimerBox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pomodoroClockNumber {
+  font-size: 46px;
+  font-weight: 800;
+  color: var(--foreground, #ffffff);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.pomodoroPhaseTag {
+  font-size: 12px;
+  color: var(--accent, #7747ff);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pomodoroControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pomodoroBtnPlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-control, 8px);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms);
+  box-shadow: 0 4px 14px var(--accent-subtle, rgba(119, 71, 255, 0.35));
+}
+
+.pomodoroBtnPlay:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.pomodoroBtnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: var(--surface-raised, #1f1f23);
+  color: var(--foreground, #ffffff);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16));
+  border-radius: var(--radius-control, 8px);
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms);
+}
+
+.pomodoroBtnSecondary:hover {
+  background: var(--surface-muted, #252830);
+  border-color: var(--accent, #7747ff);
+  color: var(--accent, #7747ff);
+}
+
+.pomodoroTrack {
+  height: 6px;
+  background: var(--surface-muted, #1a1e27);
+  border-radius: 9999px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.pomodoroFill {
+  height: 100%;
+  background: var(--accent, #7747ff);
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.pomodoroStatsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+}
+
+/* 5. Próximos Eventos de la Academia */
+.eventsCard {
+  background: var(--surface, #12141a);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-surface, 16px);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.eventsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eventsTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eventsIconWrap {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control, 8px);
+  background: rgba(119, 71, 255, 0.15);
+  color: var(--accent, #7747ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eventsTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0;
+}
+
+.eventsSubtitle {
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  margin: 2px 0 0;
+}
+
+.eventsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.eventItem {
+  background: var(--surface-muted, #1a1e27);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-surface, 12px);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  transition: border-color var(--duration-fast, 150ms);
+}
+
+.eventItem:hover {
+  border-color: var(--accent, #7747ff);
+}
+
+.eventItemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.eventItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.eventDateText {
+  color: var(--accent, #7747ff);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.eventItemTitle {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--foreground, #ffffff);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.eventItemInstructor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.eventItemInstructorImg {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.eventJoinBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--surface-raised, #1f1f23);
+  color: var(--foreground, #ffffff);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16));
+  border-radius: var(--radius-control, 8px);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.eventJoinBtn:hover {
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border-color: var(--accent, #7747ff);
+}
+
+
