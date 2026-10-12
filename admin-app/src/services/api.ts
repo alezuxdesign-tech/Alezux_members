@@ -109,6 +109,33 @@ export interface CourseInstructor {
   bio?: string;
 }
 
+export interface Instructor {
+  id: string;
+  userId?: number | null;
+  name: string;
+  email?: string;
+  role: string;
+  avatar?: string;
+  bio?: string;
+  isAdmin?: boolean;
+  allowedChannelIds?: number[];
+  assigned_courses?: { id: number; title: string }[];
+  assignedCourseIds?: number[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface InstructorsResponse {
+  instructors: Instructor[];
+  current_admin: {
+    id: number;
+    name: string;
+    email: string;
+    avatar: string;
+    is_already_instructor: boolean;
+  };
+}
+
 export interface CourseLesson extends CourseTopic {
   topics?: CourseTopic[];
 }
@@ -1127,6 +1154,108 @@ class ApiService {
       { id: 103, title: "Módulo 3: Casos Prácticos y Configuración" },
       { id: 104, title: "Módulo 4: Proyecto Final y Certificación" },
     ];
+  }
+
+  // --- INSTRUCTORS / DOCENTES ---
+  async getInstructors(): Promise<InstructorsResponse> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}instructors`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error fetching instructors:", e);
+    }
+    return {
+      instructors: [],
+      current_admin: {
+        id: 1,
+        name: "Administrador",
+        email: "admin@alezux.com",
+        avatar: "",
+        is_already_instructor: false,
+      },
+    };
+  }
+
+  async saveInstructor(data: Partial<Instructor> & { createWpUser?: boolean; password?: string }): Promise<{ success: boolean; instructor?: Instructor; message?: string }> {
+    try {
+      if (this.wpData) {
+        const url = data.id ? `${this.rootUrl}instructors/${data.id}` : `${this.rootUrl}instructors`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(data),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error saving instructor:", e);
+    }
+    return { success: false, message: "Error al guardar docente." };
+  }
+
+  async deleteInstructor(id: string): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}instructors/${id}`, {
+          method: "DELETE",
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error deleting instructor:", e);
+    }
+    return true;
+  }
+
+  async syncAdminAsInstructor(): Promise<{ success: boolean; instructor?: Instructor; message?: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}instructors/sync-admin`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error syncing admin as instructor:", e);
+    }
+    return { success: false, message: "Error al sincronizar administrador como docente." };
+  }
+
+  async saveCourseInstructors(courseId: number, instructors: CourseInstructor[]): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}courses/${courseId}/instructors`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ instructors }),
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error saving course instructors:", e);
+    }
+    return true;
   }
 
   // --- STUDENTS ---

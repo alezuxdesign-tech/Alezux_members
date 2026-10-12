@@ -98,6 +98,45 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
+			// Docentes, Instructores & Mentores
+			register_rest_route( $namespace, '/instructors', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_instructors' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'create_or_update_instructor' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/instructors/(?P<id>[a-zA-Z0-9_-]+)', [
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'create_or_update_instructor' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'DELETE',
+					'callback'            => [ $this, 'delete_instructor' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/instructors/sync-admin', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'sync_admin_as_instructor' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/courses/(?P<id>\d+)/instructors', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'save_course_instructors' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
 			// Finanzas, Ventas, Suscripciones & Planes
 			register_rest_route( $namespace, '/finance/plans', [
 				'methods'             => 'GET',
@@ -1155,6 +1194,354 @@ class Admin_Api {
 				'planName'         => get_user_meta( $fresh_user->ID, '_alezux_plan_name', true ) ?: 'Acceso Completo',
 				'enabledCourseIds' => array_values( array_map( 'intval', (array) $course_ids ) ),
 			],
+		] );
+	}
+
+	// =========================================================================
+	// GESTIÓN GLOBAL DE DOCENTES / INSTRUCTORES & MENTORES
+	// =========================================================================
+
+	/**
+	 * Obtener la lista global de docentes / instructores y datos del admin
+	 */
+	public function get_instructors() {
+		$instructors = get_option( '_alezux_global_instructors', [] );
+		if ( ! is_array( $instructors ) ) {
+			$instructors = [];
+		}
+
+		// Datos del usuario administrador actual
+		$current_user = wp_get_current_user();
+		$current_admin = [
+			'id'     => $current_user->ID,
+			'name'   => $current_user->display_name ?: $current_user->user_login,
+			'email'  => $current_user->user_email,
+			'avatar' => get_avatar_url( $current_user->ID, [ 'size' => 120 ] ),
+		];
+
+		$is_admin_registered = false;
+		foreach ( $instructors as $inst ) {
+			if ( ( ! empty( $inst['userId'] ) && (int) $inst['userId'] === (int) $current_user->ID ) || ! empty( $inst['isAdmin'] ) ) {
+				$is_admin_registered = true;
+				break;
+			}
+		}
+		$current_admin['is_already_instructor'] = $is_admin_registered;
+
+		// Calcular cursos asignados a cada docente dinámicamente
+		$all_courses = get_posts( [
+			'post_type'      => [ 'crezca_course', 'sfwd-courses' ],
+			'post_status'    => [ 'publish', 'draft' ],
+			'posts_per_page' => -1,
+		] );
+
+		$courses_by_instructor = [];
+		foreach ( $all_courses as $c ) {
+			$mentors = get_post_meta( $c->ID, '_alezux_course_mentors', true );
+			if ( is_array( $mentors ) ) {
+				foreach ( $mentors as $m ) {
+					$m_id = isset( $m['id'] ) ? (string) $m['id'] : '';
+					$m_name = isset( $m['name'] ) ? (string) $m['name'] : '';
+					if ( $m_id ) {
+						$courses_by_instructor[ $m_id ][] = [
+							'id'    => $c->ID,
+							'title' => $c->post_title,
+						];
+					}
+					if ( $m_name ) {
+						$courses_by_instructor[ 'name:' . mb_strtolower( trim( $m_name ) ) ][] = [
+							'id'    => $c->ID,
+							'title' => $c->post_title,
+						];
+					}
+				}
+			}
+		}
+
+		foreach ( $instructors as &$inst ) {
+			$assigned = [];
+			if ( ! empty( $inst['id'] ) && isset( $courses_by_instructor[ $inst['id'] ] ) ) {
+				$assigned = $courses_by_instructor[ $inst['id'] ];
+			} elseif ( ! empty( $inst['name'] ) && isset( $courses_by_instructor[ 'name:' . mb_strtolower( trim( $inst['name'] ) ) ] ) ) {
+				$assigned = $courses_by_instructor[ 'name:' . mb_strtolower( trim( $inst['name'] ) ) ];
+			}
+
+			// Quitar duplicados por id de curso
+			$unique_assigned = [];
+			$seen = [];
+			foreach ( $assigned as $a ) {
+				if ( ! in_array( $a['id'], $seen, true ) ) {
+					$seen[] = $a['id'];
+					$unique_assigned[] = $a;
+				}
+			}
+			$inst['assigned_courses'] = $unique_assigned;
+			$inst['assignedCourseIds'] = array_column( $unique_assigned, 'id' );
+		}
+
+		return rest_ensure_response( [
+			'instructors'   => array_values( $instructors ),
+			'current_admin' => $current_admin,
+		] );
+	}
+
+	/**
+	 * Crear o actualizar docente / mentor
+	 */
+	public function create_or_update_instructor( $request ) {
+		$params = $request->get_json_params();
+		$route_id = $request->get_param( 'id' );
+
+		$instructors = get_option( '_alezux_global_instructors', [] );
+		if ( ! is_array( $instructors ) ) {
+			$instructors = [];
+		}
+
+		$id = ! empty( $route_id ) ? (string) $route_id : ( ! empty( $params['id'] ) ? (string) $params['id'] : 'inst-' . time() );
+		$name = isset( $params['name'] ) ? sanitize_text_field( $params['name'] ) : '';
+		$email = isset( $params['email'] ) ? sanitize_email( $params['email'] ) : '';
+		$role = isset( $params['role'] ) ? sanitize_text_field( $params['role'] ) : 'Docente';
+		$avatar = isset( $params['avatar'] ) ? esc_url_raw( $params['avatar'] ) : '';
+		$bio = isset( $params['bio'] ) ? sanitize_textarea_field( $params['bio'] ) : '';
+		$user_id = isset( $params['userId'] ) ? (int) $params['userId'] : null;
+		$is_admin = ! empty( $params['isAdmin'] );
+		$allowed_channels = isset( $params['allowedChannelIds'] ) && is_array( $params['allowedChannelIds'] )
+			? array_values( array_map( 'intval', $params['allowedChannelIds'] ) )
+			: [];
+
+		// Crear usuario WordPress si se solicita
+		if ( ! empty( $params['createWpUser'] ) && ! empty( $email ) && ! $user_id ) {
+			$existing_user = get_user_by( 'email', $email );
+			if ( $existing_user ) {
+				$user_id = $existing_user->ID;
+			} else {
+				$username = sanitize_user( current( explode( '@', $email ) ) . rand( 10, 99 ) );
+				$password = ! empty( $params['password'] ) ? $params['password'] : wp_generate_password( 12 );
+				$new_uid = wp_create_user( $username, $password, $email );
+				if ( ! is_wp_error( $new_uid ) ) {
+					$user_id = $new_uid;
+					wp_update_user( [
+						'ID'           => $user_id,
+						'display_name' => $name,
+						'first_name'   => $name,
+					] );
+					$u = new \WP_User( $user_id );
+					$u->set_role( 'author' );
+				}
+			}
+		}
+
+		if ( empty( $avatar ) && $user_id ) {
+			$avatar = get_avatar_url( $user_id, [ 'size' => 120 ] );
+		}
+
+		$instructor_item = [
+			'id'                => $id,
+			'userId'            => $user_id,
+			'name'              => $name,
+			'email'             => $email,
+			'role'              => $role,
+			'avatar'            => $avatar,
+			'bio'               => $bio,
+			'isAdmin'           => $is_admin,
+			'allowedChannelIds' => $allowed_channels,
+			'updatedAt'         => current_time( 'mysql' ),
+		];
+
+		// Buscar si ya existe
+		$found_idx = -1;
+		foreach ( $instructors as $idx => $inst ) {
+			if ( (string) $inst['id'] === $id ) {
+				$found_idx = $idx;
+				break;
+			}
+		}
+
+		if ( $found_idx >= 0 ) {
+			$instructors[ $found_idx ] = array_merge( $instructors[ $found_idx ], $instructor_item );
+		} else {
+			$instructor_item['createdAt'] = current_time( 'mysql' );
+			$instructors[] = $instructor_item;
+		}
+
+		update_option( '_alezux_global_instructors', $instructors );
+
+		// Si se indicaron cursos asignados al crear/editar, sincronizarlos
+		if ( isset( $params['assignedCourseIds'] ) && is_array( $params['assignedCourseIds'] ) ) {
+			$assigned_cids = array_map( 'intval', $params['assignedCourseIds'] );
+			$all_courses = get_posts( [
+				'post_type'      => [ 'crezca_course', 'sfwd-courses' ],
+				'post_status'    => [ 'publish', 'draft' ],
+				'posts_per_page' => -1,
+			] );
+
+			foreach ( $all_courses as $c ) {
+				$mentors = get_post_meta( $c->ID, '_alezux_course_mentors', true );
+				$mentors = is_array( $mentors ) ? $mentors : [];
+
+				$is_currently_in = false;
+				$new_mentors = [];
+				foreach ( $mentors as $m ) {
+					if ( (string) ($m['id'] ?? '') === $id || mb_strtolower( trim( $m['name'] ?? '' ) ) === mb_strtolower( $name ) ) {
+						$is_currently_in = true;
+					} else {
+						$new_mentors[] = $m;
+					}
+				}
+
+				if ( in_array( $c->ID, $assigned_cids, true ) ) {
+					// Debe estar asignado
+					$new_mentors[] = [
+						'id'     => $id,
+						'name'   => $name,
+						'role'   => $role,
+						'avatar' => $avatar,
+						'bio'    => $bio,
+					];
+					update_post_meta( $c->ID, '_alezux_course_mentors', $new_mentors );
+				} elseif ( $is_currently_in ) {
+					// Debe quitarse
+					update_post_meta( $c->ID, '_alezux_course_mentors', $new_mentors );
+				}
+			}
+		}
+
+		return rest_ensure_response( [
+			'success'    => true,
+			'instructor' => $instructor_item,
+			'message'    => 'Docente guardado correctamente.',
+		] );
+	}
+
+	/**
+	 * Eliminar docente de la lista global
+	 */
+	public function delete_instructor( $request ) {
+		$id = (string) $request->get_param( 'id' );
+		$instructors = get_option( '_alezux_global_instructors', [] );
+		if ( ! is_array( $instructors ) ) {
+			$instructors = [];
+		}
+
+		$filtered = array_values( array_filter( $instructors, function( $inst ) use ( $id ) {
+			return (string) $inst['id'] !== $id;
+		} ) );
+
+		update_option( '_alezux_global_instructors', $filtered );
+
+		return rest_ensure_response( [
+			'success' => true,
+			'message' => 'Docente eliminado correctamente.',
+		] );
+	}
+
+	/**
+	 * Sincronizar o registrar al Administrador actual como Docente
+	 */
+	public function sync_admin_as_instructor() {
+		$current_user = wp_get_current_user();
+		if ( ! $current_user || ! $current_user->ID ) {
+			return new \WP_Error( 'not_logged_in', 'No hay sesión de usuario activa.', [ 'status' => 401 ] );
+		}
+
+		$instructors = get_option( '_alezux_global_instructors', [] );
+		if ( ! is_array( $instructors ) ) {
+			$instructors = [];
+		}
+
+		$admin_inst = null;
+		foreach ( $instructors as &$inst ) {
+			if ( ( ! empty( $inst['userId'] ) && (int) $inst['userId'] === (int) $current_user->ID ) || ! empty( $inst['isAdmin'] ) ) {
+				$inst['name']    = $current_user->display_name ?: $current_user->user_login;
+				$inst['email']   = $current_user->user_email;
+				if ( empty( $inst['avatar'] ) ) {
+					$inst['avatar'] = get_avatar_url( $current_user->ID, [ 'size' => 120 ] );
+				}
+				$inst['isAdmin'] = true;
+				$admin_inst = $inst;
+				break;
+			}
+		}
+
+		if ( ! $admin_inst ) {
+			$admin_inst = [
+				'id'                => 'inst-admin-' . $current_user->ID,
+				'userId'            => $current_user->ID,
+				'name'              => $current_user->display_name ?: $current_user->user_login,
+				'email'             => $current_user->user_email,
+				'role'              => 'Fundador & Docente Principal',
+				'avatar'            => get_avatar_url( $current_user->ID, [ 'size' => 120 ] ),
+				'bio'               => 'Administrador y docente principal de la plataforma.',
+				'isAdmin'           => true,
+				'allowedChannelIds' => [],
+				'createdAt'         => current_time( 'mysql' ),
+			];
+			$instructors[] = $admin_inst;
+		}
+
+		update_option( '_alezux_global_instructors', $instructors );
+
+		return rest_ensure_response( [
+			'success'    => true,
+			'instructor' => $admin_inst,
+			'message'    => 'Administrador asignado como Docente del sistema con éxito.',
+		] );
+	}
+
+	/**
+	 * Guardar docentes asignados a un curso de manera directa e inmediata
+	 */
+	public function save_course_instructors( $request ) {
+		$course_id = (int) $request['id'];
+		$params = $request->get_json_params();
+		$instructors = isset( $params['instructors'] ) && is_array( $params['instructors'] ) ? $params['instructors'] : [];
+
+		update_post_meta( $course_id, '_alezux_course_mentors', $instructors );
+
+		// Sincronizar docentes nuevos en la lista global
+		$global_instructors = get_option( '_alezux_global_instructors', [] );
+		if ( ! is_array( $global_instructors ) ) {
+			$global_instructors = [];
+		}
+
+		$updated_global = false;
+		foreach ( $instructors as $inst ) {
+			$inst_id = isset( $inst['id'] ) ? (string) $inst['id'] : '';
+			$inst_name = isset( $inst['name'] ) ? trim( $inst['name'] ) : '';
+			if ( ! $inst_id || ! $inst_name ) continue;
+
+			$exists = false;
+			foreach ( $global_instructors as $gi ) {
+				if ( (string) ($gi['id'] ?? '') === $inst_id || mb_strtolower( trim( $gi['name'] ?? '' ) ) === mb_strtolower( $inst_name ) ) {
+					$exists = true;
+					break;
+				}
+			}
+
+			if ( ! $exists ) {
+				$global_instructors[] = [
+					'id'                => $inst_id,
+					'name'              => $inst_name,
+					'role'              => isset( $inst['role'] ) ? sanitize_text_field( $inst['role'] ) : 'Docente',
+					'avatar'            => isset( $inst['avatar'] ) ? esc_url_raw( $inst['avatar'] ) : '',
+					'bio'               => isset( $inst['bio'] ) ? sanitize_textarea_field( $inst['bio'] ) : '',
+					'email'             => isset( $inst['email'] ) ? sanitize_email( $inst['email'] ) : '',
+					'isAdmin'           => false,
+					'allowedChannelIds' => [],
+					'createdAt'         => current_time( 'mysql' ),
+				];
+				$updated_global = true;
+			}
+		}
+
+		if ( $updated_global ) {
+			update_option( '_alezux_global_instructors', $global_instructors );
+		}
+
+		return rest_ensure_response( [
+			'success'     => true,
+			'instructors' => $instructors,
+			'message'     => 'Docentes guardados de forma inmediata en el curso.',
 		] );
 	}
 

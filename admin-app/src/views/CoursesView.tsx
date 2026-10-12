@@ -31,6 +31,7 @@ import {
   HelpCircle,
   UserPlus,
   UserCheck,
+  ShieldCheck,
   ArrowRightLeft,
   Sparkles,
   RefreshCw,
@@ -51,6 +52,7 @@ import {
   CourseSubtopic,
   CourseQuestion,
   CourseInstructor,
+  Instructor,
   CourseFileAttachment,
   FinancePlan,
   LMSSettingsResponse,
@@ -94,7 +96,11 @@ interface DeleteConfirmState {
   onConfirm: () => void;
 }
 
-export function CoursesView() {
+interface CoursesViewProps {
+  onNavigateToInstructors?: () => void;
+}
+
+export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [availablePlans, setAvailablePlans] = useState<FinancePlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -148,6 +154,10 @@ export function CoursesView() {
 
   // Docentes / Mentores del Curso
   const [instructors, setInstructors] = useState<CourseInstructor[]>([]);
+  const [globalInstructors, setGlobalInstructors] = useState<Instructor[]>([]);
+  const [selectedInstructorIdToAssign, setSelectedInstructorIdToAssign] = useState<string>("");
+  const [isAssigningAdmin, setIsAssigningAdmin] = useState(false);
+  const [isSavingInstructorDirect, setIsSavingInstructorDirect] = useState(false);
   const [newInstructorName, setNewInstructorName] = useState("");
   const [newInstructorRole, setNewInstructorRole] = useState("");
   const [newInstructorAvatar, setNewInstructorAvatar] = useState("");
@@ -258,12 +268,22 @@ export function CoursesView() {
     }
   };
 
+  const loadGlobalInstructors = async () => {
+    try {
+      const data = await api.getInstructors();
+      setGlobalInstructors(data.instructors || []);
+    } catch (e) {
+      console.warn("Could not load global instructors", e);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([api.getCourses(), api.getPlans(), api.getLMSSettings()])
-      .then(([coursesData, plansData, lmsData]) => {
+    Promise.all([api.getCourses(), api.getPlans(), api.getLMSSettings(), api.getInstructors()])
+      .then(([coursesData, plansData, lmsData, instructorsData]) => {
         setCourses(coursesData);
         setAvailablePlans(plansData);
         setLmsSettings(lmsData);
+        setGlobalInstructors(instructorsData.instructors || []);
       })
       .finally(() => {
         setIsLoading(false);
@@ -645,12 +665,107 @@ export function CoursesView() {
     showToast("success", isNew ? "Sub-clase añadida" : "Sub-clase actualizada", `"${subtopic.title}" guardada.`);
   };
 
-  // --- GESTIÓN DE DOCENTES / MENTORES ---
-  const handleAddInstructor = () => {
+  // --- GESTIÓN DE DOCENTES / MENTORES (GUARDADO INMEDIATO) ---
+  const handleAssignExistingInstructor = async () => {
+    if (!selectedInstructorIdToAssign) {
+      showToast("warning", "Selecciona un docente", "Elige un docente de la lista para asignarlo.");
+      return;
+    }
+
+    const found = globalInstructors.find((i) => String(i.id) === String(selectedInstructorIdToAssign));
+    if (!found) return;
+
+    const alreadyAssigned = instructors.some(
+      (i) => String(i.id) === String(found.id) || i.name.trim().toLowerCase() === found.name.trim().toLowerCase()
+    );
+    if (alreadyAssigned) {
+      showToast("warning", "Docente ya asignado", `"${found.name}" ya forma parte del equipo docente de este curso.`);
+      return;
+    }
+
+    const newInst: CourseInstructor = {
+      id: found.id,
+      name: found.name,
+      role: found.role || "Docente Principal",
+      avatar: found.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      bio: found.bio || "",
+    };
+
+    const updatedList = [...instructors, newInst];
+    setInstructors(updatedList);
+    setSelectedInstructorIdToAssign("");
+
+    if (selectedCourse) {
+      setIsSavingInstructorDirect(true);
+      try {
+        await api.saveCourseInstructors(selectedCourse.id, updatedList);
+        setSelectedCourse((prev) => (prev ? { ...prev, instructors: updatedList } : null));
+        setCourses((prev) =>
+          prev.map((c) => (c.id === selectedCourse.id ? { ...c, instructors: updatedList } : c))
+        );
+        showToast("success", "Docente asignado y guardado", `"${newInst.name}" se guardó a la primera en la base de datos.`);
+      } catch {
+        showToast("danger", "Error al guardar", "No se pudo sincronizar el docente en el curso.");
+      } finally {
+        setIsSavingInstructorDirect(false);
+      }
+    }
+  };
+
+  const handleAssignAdminAsInstructor = async () => {
+    setIsAssigningAdmin(true);
+    try {
+      const res = await api.syncAdminAsInstructor();
+      if (!res.success || !res.instructor) {
+        showToast("danger", "Error", res.message || "No se pudo sincronizar al administrador.");
+        return;
+      }
+
+      const adminData = res.instructor;
+      const alreadyAssigned = instructors.some(
+        (i) => String(i.id) === String(adminData.id) || i.name.trim().toLowerCase() === adminData.name.trim().toLowerCase()
+      );
+
+      if (alreadyAssigned) {
+        showToast("info", "Ya asignado", "El administrador ya está asignado como docente en este curso.");
+        return;
+      }
+
+      const adminInst: CourseInstructor = {
+        id: adminData.id,
+        name: adminData.name,
+        role: adminData.role || "Administrador & Docente",
+        avatar: adminData.avatar || "",
+        bio: adminData.bio || "Administrador de la plataforma y docente titular.",
+      };
+
+      const updatedList = [...instructors, adminInst];
+      setInstructors(updatedList);
+
+      if (selectedCourse) {
+        await api.saveCourseInstructors(selectedCourse.id, updatedList);
+        setSelectedCourse((prev) => (prev ? { ...prev, instructors: updatedList } : null));
+        setCourses((prev) =>
+          prev.map((c) => (c.id === selectedCourse.id ? { ...c, instructors: updatedList } : c))
+        );
+      }
+
+      await loadGlobalInstructors();
+      showToast("success", "Administrador asignado", "El administrador es ahora docente de este curso y se guardó a la primera.");
+    } catch {
+      showToast("danger", "Error", "Ocurrió un problema al sincronizar al administrador.");
+    } finally {
+      setIsAssigningAdmin(false);
+    }
+  };
+
+  const handleAddInstructor = async () => {
     if (!newInstructorName.trim()) {
       showToast("warning", "Nombre requerido", "Ingresa el nombre del docente.");
       return;
     }
+
+    setIsSavingInstructorDirect(true);
     const newInst: CourseInstructor = {
       id: `inst-${Date.now()}`,
       name: newInstructorName.trim(),
@@ -658,19 +773,50 @@ export function CoursesView() {
       avatar: newInstructorAvatar.trim() || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
       bio: newInstructorBio.trim(),
     };
-    setInstructors([...instructors, newInst]);
+
+    const updatedList = [...instructors, newInst];
+    setInstructors(updatedList);
+
+    if (selectedCourse) {
+      try {
+        await api.saveCourseInstructors(selectedCourse.id, updatedList);
+        setSelectedCourse((prev) => (prev ? { ...prev, instructors: updatedList } : null));
+        setCourses((prev) =>
+          prev.map((c) => (c.id === selectedCourse.id ? { ...c, instructors: updatedList } : c))
+        );
+        showToast("success", "Docente guardado inmediatamente", `"${newInst.name}" quedó registrado y guardado a la primera.`);
+      } catch {
+        showToast("danger", "Error", "No se pudo guardar el docente en el curso.");
+      }
+    }
+
     setNewInstructorName("");
     setNewInstructorRole("");
     setNewInstructorAvatar("");
     setNewInstructorBio("");
     setIsAddingInstructor(false);
-    showToast("success", "Docente añadido", `"${newInst.name}" asignado al curso.`);
+    setIsSavingInstructorDirect(false);
+
+    await loadGlobalInstructors();
   };
 
-  const handleDeleteInstructor = (index: number) => {
+  const handleDeleteInstructor = async (index: number) => {
     const target = instructors[index];
-    setInstructors(instructors.filter((_, idx) => idx !== index));
-    showToast("info", "Docente removido", `Se quitó a "${target?.name || "el docente"}" del curso.`);
+    const updatedList = instructors.filter((_, idx) => idx !== index);
+    setInstructors(updatedList);
+
+    if (selectedCourse) {
+      try {
+        await api.saveCourseInstructors(selectedCourse.id, updatedList);
+        setSelectedCourse((prev) => (prev ? { ...prev, instructors: updatedList } : null));
+        setCourses((prev) =>
+          prev.map((c) => (c.id === selectedCourse.id ? { ...c, instructors: updatedList } : c))
+        );
+        showToast("info", "Docente removido", `Se quitó a "${target?.name || "el docente"}" del curso y se guardaron los cambios.`);
+      } catch {
+        showToast("danger", "Error", "No se pudo actualizar la lista de docentes.");
+      }
+    }
   };
 
   const handleDeleteTopic = (sectionId: string, topicId: string) => {
@@ -1103,22 +1249,77 @@ export function CoursesView() {
 
             {/* 3. DOCENTES & MENTORES DEL CURSO */}
             <div className={styles.settingsGroup}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                <h4 className={styles.settingsGroupTitle}>
-                  <Users size={18} /> Docentes & Mentores del Curso ({instructors.length})
-                </h4>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsAddingInstructor(true)}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <h4 className={styles.settingsGroupTitle}>
+                    <Users size={18} /> Docentes & Mentores del Curso ({instructors.length})
+                  </h4>
+                  <p className={styles.switchSubtext} style={{ marginTop: 4 }}>
+                    Asigna a los profesores del curso. Los cambios de docentes se guardan inmediatamente en la base de datos a la primera.
+                  </p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={isAssigningAdmin}
+                    disabled={isAssigningAdmin}
+                    onClick={handleAssignAdminAsInstructor}
+                    title="Sincroniza y asigna al usuario Administrador como docente del curso"
+                  >
+                    <ShieldCheck size={14} /> Asignar Admin como Docente
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setIsAddingInstructor(true)}
+                  >
+                    <UserPlus size={14} /> + Registrar Nuevo Docente
+                  </Button>
+                  {onNavigateToInstructors && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onNavigateToInstructors}
+                      title="Ir al módulo completo de Docentes para gestionar permisos y accesos"
+                    >
+                      <ExternalLink size={13} /> Directorio de Docentes
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Selector de Docente Registrado del Directorio */}
+              <div className={styles.instructorSelectorBar}>
+                <span className={styles.miniLabel} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <UserCheck size={14} /> Seleccionar Docente Registrado:
+                </span>
+                <select
+                  value={selectedInstructorIdToAssign}
+                  onChange={(e) => setSelectedInstructorIdToAssign(e.target.value)}
+                  className={styles.instructorSelectInput}
                 >
-                  <UserPlus size={14} /> Asignar Docente
+                  <option value="">-- Elige un docente del directorio global --</option>
+                  {globalInstructors.map((gi) => (
+                    <option key={gi.id} value={gi.id}>
+                      {gi.name} {gi.role ? `(${gi.role})` : ""} {gi.isAdmin ? "★ Admin" : ""}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!selectedInstructorIdToAssign || isSavingInstructorDirect}
+                  loading={isSavingInstructorDirect}
+                  onClick={handleAssignExistingInstructor}
+                >
+                  <UserPlus size={14} /> Asignar al Curso
                 </Button>
               </div>
 
               {isAddingInstructor && (
                 <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-control)", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-                  <span className={styles.miniLabel}>Nuevo Docente / Mentor:</span>
+                  <span className={styles.miniLabel}>Nuevo Docente / Mentor (Se guardará directamente en el curso):</span>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <Input
                       label="Nombre del Docente *"
@@ -1189,10 +1390,10 @@ export function CoursesView() {
                       variant="primary"
                       size="sm"
                       onClick={handleAddInstructor}
-                      disabled={isUploadingInstructorAvatar}
-                      loading={isUploadingInstructorAvatar}
+                      disabled={isUploadingInstructorAvatar || isSavingInstructorDirect}
+                      loading={isUploadingInstructorAvatar || isSavingInstructorDirect}
                     >
-                      <UserCheck size={14} /> Guardar Docente
+                      <UserCheck size={14} /> Guardar Docente Inmediatamente
                     </Button>
                   </div>
                 </div>
@@ -1220,7 +1421,7 @@ export function CoursesView() {
                         type="button"
                         className={styles.deleteBtn}
                         onClick={() => handleDeleteInstructor(idx)}
-                        title="Quitar docente"
+                        title="Quitar docente del curso (se guardará inmediatamente)"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -1229,7 +1430,7 @@ export function CoursesView() {
                 </div>
               ) : (
                 <p className={styles.switchSubtext}>
-                  No hay docentes asignados a este curso todavía. Haz clic en "Asignar Docente" para añadir al profesor principal.
+                  No hay docentes asignados a este curso todavía. Selecciona uno del directorio o haz clic en "Asignar Admin como Docente".
                 </p>
               )}
             </div>

@@ -18,11 +18,13 @@ import {
   ShieldCheck,
   Award,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  UserCheck
 } from "lucide-react";
 import { OverviewView } from "./views/OverviewView";
 import { CoursesView } from "./views/CoursesView";
 import { StudentsView } from "./views/StudentsView";
+import { InstructorsView } from "./views/InstructorsView";
 import { FinanceView } from "./views/FinanceView";
 import { MarketingView } from "./views/MarketingView";
 import { SettingsView } from "./views/SettingsView";
@@ -36,7 +38,7 @@ import { hexToRgb, getContrastForeground } from "./components/arc/color-picker/c
 import styles from "./App.module.css";
 import studentStyles from "./views/student/StudentPortal.module.css";
 
-type AdminTabId = "overview" | "courses" | "students" | "finance" | "marketing" | "community" | "settings";
+type AdminTabId = "overview" | "courses" | "students" | "instructors" | "finance" | "marketing" | "community" | "settings";
 type StudentTabId = "dashboard" | "courses" | "achievements" | "community";
 
 interface NavItemConfig<T extends string = string> {
@@ -144,6 +146,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     { id: "overview", label: "Dashboard", icon: <BarChart3 size={18} /> },
     { id: "courses", label: "Cursos", icon: <GraduationCap size={18} /> },
     { id: "students", label: "Estudiantes", icon: <Users size={18} /> },
+    { id: "instructors", label: "Docentes", icon: <UserCheck size={18} /> },
     { id: "finance", label: "Finanzas", icon: <CreditCard size={18} /> },
     { id: "marketing", label: "Marketing", icon: <Mail size={18} /> },
     { id: "community", label: "Comunidad", icon: <MessageSquare size={18} /> },
@@ -677,8 +680,9 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
           {appMode === "admin" && (
             <>
               {activeAdminTab === "overview" && <OverviewView onNavigate={(tab) => setActiveAdminTab(tab as AdminTabId)} />}
-              {activeAdminTab === "courses" && <CoursesView />}
+              {activeAdminTab === "courses" && <CoursesView onNavigateToInstructors={() => setActiveAdminTab("instructors")} />}
               {activeAdminTab === "students" && <StudentsView />}
+              {activeAdminTab === "instructors" && <InstructorsView />}
               {activeAdminTab === "finance" && <FinanceView />}
               {activeAdminTab === "marketing" && <MarketingView currentAccent={accent} />}
               {activeAdminTab === "community" && (
