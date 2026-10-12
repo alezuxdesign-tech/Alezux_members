@@ -545,3 +545,85 @@
   color: var(--accent);
 }
 
+.headerNotificationWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.headerIconButton {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all var(--duration-fast);
+}
+
+.headerIconButton:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
+  color: var(--foreground);
+  border-color: var(--accent);
+}
+
+.headerNotificationBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--accent, #7747ff);
+  color: var(--accent-foreground, #ffffff);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 0 0 2px var(--background);
+}
+
+.headerProfileBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  color: var(--foreground);
+}
+
+.headerProfileBtn:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
+}
+
+.headerAvatarCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.headerAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+

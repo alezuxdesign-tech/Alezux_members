@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   GraduationCap, 
   CheckCircle2, 
@@ -65,16 +65,19 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
 
   useEffect(() => {
     // 1. Revisar si hay registro de última lección en localStorage
-    const saved = localStorage.getItem(`crezca_last_lesson_${profile.id}`);
+    const saved = localStorage.getItem(`crezca_last_lesson_${profile.id}`)
+      || localStorage.getItem("crezca_last_lesson_1")
+      || localStorage.getItem("crezca_last_viewed_lesson");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const crs = enrolledCourses.find((c) => c.id === parsed.courseId);
+        const crs = enrolledCourses.find((c) => c.id === parsed.courseId) || courses.find((c) => c.id === parsed.courseId);
         if (crs && crs.sections) {
           for (const sec of crs.sections) {
             const les = sec.lessons?.find((l) => l.id === parsed.lessonId);
             if (les) {
-              const top = les.subtopics?.find((sub) => sub.id === parsed.topicId);
+              const top = les.subtopics?.find((sub) => sub.id === parsed.topicId)
+                || les.topics?.find((t) => t.id === parsed.topicId);
               setLastLesson({
                 course: crs,
                 section: sec,
@@ -192,38 +195,60 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
     } catch {}
   };
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isRunning && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (isRunning && timeLeft === 0) {
-      setIsRunning(false);
-      playPomodoroChime();
+  const targetEndTimeRef = useRef<number | null>(null);
 
-      if (pomodoroMode === "focus") {
-        const nextCount = completedPomodoros + 1;
-        setCompletedPomodoros(nextCount);
-        const today = new Date().toDateString();
-        localStorage.setItem(`crezca_pomodoro_count_${profile.id}_${today}`, String(nextCount));
-        setPomodoroNotice("¡Tiempo de enfoque cumplido! Descansa unos minutos para recargar energías.");
-        setPomodoroMode("short_break");
-        setTimeLeft(customBreakMinutes * 60);
-      } else {
-        setPomodoroNotice("¡Descanso terminado! ¿Listo para sumergirte en otra sesión?");
-        setPomodoroMode("focus");
-        setTimeLeft(customFocusMinutes * 60);
+  useEffect(() => {
+    if (!isRunning) return;
+
+    const checkTime = () => {
+      if (!targetEndTimeRef.current) return;
+      const diffMs = targetEndTimeRef.current - Date.now();
+      const remaining = Math.max(0, Math.ceil(diffMs / 1000));
+      setTimeLeft(remaining);
+
+      if (remaining <= 0) {
+        setIsRunning(false);
+        targetEndTimeRef.current = null;
+        playPomodoroChime();
+
+        if (pomodoroMode === "focus") {
+          const nextCount = completedPomodoros + 1;
+          setCompletedPomodoros(nextCount);
+          const today = new Date().toDateString();
+          localStorage.setItem(`crezca_pomodoro_count_${profile.id}_${today}`, String(nextCount));
+          setPomodoroNotice("¡Tiempo de enfoque cumplido! Descansa unos minutos para recargar energías.");
+          setPomodoroMode("short_break");
+          setTimeLeft(customBreakMinutes * 60);
+        } else {
+          setPomodoroNotice("¡Descanso terminado! ¿Listo para sumergirte en otra sesión?");
+          setPomodoroMode("focus");
+          setTimeLeft(customFocusMinutes * 60);
+        }
       }
-    }
-    return () => {
-      if (interval) clearInterval(interval);
     };
-  }, [isRunning, timeLeft, pomodoroMode, completedPomodoros, customBreakMinutes, customFocusMinutes, profile.id]);
+
+    const interval = setInterval(checkTime, 1000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkTime();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
+    };
+  }, [isRunning, pomodoroMode, completedPomodoros, customBreakMinutes, customFocusMinutes, profile.id]);
 
   const handleSwitchPomodoroMode = (mode: PomodoroMode) => {
     setPomodoroMode(mode);
     setIsRunning(false);
+    targetEndTimeRef.current = null;
     setPomodoroNotice(null);
     setIsEditingTime(false);
     const dur = mode === "focus" 
@@ -236,13 +261,20 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
   };
 
   const handleTogglePomodoro = () => {
-    setIsRunning(!isRunning);
+    if (!isRunning) {
+      targetEndTimeRef.current = Date.now() + timeLeft * 1000;
+      setIsRunning(true);
+    } else {
+      setIsRunning(false);
+      targetEndTimeRef.current = null;
+    }
     setPomodoroNotice(null);
     setIsEditingTime(false);
   };
 
   const handleResetPomodoro = () => {
     setIsRunning(false);
+    targetEndTimeRef.current = null;
     setPomodoroNotice(null);
     setIsEditingTime(false);
     setTimeLeft(getDurationForMode(pomodoroMode));
@@ -474,124 +506,29 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                 className={`${styles.pomodoroTabBtn} ${pomodoroMode === "focus" ? styles.pomodoroTabBtnActive : ""}`}
                 onClick={() => handleSwitchPomodoroMode("focus")}
               >
-                Enfoque ({customFocusMinutes}m)
+                Enfoque
               </button>
               <button
                 type="button"
                 className={`${styles.pomodoroTabBtn} ${pomodoroMode === "short_break" ? styles.pomodoroTabBtnActive : ""}`}
                 onClick={() => handleSwitchPomodoroMode("short_break")}
               >
-                Descanso ({customBreakMinutes}m)
+                Descanso
               </button>
               <button
                 type="button"
                 className={`${styles.pomodoroTabBtn} ${pomodoroMode === "long_break" ? styles.pomodoroTabBtnActive : ""}`}
                 onClick={() => handleSwitchPomodoroMode("long_break")}
               >
-                Largo ({customLongBreakMinutes}m)
+                Largo
               </button>
             </div>
           </div>
-
-          {/* Formulario de personalización de tiempo expandible */}
-          {isEditingTime && (
-            <div className={styles.pomodoroCustomForm}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
-                  Duración ({pomodoroMode === "focus" ? "Enfoque" : "Descanso"}):
-                </span>
-                <input
-                  type="number"
-                  min={1}
-                  max={180}
-                  value={customInputVal}
-                  onChange={(e) => setCustomInputVal(e.target.value)}
-                  style={{
-                    width: 60,
-                    height: 32,
-                    background: "var(--background)",
-                    color: "var(--foreground)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius-control)",
-                    padding: "0 8px",
-                    textAlign: "center",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    outline: "none",
-                  }}
-                />
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>minutos</span>
-                <Button variant="primary" size="sm" onClick={handleSaveCustomMinutes}>
-                  <Check size={13} /> Aplicar
-                </Button>
-              </div>
-
-              {pomodoroMode === "focus" && (
-                <div className={styles.pomodoroPresetPills}>
-                  {[15, 25, 30, 45, 60].map((mins) => (
-                    <button
-                      key={mins}
-                      type="button"
-                      className={`${styles.pomodoroPresetBtn} ${customFocusMinutes === mins ? styles.pomodoroPresetBtnActive : ""}`}
-                      onClick={() => handleSetPresetMinutes(mins)}
-                    >
-                      {mins}m
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           <div className={styles.pomodoroBody}>
             <div className={styles.pomodoroTimerBox}>
               <div className={styles.pomodoroClockRow}>
                 <span className={styles.pomodoroClockNumber}>{formatTimerNumber(timeLeft)}</span>
-                <span className={styles.pomodoroPhaseTag}>
-                  <Sparkles size={13} />
-                  {pomodoroMode === "focus"
-                    ? "Enfoque Total"
-                    : pomodoroMode === "short_break"
-                    ? "Pausa Activa"
-                    : "Descanso Extendido"}
-                </span>
-              </div>
-
-              {/* Botones de ajuste directo de tiempo (+ / -) */}
-              <div className={styles.pomodoroAdjustBar}>
-                <button
-                  type="button"
-                  className={styles.pomodoroAdjustBtn}
-                  onClick={() => handleAdjustMinutes(-5)}
-                  title="Restar 5 minutos"
-                >
-                  <Minus size={11} /> 5 min
-                </button>
-                <button
-                  type="button"
-                  className={styles.pomodoroAdjustBtn}
-                  onClick={() => handleAdjustMinutes(5)}
-                  title="Añadir 5 minutos"
-                >
-                  <Plus size={11} /> 5 min
-                </button>
-                <button
-                  type="button"
-                  className={styles.pomodoroAdjustBtn}
-                  onClick={() => handleAdjustMinutes(1)}
-                  title="Añadir 1 minuto"
-                >
-                  <Plus size={11} /> 1 min
-                </button>
-                <button
-                  type="button"
-                  className={styles.pomodoroAdjustBtn}
-                  onClick={() => setIsEditingTime(!isEditingTime)}
-                  title="Configurar minutos exactos"
-                  style={{ marginLeft: 4 }}
-                >
-                  <Sliders size={12} /> {isEditingTime ? "Ocultar" : "Personalizar"}
-                </button>
               </div>
             </div>
 

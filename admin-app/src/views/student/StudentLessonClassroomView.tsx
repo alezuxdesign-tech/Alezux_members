@@ -40,6 +40,7 @@ interface StudentLessonClassroomViewProps {
   currentLesson: CourseLesson;
   initialTopic?: CourseTopic;
   completedTopicIds: string[];
+  studentId?: number;
   onToggleCompleteTopic: (topicId: string) => void;
   onBackToCourse: () => void;
   onSwitchModule: (sec: CourseSection, les: CourseLesson, top?: CourseTopic) => void;
@@ -65,6 +66,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
   currentLesson,
   initialTopic,
   completedTopicIds,
+  studentId,
   onToggleCompleteTopic,
   onBackToCourse,
   onSwitchModule,
@@ -198,6 +200,27 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
     }
     return allPlayableItems[0] || null;
   }, [allPlayableItems, activeItemId, topics]);
+
+  // Persistir en tiempo real la última clase vista en localStorage
+  useEffect(() => {
+    if (!course || !currentLesson) return;
+    try {
+      const payload = {
+        courseId: course.id,
+        sectionId: currentSection?.id,
+        lessonId: currentLesson.id,
+        topicId: activeItemId || initialTopic?.id,
+        updatedAt: Date.now(),
+      };
+      if (studentId) {
+        localStorage.setItem(`crezca_last_lesson_${studentId}`, JSON.stringify(payload));
+      }
+      localStorage.setItem("crezca_last_lesson_1", JSON.stringify(payload));
+      localStorage.setItem("crezca_last_viewed_lesson", JSON.stringify(payload));
+    } catch (e) {
+      console.warn("Error guardando última clase vista:", e);
+    }
+  }, [course.id, currentSection?.id, currentLesson.id, activeItemId, initialTopic?.id, studentId]);
 
   // Estado del acordeón de subtopics en el sidebar
   const [expandedTopicIds, setExpandedTopicIds] = useState<Record<string, boolean>>(() => {

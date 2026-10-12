@@ -19,12 +19,16 @@ import {
   Award,
   LogOut,
   MessageSquare,
-  UserCheck
+  UserCheck,
+  Calendar,
+  Bell,
+  User
 } from "lucide-react";
 import { OverviewView } from "./views/OverviewView";
 import { CoursesView } from "./views/CoursesView";
 import { StudentsView } from "./views/StudentsView";
 import { InstructorsView } from "./views/InstructorsView";
+import { EventsView } from "./views/EventsView";
 import { FinanceView } from "./views/FinanceView";
 import { MarketingView } from "./views/MarketingView";
 import { SettingsView } from "./views/SettingsView";
@@ -33,13 +37,15 @@ import { StudentCommunityView } from "./views/student/StudentCommunityView";
 import { StudentCatalogView } from "./views/student/StudentCatalogView";
 import { StudentCourseNetflixView } from "./views/student/StudentCourseNetflixView";
 import { StudentLessonClassroomView } from "./views/student/StudentLessonClassroomView";
+import { StudentProfileView } from "./views/student/StudentProfileView";
+import { NotificationsPopover } from "./components/NotificationsPopover";
 import { api, Course, CourseSection, CourseLesson, CourseTopic, StudentProfile } from "./services/api";
 import { hexToRgb, getContrastForeground } from "./components/arc/color-picker/color-utils";
 import styles from "./App.module.css";
 import studentStyles from "./views/student/StudentPortal.module.css";
 
-type AdminTabId = "overview" | "courses" | "students" | "instructors" | "finance" | "marketing" | "community" | "settings";
-type StudentTabId = "dashboard" | "courses" | "community";
+type AdminTabId = "overview" | "courses" | "students" | "instructors" | "events" | "finance" | "marketing" | "community" | "settings";
+type StudentTabId = "dashboard" | "courses" | "community" | "profile";
 
 interface NavItemConfig<T extends string = string> {
   id: T;
@@ -141,12 +147,27 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
   const [selectedTopic, setSelectedTopic] = useState<CourseTopic | null>(null);
   const [studentLoading, setStudentLoading] = useState(false);
 
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem("crezca_notifications");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((n: any) => !n.read).length;
+        }
+      }
+    } catch (e) {}
+    return 3;
+  });
+
   // Navegación para el Administrador
   const adminNavItems: NavItemConfig<AdminTabId>[] = [
     { id: "overview", label: "Dashboard", icon: <BarChart3 size={18} /> },
     { id: "courses", label: "Cursos", icon: <GraduationCap size={18} /> },
     { id: "students", label: "Estudiantes", icon: <Users size={18} /> },
     { id: "instructors", label: "Docentes", icon: <UserCheck size={18} /> },
+    { id: "events", label: "Eventos", icon: <Calendar size={18} /> },
     { id: "finance", label: "Finanzas", icon: <CreditCard size={18} /> },
     { id: "marketing", label: "Marketing", icon: <Mail size={18} /> },
     { id: "community", label: "Comunidad", icon: <MessageSquare size={18} /> },
@@ -679,7 +700,80 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               )
             )}
 
-            <span className={styles.versionBadge}>Arc Design System</span>
+            {/* Notificaciones Globales */}
+            <div className={styles.headerNotificationWrapper}>
+              <button
+                type="button"
+                className={styles.headerIconButton}
+                onClick={() => {
+                  setIsNotificationsOpen((prev) => !prev);
+                  try {
+                    const stored = localStorage.getItem("crezca_notifications");
+                    if (stored) {
+                      const parsed = JSON.parse(stored);
+                      setUnreadNotificationsCount(parsed.filter((n: any) => !n.read).length);
+                    }
+                  } catch (e) {}
+                }}
+                title="Notificaciones"
+                aria-label="Ver notificaciones"
+              >
+                <Bell size={16} />
+                {unreadNotificationsCount > 0 && (
+                  <span className={styles.headerNotificationBadge}>
+                    {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                  </span>
+                )}
+              </button>
+
+              <NotificationsPopover
+                isOpen={isNotificationsOpen}
+                onClose={() => {
+                  setIsNotificationsOpen(false);
+                  try {
+                    const stored = localStorage.getItem("crezca_notifications");
+                    if (stored) {
+                      const parsed = JSON.parse(stored);
+                      setUnreadNotificationsCount(parsed.filter((n: any) => !n.read).length);
+                    }
+                  } catch (e) {}
+                }}
+                onNavigate={(tab) => {
+                  if (appMode === "admin") {
+                    if (tab === "events" || tab === "courses" || tab === "students" || tab === "instructors" || tab === "community" || tab === "settings") {
+                      setActiveAdminTab(tab as AdminTabId);
+                    }
+                  } else {
+                    if (tab === "dashboard" || tab === "courses" || tab === "community" || tab === "profile") {
+                      setActiveStudentTab(tab as StudentTabId);
+                    }
+                  }
+                }}
+                appMode={appMode}
+              />
+            </div>
+
+            {/* Foto de Perfil de Usuario */}
+            <button
+              type="button"
+              className={styles.headerProfileBtn}
+              onClick={() => {
+                if (appMode === "student") {
+                  setActiveStudentTab("profile");
+                } else {
+                  setActiveAdminTab("settings");
+                }
+              }}
+              title={appMode === "student" ? "Ver mi perfil de estudiante" : "Configuración y perfil del administrador"}
+            >
+              <div className={styles.headerAvatarCircle}>
+                {appMode === "student" && studentProfile?.avatar ? (
+                  <img src={studentProfile.avatar} alt="Avatar" className={styles.headerAvatarImg} />
+                ) : (
+                  <User size={15} />
+                )}
+              </div>
+            </button>
           </div>
         </header>
 
@@ -692,6 +786,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               {activeAdminTab === "courses" && <CoursesView onNavigateToInstructors={() => setActiveAdminTab("instructors")} />}
               {activeAdminTab === "students" && <StudentsView />}
               {activeAdminTab === "instructors" && <InstructorsView />}
+              {activeAdminTab === "events" && <EventsView />}
               {activeAdminTab === "finance" && <FinanceView />}
               {activeAdminTab === "marketing" && <MarketingView currentAccent={accent} />}
               {activeAdminTab === "community" && (
@@ -734,7 +829,11 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                   courses={studentCourses}
                   onSelectCourse={handleSelectCourse}
                   onResumeLesson={handleResumeLesson}
-                  onNavigateTab={(tab) => setActiveStudentTab(tab)}
+                  onNavigateTab={(tab) => {
+                    if (tab === "courses" || tab === "community" || tab === "dashboard") {
+                      setActiveStudentTab(tab);
+                    }
+                  }}
                 />
               )}
 
@@ -746,7 +845,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                       courses={studentCourses}
                       profile={studentProfile || defaultStudentProfile}
                       onSelectCourse={handleSelectCourse}
-                      onOpenProfile={() => {}}
+                      onOpenProfile={() => setActiveStudentTab("profile")}
                     />
                   )}
 
@@ -767,6 +866,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                       currentLesson={selectedLesson}
                       initialTopic={selectedTopic || undefined}
                       completedTopicIds={studentProfile?.completedTopicIds || []}
+                      studentId={studentProfile?.id}
                       onToggleCompleteTopic={handleToggleCompleteTopic}
                       onBackToCourse={handleBackToCourse}
                       onSwitchModule={(sec, les, top) => {
@@ -797,6 +897,17 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                       handleSelectCourse(crs);
                     }
                   }}
+                />
+              )}
+
+              {/* 4. Perfil del Estudiante */}
+              {activeStudentTab === "profile" && (
+                <StudentProfileView
+                  profile={studentProfile || defaultStudentProfile}
+                  courses={studentCourses}
+                  onProfileUpdate={(updated) => setStudentProfile(updated)}
+                  onBack={() => setActiveStudentTab("dashboard")}
+                  onLogout={() => { window.location.href = logoutUrl; }}
                 />
               )}
             </>
