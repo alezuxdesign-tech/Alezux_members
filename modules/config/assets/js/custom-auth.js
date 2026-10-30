@@ -299,7 +299,8 @@
       recoverForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const submitBtn = recoverForm.querySelector('.auth-submit-btn');
-        const userLogin = (document.getElementById('alezux-recover-login') || {}).value || '';
+        const userInput = document.getElementById('alezux-recover-user') || document.getElementById('alezux-recover-login');
+        const userLogin = (userInput ? userInput.value : '').trim();
 
         if (!userLogin) {
           showAlert(views.recover, 'error', 'Por favor ingresa tu correo o nombre de usuario.');
@@ -311,7 +312,7 @@
         const formData = new FormData();
         formData.append('action', 'alezux_ajax_recover');
         formData.append('nonce', config.nonce);
-        formData.append('user_login', userLogin.trim());
+        formData.append('user_login', userLogin);
 
         fetch(config.ajaxUrl, {
           method: 'POST',
@@ -322,8 +323,7 @@
           setButtonLoading(submitBtn, false);
           if (data && data.success) {
             showAlert(views.recover, 'success', data.data.message || 'Se ha enviado un enlace seguro a tu correo electrónico.');
-            const input = document.getElementById('alezux-recover-login');
-            if (input) input.value = '';
+            if (userInput) userInput.value = '';
           } else {
             const msg = (data && data.data && data.data.message) ? data.data.message : 'No existe ningún usuario con esos datos.';
             showAlert(views.recover, 'error', msg);

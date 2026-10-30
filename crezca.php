@@ -301,7 +301,7 @@ function crezca_get_auth_settings() {
 		'step_3_text'            => "Access your courses\ninstantly",
 		'login_title'            => 'Welcome Back',
 		'login_subtitle'         => 'Inicia sesión en tu cuenta para continuar',
-		'allow_registration'     => true,
+		'allow_registration'     => false,
 		'terms_url'              => get_privacy_policy_url() ? get_privacy_policy_url() : home_url( '/terminos-y-condiciones' ),
 		'privacy_url'            => get_privacy_policy_url() ? get_privacy_policy_url() : home_url( '/politica-de-privacidad' ),
 		'custom_css'             => '',

@@ -169,7 +169,7 @@ export function SettingsView({
     step_3_text: "Access your courses\ninstantly",
     login_title: "Welcome Back",
     login_subtitle: "Inicia sesión en tu cuenta para continuar",
-    allow_registration: true,
+    allow_registration: false,
     terms_url: "/terminos-y-condiciones",
     privacy_url: "/politica-de-privacidad",
     custom_css: "",

@@ -355,13 +355,6 @@ if ( $standalone ) : ?>
             <span class="auth-spinner"></span>
             <span class="btn-text">Iniciar Sesión</span>
           </button>
-
-          <?php if ( $allow_register ) : ?>
-            <div class="auth-switch-row">
-              ¿No tienes una cuenta?
-              <a href="#register" class="auth-link" data-auth-target="register">Regístrate</a>
-            </div>
-          <?php endif; ?>
         </form>
       </div>
 
@@ -479,9 +472,11 @@ if ( $standalone ) : ?>
               <input 
                 type="text" 
                 id="alezux-recover-user" 
+                name="user_login"
                 class="auth-input" 
                 placeholder="tu@correo.com o usuario" 
                 required
+                autocomplete="username"
               >
             </div>
           </div>

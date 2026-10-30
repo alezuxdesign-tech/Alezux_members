@@ -791,12 +791,13 @@ class Config extends Module_Base {
 		$log_file = ALEZUX_MEMBERS_PATH . 'debug_status.txt';
 		
 		// BYPASS DE SEGURIDAD PARA HOSTINGER CACHE:
-		$nonce_check = wp_verify_nonce( $_POST['nonce'], 'alezux-auth-nonce' );
+		$nonce       = isset( $_POST['nonce'] ) ? sanitize_text_field( $_POST['nonce'] ) : '';
+		$nonce_check = wp_verify_nonce( $nonce, 'alezux-auth-nonce' );
 		if ( ! $nonce_check ) {
 			file_put_contents( $log_file, "[" . date('Y-m-d H:i:s') . "] ADVERTENCIA: Nonce inválido en recuperación. Continuando por bypass...\n", FILE_APPEND );
 		}
 
-		$user_login = sanitize_text_field( $_POST['user_login'] );
+		$user_login = isset( $_POST['user_login'] ) ? sanitize_text_field( trim( wp_unslash( $_POST['user_login'] ) ) ) : '';
 		
 		if ( empty( $user_login ) ) {
 			wp_send_json_error( [ 'message' => 'Por favor ingresa tu correo o usuario.' ] );
@@ -809,7 +810,7 @@ class Config extends Module_Base {
 
 		if ( ! $user_data ) {
 			file_put_contents( $log_file, "[" . date('Y-m-d H:i:s') . "] ERROR: Usuario no encontrado ($user_login)\n", FILE_APPEND );
-			wp_send_json_error( [ 'message' => 'No existe ningún usuario con ese correo o nombre.' ] );
+			wp_send_json_error( [ 'message' => 'No existe ningún usuario con ese correo o usuario.' ] );
 		}
 
 		$user_id = $user_data->ID;
@@ -829,8 +830,9 @@ class Config extends Module_Base {
 			if ( $reset_page_id ) {
 				$reset_url = get_permalink( $reset_page_id );
 				$reset_url = add_query_arg( [
-					'key' => $key,
-					'login' => rawurlencode( $user_data->user_login )
+					'action' => 'rp',
+					'key'    => $key,
+					'login'  => rawurlencode( $user_data->user_login )
 				], $reset_url );
 			} else {
 				$reset_url = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user_data->user_login ), 'login' );
