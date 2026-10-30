@@ -2639,10 +2639,18 @@ class Admin_Api {
 			return rest_ensure_response( [] );
 		}
 
+		// Limpieza preventiva de marcas de lectura espurias
+		$wpdb->query( "UPDATE $table_logs SET opened_at = NULL WHERE opened_at = '0000-00-00 00:00:00'" );
+
 		$formatted = [];
 		foreach ( $logs as $log ) {
 			$status_display = 'Enviado';
-			if ( ! empty( $log->opened_at ) ) {
+			$is_opened = ! empty( $log->opened_at ) 
+				&& $log->opened_at !== '0000-00-00 00:00:00' 
+				&& $log->opened_at !== 'null' 
+				&& strtotime( $log->opened_at ) > 0;
+
+			if ( $is_opened ) {
 				$status_display = 'Leído';
 			} elseif ( strpos( strtolower( $log->status ), 'fail' ) !== false || strpos( strtolower( $log->status ), 'err' ) !== false ) {
 				$status_display = 'Fallido';
@@ -2655,7 +2663,7 @@ class Admin_Api {
 				'date'      => date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $log->sent_at ) ),
 				'status'    => $status_display,
 				'rawStatus' => strtolower( $log->status ),
-				'openedAt'  => ! empty( $log->opened_at ) ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $log->opened_at ) ) : null,
+				'openedAt'  => $is_opened ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $log->opened_at ) ) : null,
 			];
 		}
 

@@ -373,6 +373,26 @@ class Default_Templates {
 			';
 		};
 
+		$password_card = function( $password_var ) use ( $colors, $accent_data ) {
+			return '
+				<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 18px 0; background-color: ' . $colors['code_bg'] . '; border: 1.5px dashed ' . $accent_data['accent'] . '; border-radius: 14px; overflow: hidden;">
+					<tr>
+						<td align="center" style="padding: 20px 18px; text-align: center;">
+							<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: ' . $colors['text_muted'] . '; margin-bottom: 8px;">
+								🔑 Contraseña de Acceso
+							</div>
+							<div style="display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', Courier, monospace; font-size: 19px; font-weight: 800; letter-spacing: 2px; color: ' . $accent_data['accent'] . '; padding: 9px 22px; background-color: ' . $colors['card_bg'] . '; border: 1px solid ' . $colors['card_border'] . '; border-radius: 8px; -webkit-user-select: all; -moz-user-select: all; user-select: all; cursor: pointer;" title="Toca o haz doble clic para seleccionar toda la contraseña">
+								' . $password_var . '
+							</div>
+							<div style="font-size: 11px; color: ' . $colors['text_muted'] . '; margin-top: 10px; line-height: 1.4;">
+								📋 <em>Toca o haz doble clic sobre la contraseña para seleccionarla y copiarla</em>
+							</div>
+						</td>
+					</tr>
+				</table>
+			';
+		};
+
 		switch ( $type ) {
 			case 'student_welcome':
 				return [
@@ -383,9 +403,9 @@ class Default_Templates {
 						$paragraph( 'Nos emociona darte la bienvenida a <strong>{{site_name}}</strong>. Tu acceso a la plataforma ya se encuentra activo y tienes todo preparado para empezar a aprender.' ) .
 						$box_start( 'Tus Credenciales de Acceso', 'key' ) .
 						$row( 'Usuario / Correo', '{{user.username}}' ) .
-						$row( 'Contraseña Temporal', '{{password}}', true ) .
 						$row( 'Curso o Membresía', '{{course_title}}', false, true ) .
 						$box_end() .
+						$password_card( '{{password}}' ) .
 						$paragraph( 'Por motivos de seguridad, te sugerimos actualizar tu contraseña después de tu primer inicio de sesión.' ) .
 						$button( 'Acceder al Campus Virtual &rarr;', '{{login_url}}' ) .
 						$footer
@@ -414,9 +434,9 @@ class Default_Templates {
 						$title( 'Nueva contraseña asignada' ) .
 						$paragraph( 'Hola <strong>{{user.name}}</strong>, un administrador de la plataforma ha restablecido las credenciales de tu cuenta.' ) .
 						$box_start( 'Nuevos Datos de Acceso', 'key' ) .
-						$row( 'Usuario', '{{user.email}}' ) .
-						$row( 'Nueva Contraseña', '{{new_password}}', true, true ) .
+						$row( 'Usuario', '{{user.email}}', false, true ) .
 						$box_end() .
+						$password_card( '{{new_password}}' ) .
 						$paragraph( 'Te recomendamos cambiar esta contraseña desde los ajustes de tu perfil una vez que inicies sesión.' ) .
 						$button( 'Ingresar al Campus &rarr;', '{{login_url}}' ) .
 						$footer
@@ -656,12 +676,14 @@ class Default_Templates {
 
 		// Textos de badge / trazos de iconos anteriores
 		$old_badge_txs = [
+			'#7747ff', '#5b2bd9', '#a78bff',
 			'#5825d6', '#4338ca', '#c7b7ff', '#818cf8',
-			'#0345b5', '#93c5fd', '#1d4ed8',
-			'#065f46', '#6ee7b7', '#047857',
-			'#92400e', '#fcd34d', '#b45309',
-			'#991b1b', '#fca5a5', '#b91c1c',
-			'#27272a', '#d4d4d8', '#3f3f46',
+			'#0562ef', '#0345b5', '#93c5fd', '#1d4ed8', '#60a5fa',
+			'#059669', '#0db879', '#047857', '#10b981', '#6ee7b7', '#065f46', '#34d399',
+			'#d97706', '#f3ad20', '#b45309', '#f59e0b', '#fcd34d', '#92400e', '#fbbf24',
+			'#e0483d', '#f15f55', '#b91c1c', '#ef4444', '#fca5a5', '#991b1b',
+			'#3f3f46', '#71717a', '#27272a', '#d4d4d8', '#a1a1aa',
+			'#0073aa',
 		];
 
 		// Sombras de botones anteriores
@@ -699,11 +721,14 @@ class Default_Templates {
 			}
 		}
 
-		// 4. Reemplazar textos de badge e iconos SVG
+		// 4. Reemplazar textos de badge, acentos e iconos SVG
 		foreach ( $old_badge_txs as $old_tx ) {
-			if ( strtolower( $old_tx ) !== strtolower( $palette['badge_text'] ) ) {
-				$html = str_ireplace( 'color: ' . $old_tx, 'color: ' . $palette['badge_text'], $html );
-				$html = str_ireplace( 'stroke="' . $old_tx . '"', 'stroke="' . $palette['badge_text'] . '"', $html );
+			if ( strtolower( $old_tx ) !== strtolower( $palette['accent'] ) ) {
+				$html = str_ireplace( 'color: ' . $old_tx, 'color: ' . $palette['accent'], $html );
+				$html = str_ireplace( 'color:' . $old_tx, 'color:' . $palette['accent'], $html );
+				$html = str_ireplace( 'stroke="' . $old_tx . '"', 'stroke="' . $palette['accent'] . '"', $html );
+				$html = str_ireplace( 'border: 1.5px dashed ' . $old_tx, 'border: 1.5px dashed ' . $palette['accent'], $html );
+				$html = str_ireplace( 'border: 1px dashed ' . $old_tx, 'border: 1px dashed ' . $palette['accent'], $html );
 			}
 		}
 
@@ -762,7 +787,8 @@ class Default_Templates {
 				$subject = ! empty( $row->subject ) ? $row->subject : $canonical['subject'];
 
 				// Si el contenido actual no tiene la estructura Arc o iconos Lucide, o se fuerza:
-				if ( $force_regenerate || strpos( $row->content, 'arc-wrapper' ) === false || strpos( $row->content, '<svg' ) === false ) {
+				$has_new_pwd = in_array( $type_key, [ 'student_welcome', 'admin_reset_password' ], true ) ? strpos( $row->content, 'Contraseña de Acceso' ) !== false : true;
+				if ( $force_regenerate || ! $has_new_pwd || strpos( $row->content, 'arc-wrapper' ) === false || strpos( $row->content, '<svg' ) === false ) {
 					$new_content = $canonical['content'];
 				} else {
 					// Actualizar la paleta de acento en el HTML existente respetando textos personalizados

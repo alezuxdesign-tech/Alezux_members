@@ -170,13 +170,19 @@ class Marketing extends Module_Base {
 		if ( isset( $_GET['alezux_track_email'] ) ) {
 			$log_id = intval( $_GET['alezux_track_email'] );
 			if ( $log_id > 0 ) {
-				global $wpdb;
-				$table = $wpdb->prefix . 'alezux_marketing_logs';
-				$wpdb->query( $wpdb->prepare( 
-					"UPDATE $table SET opened_at = %s WHERE id = %d AND opened_at IS NULL", 
-					current_time( 'mysql' ), 
-					$log_id 
-				) );
+				$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? strtolower( $_SERVER['HTTP_USER_AGENT'] ) : '';
+				// Descartar rastreadores, bots, crawlers y previsualizadores automáticos
+				$is_bot = ! empty( $user_agent ) && preg_match( '/bot|spider|crawl|slurp|facebook|whatsapp|telegram|twitter|preview|fetch|scanner|virus|headless|curl|wget/i', $user_agent );
+
+				if ( ! $is_bot ) {
+					global $wpdb;
+					$table = $wpdb->prefix . 'alezux_marketing_logs';
+					$wpdb->query( $wpdb->prepare( 
+						"UPDATE $table SET opened_at = %s WHERE id = %d AND (opened_at IS NULL OR opened_at = '0000-00-00 00:00:00')", 
+						current_time( 'mysql' ), 
+						$log_id 
+					) );
+				}
 			}
 
 			// Return transparent 1x1 GIF
@@ -513,9 +519,17 @@ class Marketing extends Module_Base {
 			// Format for display
 			$formatted = [];
 			foreach($logs as $log) {
-				$status_display = ucfirst( $log->status );
-				if ( ! empty( $log->opened_at ) ) {
+				$is_opened = ! empty( $log->opened_at ) 
+					&& $log->opened_at !== '0000-00-00 00:00:00' 
+					&& $log->opened_at !== 'null' 
+					&& strtotime( $log->opened_at ) > 0;
+
+				if ( $is_opened ) {
 					$status_display = 'Leído';
+				} elseif ( strpos( strtolower( $log->status ), 'fail' ) !== false ) {
+					$status_display = 'Fallido';
+				} else {
+					$status_display = 'Enviado';
 				}
 
 				$formatted[] = [
@@ -523,7 +537,8 @@ class Marketing extends Module_Base {
 					'recipient' => $log->recipient_email,
 					'date' => date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $log->sent_at ) ),
 					'status' => $status_display,
-					'raw_status' => strtolower( $log->status )
+					'raw_status' => strtolower( $log->status ),
+					'opened_at'  => $is_opened ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $log->opened_at ) ) : null,
 				];
 			}
 

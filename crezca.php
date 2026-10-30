@@ -279,7 +279,7 @@ function crezca_get_auth_settings() {
  * Obtener la URL del Campus Virtual / Portal del Estudiante
  */
 function crezca_get_student_portal_url() {
-	$student_page_id = get_option( 'alezux_student_dashboard_page_id' );
+	$student_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
 	if ( $student_page_id && get_post_status( $student_page_id ) === 'publish' ) {
 		return get_permalink( $student_page_id );
 	}
@@ -298,16 +298,41 @@ function crezca_get_student_portal_url() {
 		return get_permalink( $found_page_id );
 	}
 
-	$slugs = [ 'aula', 'campus', 'cursos', 'estudiantes', 'mi-cuenta' ];
+	$slugs = [ 'campus', 'aula', 'cursos', 'estudiantes', 'mi-cuenta' ];
 	foreach ( $slugs as $slug ) {
 		$page = get_page_by_path( $slug );
 		if ( $page && $page->post_status === 'publish' ) {
+			if ( strpos( $page->post_content, 'crezca_aula' ) === false && strpos( $page->post_content, 'alezux_aula' ) === false ) {
+				wp_update_post( [
+					'ID'           => $page->ID,
+					'post_content' => '[crezca_aula]',
+				] );
+			}
 			update_option( 'alezux_student_dashboard_page_id', (int) $page->ID );
 			return get_permalink( $page->ID );
 		}
 	}
 
-	return home_url( '/' );
+	// Auto-provisionar la página del Campus Virtual si aún no existe
+	if ( function_exists( 'wp_insert_post' ) ) {
+		$new_page_id = wp_insert_post( [
+			'post_title'     => 'Campus Virtual',
+			'post_name'      => 'campus',
+			'post_content'   => '[crezca_aula]',
+			'post_status'    => 'publish',
+			'post_type'      => 'page',
+			'comment_status' => 'closed',
+			'ping_status'    => 'closed',
+		] );
+
+		if ( $new_page_id && ! is_wp_error( $new_page_id ) ) {
+			update_post_meta( $new_page_id, '_wp_page_template', 'elementor_canvas' );
+			update_option( 'alezux_student_dashboard_page_id', (int) $new_page_id );
+			return get_permalink( $new_page_id );
+		}
+	}
+
+	return home_url( '/campus/' );
 }
 
 /**
@@ -382,3 +407,89 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 }
 add_shortcode( 'crezca_aula', 'crezca_render_student_portal_shortcode' );
 add_shortcode( 'alezux_aula', 'crezca_render_student_portal_shortcode' );
+
+/**
+ * Intercepta accesos a ?tab=courses en la raíz o páginas del tema para redirigir al Campus Virtual
+ */
+add_action( 'template_redirect', 'crezca_redirect_student_tabs_to_campus', 5 );
+function crezca_redirect_student_tabs_to_campus() {
+	if ( is_admin() || wp_doing_ajax() || wp_doing_cron() ) {
+		return;
+	}
+
+	if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
+		$portal_url     = crezca_get_student_portal_url();
+		$portal_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
+
+		// Si no estamos en la página del portal del estudiante, redirigir
+		if ( ! is_page( $portal_page_id ) ) {
+			$target = add_query_arg( 'tab', sanitize_text_field( $_GET['tab'] ), $portal_url );
+			wp_safe_redirect( $target );
+			exit;
+		}
+	}
+}
+
+/**
+ * Sobrescribe la plantilla del Campus Virtual para renderizado Canvas a pantalla completa sin interferencias del tema
+ */
+add_filter( 'template_include', 'crezca_student_portal_canvas_template', 9999 );
+function crezca_student_portal_canvas_template( $template ) {
+	if ( is_admin() || ( class_exists( '\\Elementor\\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) || isset( $_GET['elementor-preview'] ) ) {
+		return $template;
+	}
+
+	$portal_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
+	global $post;
+
+	$is_portal = false;
+	if ( $portal_page_id > 0 && is_page( $portal_page_id ) ) {
+		$is_portal = true;
+	} elseif ( is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'crezca_aula' ) || has_shortcode( $post->post_content, 'alezux_aula' ) ) ) {
+		$is_portal = true;
+	}
+
+	if ( $is_portal ) {
+		add_filter( 'show_admin_bar', '__return_false' );
+
+		$theme        = get_option( 'alezux_theme', 'dark' );
+		$is_light     = ( 'light' === $theme );
+		$bg_color     = $is_light ? '#f8fafc' : '#090a0f';
+		$text_color   = $is_light ? '#0f172a' : '#f8fafc';
+		$academy_name = get_option( 'alezux_academy_name', 'Campus Virtual' );
+
+		header( 'Content-Type: text/html; charset=UTF-8' );
+		?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?> style="margin-top: 0 !important; background: <?php echo esc_attr( $bg_color ); ?>;">
+<head>
+<meta charset="<?php bloginfo( 'charset' ); ?>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title><?php echo esc_html( $academy_name ); ?> - Campus Virtual</title>
+<?php wp_head(); ?>
+<style>
+	html, body {
+		margin: 0 !important;
+		padding: 0 !important;
+		width: 100% !important;
+		min-height: 100vh !important;
+		overflow-x: hidden !important;
+		background: <?php echo esc_attr( $bg_color ); ?> !important;
+		color: <?php echo esc_attr( $text_color ); ?> !important;
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif !important;
+	}
+	#wpadminbar { display: none !important; }
+	html { margin-top: 0 !important; }
+</style>
+</head>
+<body class="crezca-campus-portal <?php echo $is_light ? 'theme-light' : 'theme-dark'; ?>">
+	<?php echo crezca_render_student_portal_shortcode(); ?>
+	<?php wp_footer(); ?>
+</body>
+</html>
+		<?php
+		exit;
+	}
+
+	return $template;
+}

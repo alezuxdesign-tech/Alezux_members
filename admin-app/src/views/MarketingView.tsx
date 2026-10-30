@@ -196,12 +196,14 @@ function replaceAccentColorsInHtml(
   ];
 
   const oldBadgeTxs = [
+    "#7747ff", "#5b2bd9", "#a78bff",
     "#5825d6", "#4338ca", "#c7b7ff", "#818cf8",
-    "#0345b5", "#93c5fd", "#1d4ed8",
-    "#065f46", "#6ee7b7", "#047857",
-    "#92400e", "#fcd34d", "#b45309",
-    "#991b1b", "#fca5a5", "#b91c1c",
-    "#27272a", "#d4d4d8", "#3f3f46",
+    "#0562ef", "#0345b5", "#93c5fd", "#1d4ed8", "#60a5fa",
+    "#059669", "#0db879", "#047857", "#10b981", "#6ee7b7", "#065f46", "#34d399",
+    "#d97706", "#f3ad20", "#b45309", "#f59e0b", "#fcd34d", "#92400e", "#fbbf24",
+    "#e0483d", "#f15f55", "#b91c1c", "#ef4444", "#fca5a5", "#991b1b",
+    "#3f3f46", "#71717a", "#27272a", "#d4d4d8", "#a1a1aa",
+    "#0073aa",
   ];
 
   const oldShadows = [
@@ -241,9 +243,12 @@ function replaceAccentColorsInHtml(
   }
 
   for (const oldTx of oldBadgeTxs) {
-    if (oldTx.toLowerCase() !== palette.badgeText.toLowerCase()) {
-      res = res.split(`color: ${oldTx}`).join(`color: ${palette.badgeText}`);
-      res = res.split(`stroke="${oldTx}"`).join(`stroke="${palette.badgeText}"`);
+    if (oldTx.toLowerCase() !== palette.accent.toLowerCase()) {
+      res = res.split(`color: ${oldTx}`).join(`color: ${palette.accent}`);
+      res = res.split(`color:${oldTx}`).join(`color: ${palette.accent}`);
+      res = res.split(`stroke="${oldTx}"`).join(`stroke="${palette.accent}"`);
+      res = res.split(`border: 1.5px dashed ${oldTx}`).join(`border: 1.5px dashed ${palette.accent}`);
+      res = res.split(`border: 1px dashed ${oldTx}`).join(`border: 1px dashed ${palette.accent}`);
     }
   }
 

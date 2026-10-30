@@ -257,6 +257,12 @@ class Email_Engine {
 		$subject = $this->replace_vars( $subject, $vars );
 		$content = $this->replace_vars( $content, $vars );
 
+		// Sincronizar colores dinámicos al acento de marca activo antes del envío
+		if ( class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' ) ) {
+			$is_dark = ( 'dark' === $theme );
+			$content = \Alezux_Members\Modules\Marketing\Includes\Default_Templates::replace_accent_in_html( $content, $accent, $is_dark );
+		}
+
 		// 4. Tracking Logic (Create log BEFORE sending to get ID)
 		$log_id = 0;
 		if ( ! $is_test ) {
@@ -327,7 +333,8 @@ class Email_Engine {
 				'recipient_email' => $recipient_email, 
 				'user_id' => $user_id,
 				'status' => 'sending', // Initial status
-				'sent_at' => current_time( 'mysql' )
+				'sent_at' => current_time( 'mysql' ),
+				'opened_at' => null, // Explicitamente NULL hasta que el destinatario lo abra
 			] 
 		);
 
