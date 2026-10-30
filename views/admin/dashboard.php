@@ -33,21 +33,7 @@ $accent_colors = [
 $accent_color = isset( $accent_colors[ $accent ] ) ? $accent_colors[ $accent ] : '#7747ff';
 ?>
 
-<div id="crezca-admin-root" style="background:<?php echo esc_attr( $bg_color ); ?>;">
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:<?php echo esc_attr( $bg_color ); ?>;color:<?php echo esc_attr( $muted_color ); ?>;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;user-select:none;text-align:center;padding:20px;">
-    <?php if ( ! empty( $academy_logo ) ) : ?>
-      <img src="<?php echo esc_url( $academy_logo ); ?>" alt="<?php echo esc_attr( $academy_name ); ?>" style="max-height:48px;max-width:180px;object-fit:contain;margin-bottom:16px;border-radius:8px;" />
-    <?php endif; ?>
-    <div style="width:36px;height:36px;border:3px solid rgba(125,125,125,0.15);border-top-color:<?php echo esc_attr( $accent_color ); ?>;border-radius:50%;animation:crezca-spin 0.8s linear infinite;margin-bottom:14px;"></div>
-    <div style="font-size:15px;font-weight:700;color:<?php echo esc_attr( $text_color ); ?>;letter-spacing:-0.01em;">
-      <?php echo esc_html( $academy_name ); ?>
-    </div>
-    <div id="crezca-loading-hint" style="font-size:12px;color:<?php echo esc_attr( $muted_color ); ?>;margin-top:6px;max-width:480px;line-height:1.4;">
-      Cargando...
-    </div>
-    <style>@keyframes crezca-spin { to { transform: rotate(360deg); } }</style>
-  </div>
-</div>
+<div id="crezca-admin-root" style="min-height:100vh;background:<?php echo esc_attr( $bg_color ); ?>;"></div>
 
 <!-- DIAGNÓSTICO EN TIEMPO REAL EN CONSOLA -->
 <script id="crezca-diagnostic-start">
@@ -59,28 +45,6 @@ $accent_color = isset( $accent_colors[ $accent ] ) ? $accent_colors[ $accent ] :
   console.log("   • Contenedor #crezca-admin-root en DOM:", !!document.getElementById("crezca-admin-root"));
   console.log("%c=======================================================", "color: #7747ff;");
 
-  // Feedback progresivo mientras descarga y monta React
-  setTimeout(function() {
-    var root = document.getElementById("crezca-admin-root");
-    if (root && !root.__crezcaRootMounted) {
-      var hint = document.getElementById("crezca-loading-hint");
-      if (hint) {
-        hint.innerHTML = 'Descargando y preparando recursos del panel...';
-      }
-    }
-  }, 3500);
-
-  // Alerta sólo si tras 15 segundos no ha montado (error real de red o script bloqueado)
-  setTimeout(function() {
-    var root = document.getElementById("crezca-admin-root");
-    if (root && !root.__crezcaRootMounted) {
-      console.error("%c⚠️ [Crezca Alerta] React no se ha montado tras 15s. Comprueba si el script JS se descargó correctamente en la pestaña Network.", "color: red; font-weight: bold; font-size: 14px;");
-      var hint = document.getElementById("crezca-loading-hint");
-      if (hint) {
-        hint.innerHTML = '<span style="color:#f87171;font-weight:600;">La conexión con el script tardó más de lo esperado.</span><br><small style="color:#64748b;">Abre la pestaña Console y Network (F12) para comprobar si algún plugin o ad-blocker bloqueó alezux-dashboard.js, o recarga la página.</small>';
-      }
-    }
-  }, 15000);
 </script>
 
 

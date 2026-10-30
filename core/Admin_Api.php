@@ -13,17 +13,6 @@ class Admin_Api {
 
 	public function init() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
-		add_filter( 'rest_post_dispatch', [ $this, 'send_nocache_headers' ], 10, 3 );
-	}
-
-	public function send_nocache_headers( $response, $server, $request ) {
-		$route = $request ? $request->get_route() : '';
-		if ( strpos( $route, '/crezca/v1' ) !== false || strpos( $route, '/alezux/v1' ) !== false ) {
-			$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
-			$response->header( 'Pragma', 'no-cache' );
-			$response->header( 'Expires', '0' );
-		}
-		return $response;
 	}
 
 	public function register_routes() {
@@ -693,7 +682,13 @@ class Admin_Api {
 			];
 		}
 
-		return rest_ensure_response( $courses );
+		$response = rest_ensure_response( $courses );
+		if ( is_a( $response, 'WP_REST_Response' ) ) {
+			$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+			$response->header( 'Pragma', 'no-cache' );
+			$response->header( 'Expires', '0' );
+		}
+		return $response;
 	}
 
 	/**
