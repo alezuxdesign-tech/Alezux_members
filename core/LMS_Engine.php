@@ -205,7 +205,7 @@ class LMS_Engine {
 			if ( $plan_id && $wpdb->get_var( "SHOW TABLES LIKE '$subscriptions_table'" ) === $subscriptions_table ) {
 				$has_active_sub = $wpdb->get_var( $wpdb->prepare(
 					"SELECT id FROM $subscriptions_table 
-					 WHERE user_id = %d AND plan_id = %d AND status IN ('active', 'trialing', 'paid') 
+					 WHERE user_id = %d AND plan_id = %d AND status IN ('active', 'trialing', 'paid', 'completed') 
 					 LIMIT 1",
 					$user_id,
 					$plan_id

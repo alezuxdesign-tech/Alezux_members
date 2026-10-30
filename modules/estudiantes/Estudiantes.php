@@ -546,7 +546,9 @@ class Estudiantes extends Module_Base {
 		if ( $all_courses ) {
 			foreach ( $all_courses as $course ) {
 				$has_access = false;
-				if ( function_exists( 'sfwd_lms_has_access' ) ) {
+				if ( class_exists( '\Alezux_Members\Core\LMS_Engine' ) ) {
+					$has_access = \Alezux_Members\Core\LMS_Engine::has_access( $course->ID, $user->ID );
+				} elseif ( function_exists( 'sfwd_lms_has_access' ) ) {
 					$has_access = \sfwd_lms_has_access( $course->ID, $user->ID );
 				}
 

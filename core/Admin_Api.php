@@ -2974,6 +2974,26 @@ class Admin_Api {
 					$enrolled_ids = array_unique( array_merge( $enrolled_ids, array_map( 'intval', $ld_courses ) ) );
 				}
 			}
+
+			// Respaldo de sincronización automática desde compras/suscripciones en Finanzas
+			global $wpdb;
+			$subs_table  = $wpdb->prefix . 'alezux_finanzas_subscriptions';
+			$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$subs_table'" ) === $subs_table && $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table ) {
+				$sub_course_ids = $wpdb->get_col( $wpdb->prepare(
+					"SELECT p.course_id 
+					 FROM $subs_table s 
+					 INNER JOIN $plans_table p ON s.plan_id = p.id 
+					 WHERE s.user_id = %d 
+					   AND s.status IN ('active', 'completed', 'paid', 'trialing') 
+					   AND p.course_id > 0",
+					$user->ID
+				) );
+				if ( ! empty( $sub_course_ids ) ) {
+					$enrolled_ids = array_values( array_unique( array_merge( $enrolled_ids, array_map( 'intval', $sub_course_ids ) ) ) );
+					update_user_meta( $user->ID, '_alezux_enabled_courses', $enrolled_ids );
+				}
+			}
 		}
 
 		$custom_avatar = get_user_meta( $user->ID, '_crezca_custom_avatar', true );

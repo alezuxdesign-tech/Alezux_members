@@ -135,25 +135,45 @@ class Enrollment_Manager {
              $is_one_time = ( ( isset( $plan->frequency ) && $plan->frequency === 'contado' ) || $plan->total_quotas == 1 );
         }
 
-        // 3. Matricular en LearnDash
-        if ( $plan && function_exists( 'ld_update_course_access' ) ) {
-            // Verificar si el curso es valido
-            if ( $plan->course_id > 0 ) {
-                ld_update_course_access( $user_id, $plan->course_id );
-                error_log( "Alezux: Usuario $user_id matriculado exitosamente en curso {$plan->course_id} via LD." );
+        // 3. Matricular en Crezca LMS Nativo + LearnDash
+        if ( $plan && ! empty( $plan->course_id ) ) {
+            $course_id = (int) $plan->course_id;
+
+            // 3a. Crezca LMS Nativo
+            if ( class_exists( '\Alezux_Members\Core\LMS_Engine' ) ) {
+                \Alezux_Members\Core\LMS_Engine::enroll_student( $user_id, $course_id );
+                error_log( "Alezux: Usuario $user_id matriculado exitosamente en curso $course_id via LMS_Engine." );
             } else {
-                 error_log( "Alezux Warning: El plan {$plan_id} no tiene un course_id valido ({$plan->course_id}). No se pudo matricular." );
+                $enabled = get_user_meta( $user_id, '_alezux_enabled_courses', true );
+                if ( ! is_array( $enabled ) ) {
+                    $enabled = [];
+                }
+                if ( ! in_array( $course_id, array_map( 'intval', $enabled ), true ) ) {
+                    $enabled[] = $course_id;
+                    update_user_meta( $user_id, '_alezux_enabled_courses', array_values( array_unique( array_map( 'intval', $enabled ) ) ) );
+                    error_log( "Alezux: Usuario $user_id matriculado exitosamente en curso $course_id via meta directo." );
+                }
             }
-        } elseif ( ! function_exists( 'ld_update_course_access' ) ) {
-            error_log( "Alezux Error: Función 'ld_update_course_access' no existe. LearnDash no está activo?" );
+
+            // Registrar metadatos del plan activo
+            if ( ! empty( $plan->name ) ) {
+                update_user_meta( $user_id, '_alezux_plan_name', $plan->name );
+            }
+            update_user_meta( $user_id, '_alezux_plan_id', $plan_id );
+
+            // 3b. LearnDash (si está presente)
+            if ( function_exists( 'ld_update_course_access' ) ) {
+                ld_update_course_access( $user_id, $course_id );
+                error_log( "Alezux: Usuario $user_id matriculado en LearnDash para curso $course_id." );
+            }
         }
 
         // 4. Registrar Suscripción/Compra
         $subs_table = $wpdb->prefix . 'alezux_finanzas_subscriptions';
         
-        // Verificar duplicados activos
+        // Verificar duplicados activos o completados
         $existing_sub = $wpdb->get_var( $wpdb->prepare( 
-            "SELECT id FROM $subs_table WHERE user_id = %d AND plan_id = %d AND status = 'active'", 
+            "SELECT id FROM $subs_table WHERE user_id = %d AND plan_id = %d AND status IN ('active', 'completed', 'paid')", 
             $user_id, $plan_id 
         ) );
 

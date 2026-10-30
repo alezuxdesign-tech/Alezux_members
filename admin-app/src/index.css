@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
 * {
   box-sizing: border-box;
 }
@@ -12,7 +14,7 @@ body {
   overflow: hidden;
   background-color: var(--background) !important;
   color: var(--foreground) !important;
-  font-family: var(--font-body);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -28,13 +30,20 @@ body {
 
 /* Reset for WordPress Admin integration */
 #crezca-admin-root,
-#crezca-student-root {
-  height: 100vh;
-  max-height: 100vh;
-  width: 100%;
-  overflow: hidden;
-  background-color: var(--background);
-  color: var(--foreground);
+#crezca-admin-root *,
+#crezca-student-root,
+#crezca-student-root *,
+#crezca-student-root button,
+#crezca-student-root input,
+#crezca-student-root select,
+#crezca-student-root textarea,
+#crezca-student-root h1,
+#crezca-student-root h2,
+#crezca-student-root h3,
+#crezca-student-root h4,
+#crezca-student-root h5,
+#crezca-student-root h6 {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 }
 
 #alezux-admin-root {

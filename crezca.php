@@ -350,7 +350,8 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 	$js_ver  = filemtime( $dist_js );
 	$css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : time();
 	
-	wp_enqueue_style( 'crezca-dashboard-style', CREZCA_URL . 'assets/dist/alezux-dashboard.css', [], $css_ver );
+	wp_enqueue_style( 'crezca-inter-font', 'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap', [], null );
+	wp_enqueue_style( 'crezca-dashboard-style', CREZCA_URL . 'assets/dist/alezux-dashboard.css', [ 'crezca-inter-font' ], $css_ver );
 	wp_enqueue_script( 'crezca-dashboard-script', CREZCA_URL . 'assets/dist/alezux-dashboard.js', [], $js_ver, true );
 	
 	$current_user  = wp_get_current_user();
@@ -466,8 +467,14 @@ function crezca_student_portal_canvas_template( $template ) {
 <meta charset="<?php bloginfo( 'charset' ); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title><?php echo esc_html( $academy_name ); ?> - Campus Virtual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
 <?php wp_head(); ?>
 <style>
+	html, body, #crezca-student-root, #crezca-student-root * {
+		font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+	}
 	html, body {
 		margin: 0 !important;
 		padding: 0 !important;
@@ -476,7 +483,6 @@ function crezca_student_portal_canvas_template( $template ) {
 		overflow-x: hidden !important;
 		background: <?php echo esc_attr( $bg_color ); ?> !important;
 		color: <?php echo esc_attr( $text_color ); ?> !important;
-		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif !important;
 	}
 	#wpadminbar { display: none !important; }
 	html { margin-top: 0 !important; }
