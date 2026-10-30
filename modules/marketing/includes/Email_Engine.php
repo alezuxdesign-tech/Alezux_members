@@ -71,6 +71,11 @@ class Email_Engine {
 				'description' => 'Se envía al usuario confirmando que su pago se ha procesado correctamente.',
 				'variables'   => [ '{{user.name}}', '{{plan_name}}', '{{price}}', '{{date}}', '{{amount}}', '{{site_name}}', '{{logo_url}}' ]
 			],
+			'admin_transfer_alert' => [
+				'title'       => 'Finanzas - Alerta de Transferencia (Para Administrador)',
+				'description' => 'Notifica de inmediato al administrador cuando un alumno reporta un comprobante de transferencia bancaria, Zelle o Pago Móvil para revisar y activar su acceso.',
+				'variables'   => [ '{{student_name}}', '{{student_email}}', '{{student_phone}}', '{{plan_name}}', '{{amount}}', '{{payment_method}}', '{{reference}}', '{{receipt_url}}', '{{admin_url}}', '{{site_name}}', '{{logo_url}}' ]
+			],
 			'payment_failed' => [
 				'title'       => 'Finanzas - Pago Fallido',
 				'description' => 'Se envía cuando un intento de pago o renovación falla.',

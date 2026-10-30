@@ -343,6 +343,30 @@ class Finanzas extends Module_Base {
         );
 
         if ( $inserted ) {
+            // Notificar al administrador por correo sobre el nuevo comprobante de pago
+            try {
+                if ( class_exists( '\Alezux_Members\Modules\Marketing\Includes\Email_Engine' ) ) {
+                    $email_engine    = new \Alezux_Members\Modules\Marketing\Includes\Email_Engine();
+                    $admin_email     = get_option( 'admin_email' );
+                    $admin_panel_url = admin_url( 'admin.php?page=crezca#finanzas' );
+
+                    $email_engine->send_email( 'admin_transfer_alert', $admin_email, [
+                        'student_name'   => $student_name,
+                        'student_email'  => $student_email,
+                        'student_phone'  => ! empty( $student_phone ) ? $student_phone : 'No indicado',
+                        'plan_name'      => $plan->name,
+                        'amount'         => '$' . number_format( (float) $plan->quota_amount, 2 ) . ' USD',
+                        'payment_method' => strtoupper( $method ),
+                        'reference'      => $reference,
+                        'receipt_url'    => ! empty( $receipt_url ) ? $receipt_url : '#',
+                        'admin_url'      => $admin_panel_url,
+                        'user'           => $existing_user ? $existing_user : null,
+                    ] );
+                }
+            } catch ( \Exception $e ) {
+                error_log( 'Error notificando pago manual al administrador: ' . $e->getMessage() );
+            }
+
             wp_send_json_success( [
                 'message'       => '¡Tu comprobante ha sido registrado con éxito! Tu acceso será activado en cuanto el equipo confirme la transacción.',
                 'transaction_id'=> $wpdb->insert_id,

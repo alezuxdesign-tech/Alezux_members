@@ -422,6 +422,28 @@ class Default_Templates {
 						$footer
 				];
 
+			case 'admin_transfer_alert':
+				return [
+					'subject' => '🔔 Nuevo pago por transferencia recibido: {{plan_name}} - {{student_name}}',
+					'content' => $header .
+						$badge( 'Comprobante de Pago Recibido', 'alert-circle', ( $is_dark ? 'rgba(245,158,11,0.18)' : '#fffbeb' ), ( $is_dark ? '#fcd34d' : '#d97706' ), ( $is_dark ? 'rgba(245,158,11,0.3)' : '#fde68a' ) ) .
+						$title( 'Comprobante de pago pendiente de revisión' ) .
+						$paragraph( 'Un alumno ha enviado un comprobante de pago por transferencia bancaria o pago manual a través del checkout de la academia. A continuación tienes los detalles para verificar la acreditación y habilitar su acceso:' ) .
+						$box_start( 'Detalles del Alumno y Pago', 'credit-card' ) .
+						$row( 'Alumno', '{{student_name}}' ) .
+						$row( 'Correo Electrónico', '{{student_email}}' ) .
+						$row( 'Teléfono / WhatsApp', '{{student_phone}}' ) .
+						$row( 'Plan / Formación', '{{plan_name}}' ) .
+						$row( 'Monto a Validar', '{{amount}}' ) .
+						$row( 'Método de Pago', '{{payment_method}}' ) .
+						$row( 'Nº Referencia', '{{reference}}', true ) .
+						$row( 'Comprobante Adjunto', '<a href="{{receipt_url}}" target="_blank" style="color: ' . $accent_data['accent'] . '; font-weight: 700; text-decoration: underline;">Ver archivo adjunto</a>', false, true ) .
+						$box_end() .
+						$paragraph( 'Ingresa al módulo de Finanzas en el panel de administración para validar la transacción y activar al estudiante con un solo clic:' ) .
+						$button( 'Revisar y Activar en Finanzas &rarr;', '{{admin_url}}' ) .
+						$footer
+				];
+
 			case 'payment_success':
 				return [
 					'subject' => '¡Pago Confirmado! - {{plan_name}}',

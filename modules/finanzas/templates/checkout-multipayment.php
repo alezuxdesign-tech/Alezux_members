@@ -36,6 +36,41 @@ if ( empty( $academy_logo ) ) {
 	$academy_logo = get_site_icon_url( 128 );
 }
 
+// 1.1 Configuración de Tema y Color de Acento (desde el Administrador)
+$theme_opt  = get_option( 'alezux_theme', 'dark' );
+$accent_opt = get_option( 'alezux_accent', 'violet' );
+
+$accent_presets = [
+	'violet' => [ 'hex' => '#7747ff', 'dim' => 'rgba(119, 71, 255, 0.14)', 'border' => '#906aff', 'fg' => '#ffffff' ],
+	'blue'   => [ 'hex' => '#0562ef', 'dim' => 'rgba(5, 98, 239, 0.14)',   'border' => '#2b7fff', 'fg' => '#ffffff' ],
+	'green'  => [ 'hex' => '#0db879', 'dim' => 'rgba(13, 184, 121, 0.14)', 'border' => '#10b981', 'fg' => '#ffffff' ],
+	'amber'  => [ 'hex' => '#f59e0b', 'dim' => 'rgba(245, 158, 11, 0.14)', 'border' => '#fbbf24', 'fg' => '#000000' ],
+	'rose'   => [ 'hex' => '#f43f5e', 'dim' => 'rgba(244, 63, 94, 0.14)',  'border' => '#fb7185', 'fg' => '#ffffff' ],
+	'cyan'   => [ 'hex' => '#06b6d4', 'dim' => 'rgba(6, 182, 212, 0.14)',  'border' => '#22d3ee', 'fg' => '#000000' ],
+];
+
+if ( isset( $accent_presets[ $accent_opt ] ) ) {
+	$accent_data = $accent_presets[ $accent_opt ];
+} else {
+	$hex = ltrim( $accent_opt, '#' );
+	if ( preg_match( '/^[0-9a-f]{6}$/i', $hex ) ) {
+		$r = hexdec( substr( $hex, 0, 2 ) );
+		$g = hexdec( substr( $hex, 2, 2 ) );
+		$b = hexdec( substr( $hex, 4, 2 ) );
+		$lum = ( 0.299 * $r + 0.587 * $g + 0.114 * $b ) / 255;
+		$accent_data = [
+			'hex'    => '#' . $hex,
+			'dim'    => "rgba($r, $g, $b, 0.15)",
+			'border' => '#' . $hex,
+			'fg'     => $lum > 0.6 ? '#000000' : '#ffffff',
+		];
+	} else {
+		$accent_data = $accent_presets['violet'];
+	}
+}
+
+$is_light_theme = ( $theme_opt === 'light' );
+
 // 2. Información del Curso (Estilo Página de Ventas)
 $course_id    = (int) ( $plan->course_id ?? 0 );
 $course_title = 'Membresía All-Access (Todos los Cursos)';
@@ -332,24 +367,24 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : 'pagomov
 		   TOKENS DE DISEÑO ARC UI (Standalone Landing Checkout)
 		   ======================================================== */
 		:root {
-			color-scheme: dark;
-			--arc-bg: #09090b;
-			--arc-surface: #121215;
-			--arc-surface-subtle: #18181c;
-			--arc-surface-raised: #1f1f25;
-			--arc-border: rgba(255, 255, 255, 0.08);
-			--arc-border-strong: rgba(255, 255, 255, 0.16);
-			--arc-border-input: #27272a;
+			color-scheme: <?php echo $is_light_theme ? 'light' : 'dark'; ?>;
+			--arc-bg: <?php echo $is_light_theme ? '#f8fafc' : '#09090b'; ?>;
+			--arc-surface: <?php echo $is_light_theme ? '#ffffff' : '#121215'; ?>;
+			--arc-surface-subtle: <?php echo $is_light_theme ? '#f1f5f9' : '#18181c'; ?>;
+			--arc-surface-raised: <?php echo $is_light_theme ? '#e2e8f0' : '#1f1f25'; ?>;
+			--arc-border: <?php echo $is_light_theme ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'; ?>;
+			--arc-border-strong: <?php echo $is_light_theme ? 'rgba(0, 0, 0, 0.16)' : 'rgba(255, 255, 255, 0.16)'; ?>;
+			--arc-border-input: <?php echo $is_light_theme ? '#cbd5e1' : '#27272a'; ?>;
 			
-			/* Acento vibrante estilo fintech (verde lima/neón de referencia) */
-			--arc-accent: #bef264;
-			--arc-accent-dim: rgba(190, 242, 100, 0.12);
-			--arc-accent-border: #a3e635;
-			--arc-accent-foreground: #09090b;
+			/* Acento dinámico configurado en la administración */
+			--arc-accent: <?php echo esc_attr( $accent_data['hex'] ); ?>;
+			--arc-accent-dim: <?php echo esc_attr( $accent_data['dim'] ); ?>;
+			--arc-accent-border: <?php echo esc_attr( $accent_data['border'] ); ?>;
+			--arc-accent-foreground: <?php echo esc_attr( $accent_data['fg'] ); ?>;
 
-			--arc-text-primary: #f4f4f5;
-			--arc-text-secondary: #a1a1aa;
-			--arc-text-muted: #71717a;
+			--arc-text-primary: <?php echo $is_light_theme ? '#0f172a' : '#f4f4f5'; ?>;
+			--arc-text-secondary: <?php echo $is_light_theme ? '#475569' : '#a1a1aa'; ?>;
+			--arc-text-muted: <?php echo $is_light_theme ? '#64748b' : '#71717a'; ?>;
 
 			--radius-control: 12px;
 			--radius-card: 20px;
@@ -550,7 +585,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : 'pagomov
 			background: var(--arc-surface-subtle) !important;
 			border: 1px solid var(--arc-border-input) !important;
 			border-radius: var(--radius-control) !important;
-			color: #fff !important;
+			color: var(--arc-text-primary) !important;
 			font-family: inherit;
 			font-size: 0.88rem;
 			outline: none;
@@ -575,8 +610,8 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : 'pagomov
 			align-items: center;
 			gap: 8px;
 			padding: 10px 14px;
-			background: rgba(163, 230, 53, 0.08);
-			border: 1px solid rgba(163, 230, 53, 0.2);
+			background: var(--arc-accent-dim);
+			border: 1px solid var(--arc-accent-border);
 			border-radius: var(--radius-control);
 			font-size: 0.82rem;
 			color: var(--arc-accent);
@@ -877,7 +912,7 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : 'pagomov
 
 		.file-name {
 			font-weight: 600;
-			color: #fff;
+			color: var(--arc-text-primary);
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;
