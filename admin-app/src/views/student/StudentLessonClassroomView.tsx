@@ -318,6 +318,16 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
     ];
   }, [course.instructors]);
 
+  // Función para decodificar entidades HTML (& -> &#038;) en URLs de reproductores protegidos
+  const cleanIframeUrl = (url?: string): string => {
+    if (!url) return "";
+    return url
+      .replace(/&#038;/g, "&")
+      .replace(/&amp;/g, "&")
+      .replace(/&#38;/g, "&")
+      .trim();
+  };
+
   // Cache de embeds dinámicos (VdoCipher shortcodes, iframes dinámicos, etc.)
   const [dynamicEmbeds, setDynamicEmbeds] = useState<Record<string, {
     loading: boolean;
@@ -378,12 +388,14 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
     api.renderVideoEmbed(key)
       .then((res) => {
         if (res && res.success && (res.iframe_url || res.html)) {
+          const finalIframeUrl = cleanIframeUrl(res.iframe_url);
+          const finalHtml = res.html ? cleanIframeUrl(res.html) : undefined;
           setDynamicEmbeds((prev) => ({
             ...prev,
             [key]: {
               loading: false,
-              iframe_url: res.iframe_url,
-              html: res.html,
+              iframe_url: finalIframeUrl,
+              html: finalHtml,
             },
           }));
         } else {
@@ -516,7 +528,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
       return (
         <div className={styles.videoResponsiveWrapper}>
           <iframe
-            src={rawUrl}
+            src={cleanIframeUrl(rawUrl)}
             title={currentItem.title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
@@ -613,7 +625,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
         return (
           <div className={styles.videoResponsiveWrapper}>
             <iframe
-              src={embedState.iframe_url}
+              src={cleanIframeUrl(embedState.iframe_url)}
               title={currentItem.title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
               allowFullScreen

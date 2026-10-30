@@ -3589,6 +3589,17 @@ class Admin_Api {
 			] );
 		}
 
+		// Función auxiliar para decodificar entidades HTML de URLs (& -> &#038;)
+		$clean_url_entities = function( $raw_src ) {
+			if ( empty( $raw_src ) ) {
+				return '';
+			}
+			$decoded = wp_specialchars_decode( $raw_src, ENT_QUOTES );
+			$decoded = html_entity_decode( $decoded, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+			$decoded = str_replace( [ '&#038;', '&amp;', '&#38;' ], '&', $decoded );
+			return trim( $decoded );
+		};
+
 		// Decodificar entidades HTML si vienen escapadas (&quot;, &#39;, &lt;, etc.)
 		$video_raw = html_entity_decode( wp_unslash( $video_raw ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
@@ -3596,11 +3607,11 @@ class Admin_Api {
 		if ( stripos( $video_raw, '<iframe' ) !== false ) {
 			$iframe_url = '';
 			if ( preg_match( '/src=["\']([^"\']+)["\']/i', $video_raw, $m ) ) {
-				$iframe_url = esc_url_raw( $m[1] );
+				$iframe_url = $clean_url_entities( $m[1] );
 			}
 			return rest_ensure_response( [
 				'success'    => true,
-				'html'       => $video_raw,
+				'html'       => str_replace( [ '&#038;', '&amp;' ], '&', $video_raw ),
 				'iframe_url' => $iframe_url,
 				'type'       => 'iframe_raw',
 			] );
@@ -3609,26 +3620,68 @@ class Admin_Api {
 		// 2. Normalizar si es shortcode o ID directo de VdoCipher
 		$shortcode_to_run = $video_raw;
 		$is_shortcode     = ( str_starts_with( $video_raw, '[' ) && str_ends_with( $video_raw, ']' ) ) || str_contains( $video_raw, '[vdo' );
+		$vdo_direct_id    = '';
 
 		// Si es un ID hexadecimal de VdoCipher (32 caracteres) o formato vdo:ID
 		if ( ! $is_shortcode ) {
 			if ( preg_match( '/^vdo:([a-f0-9]{32})$/i', $video_raw, $vm ) ) {
+				$vdo_direct_id    = $vm[1];
 				$shortcode_to_run = '[vdo id="' . esc_attr( $vm[1] ) . '"]';
 				$is_shortcode     = true;
 			} elseif ( preg_match( '/^[a-f0-9]{32}$/i', $video_raw ) ) {
+				$vdo_direct_id    = $video_raw;
 				$shortcode_to_run = '[vdo id="' . esc_attr( $video_raw ) . '"]';
 				$is_shortcode     = true;
 			}
+		} elseif ( preg_match( '/\[vdo\s+id=["\']?([a-zA-Z0-9_-]+)["\']?/i', $shortcode_to_run, $v_id_m ) ) {
+			$vdo_direct_id = $v_id_m[1];
 		}
 
 		if ( $is_shortcode ) {
+			// Optimización directa para VdoCipher: si la función nativa vdo_otp existe, generar URL limpia sin esc_url que corrompa los &
+			if ( ! empty( $vdo_direct_id ) && function_exists( 'vdo_otp' ) ) {
+				$otp_post_array = [ 'ttl' => 300 ];
+				if ( get_option( 'vdo_annotate_code' ) != '' && function_exists( 'processWatermark' ) ) {
+					$otp_post_array['annotate'] = processWatermark( get_option( 'vdo_annotate_code' ) );
+				}
+				$userId = get_current_user_id();
+				if ( get_option( 'vdo_send_user_id_in_api' ) && $userId !== 0 ) {
+					$otp_post_array['userId'] = $userId;
+				}
+
+				$OTP_Response = vdo_otp( $vdo_direct_id, $otp_post_array );
+
+				if ( is_object( $OTP_Response ) && ! empty( $OTP_Response->otp ) && ! empty( $OTP_Response->playbackInfo ) ) {
+					$direct_url = 'https://player.vdocipher.com/v2/?otp=' . $OTP_Response->otp . '&playbackInfo=' . $OTP_Response->playbackInfo;
+					$vdo_player_theme = get_option( 'vdo_player_theme' );
+					if ( is_string( $vdo_player_theme ) && strlen( $vdo_player_theme ) === 16 ) {
+						$direct_url .= '&player=' . $vdo_player_theme;
+					}
+
+					return rest_ensure_response( [
+						'success'    => true,
+						'html'       => '<iframe src="' . esc_attr( $direct_url ) . '" allow="encrypted-media" allowfullscreen></iframe>',
+						'iframe_url' => $direct_url,
+						'type'       => 'vdocipher_direct',
+					] );
+				} elseif ( is_object( $OTP_Response ) && ! empty( $OTP_Response->message ) ) {
+					return rest_ensure_response( [
+						'success'    => false,
+						'html'       => '',
+						'iframe_url' => '',
+						'type'       => 'vdocipher_error',
+						'message'    => 'VdoCipher Error: ' . $OTP_Response->message,
+					] );
+				}
+			}
+
 			// Ejecutar shortcodes nativos de WordPress
 			$rendered = do_shortcode( $shortcode_to_run );
 
 			// Si el shortcode no se procesó mediante do_shortcode y la función vdo_shortcode existe directamente
 			if ( ( empty( $rendered ) || trim( $rendered ) === trim( $shortcode_to_run ) ) && function_exists( 'vdo_shortcode' ) ) {
-				if ( preg_match( '/id=["\']?([a-zA-Z0-9_-]+)["\']?/i', $shortcode_to_run, $id_m ) ) {
-					$rendered = vdo_shortcode( [ 'id' => $id_m[1] ] );
+				if ( ! empty( $vdo_direct_id ) ) {
+					$rendered = vdo_shortcode( [ 'id' => $vdo_direct_id ] );
 				}
 			}
 
@@ -3648,12 +3701,13 @@ class Admin_Api {
 			if ( ! empty( $rendered ) && trim( $rendered ) !== trim( $shortcode_to_run ) ) {
 				$iframe_url = '';
 				if ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $rendered, $m ) ) {
-					$iframe_url = esc_url_raw( $m[1] );
+					// IMPORTANTE: Decodificar entidades para que &playbackInfo no se convierta en &#038;playbackInfo
+					$iframe_url = $clean_url_entities( $m[1] );
 				}
 
 				return rest_ensure_response( [
 					'success'    => true,
-					'html'       => $rendered,
+					'html'       => str_replace( [ '&#038;', '&amp;' ], '&', $rendered ),
 					'iframe_url' => $iframe_url,
 					'type'       => 'shortcode',
 				] );
@@ -3675,11 +3729,11 @@ class Admin_Api {
 			if ( ! empty( $oembed ) ) {
 				$iframe_url = '';
 				if ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $oembed, $m ) ) {
-					$iframe_url = esc_url_raw( $m[1] );
+					$iframe_url = $clean_url_entities( $m[1] );
 				}
 				return rest_ensure_response( [
 					'success'    => true,
-					'html'       => $oembed,
+					'html'       => str_replace( [ '&#038;', '&amp;' ], '&', $oembed ),
 					'iframe_url' => $iframe_url,
 					'type'       => 'oembed',
 				] );
@@ -3688,7 +3742,7 @@ class Admin_Api {
 			return rest_ensure_response( [
 				'success'    => true,
 				'html'       => '',
-				'iframe_url' => $video_raw,
+				'iframe_url' => $clean_url_entities( $video_raw ),
 				'type'       => 'url',
 			] );
 		}
