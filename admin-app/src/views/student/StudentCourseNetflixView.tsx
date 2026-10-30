@@ -222,7 +222,8 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                   const lessonsCount = lessons.length;
                   const cover = moduleSection.cover || course.thumbnail;
                   const trackTag = `${lessonsCount} ${lessonsCount === 1 ? "Clase" : "Clases"}`;
-                  const showLabels = course.show_card_labels !== false && !moduleSection.hide_card_labels;
+                  const isCourseLabelsDisabled = course.show_card_labels === false || (course.show_card_labels as any) === '0' || (course.show_card_labels as any) === 'false';
+                  const showLabels = !isCourseLabelsDisabled && !moduleSection.hide_card_labels;
 
                   return (
                     <div

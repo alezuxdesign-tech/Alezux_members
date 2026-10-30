@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Plus, 
   GripVertical, 
@@ -172,6 +172,8 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
 
   // Estado del Constructor del Curso Activo (Builder)
   const [sections, setSections] = useState<CourseSection[]>([]);
+  const sectionsRef = useRef<CourseSection[]>([]);
+  sectionsRef.current = sections;
   const [isSavingCurriculum, setIsSavingCurriculum] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -314,7 +316,11 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
     );
     setCourseStatus(course.status || "publish");
     setCourseLinkedPlanId(course.linkedPlanId ?? null);
-    setShowCardLabels(course.show_card_labels !== false);
+    setShowCardLabels(
+      course.show_card_labels !== false &&
+      (course.show_card_labels as any) !== "0" &&
+      (course.show_card_labels as any) !== "false"
+    );
     setInstructors(course.instructors || []);
     setSections(course.sections || []);
     setBuilderTab("curriculum");
@@ -329,10 +335,13 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
       const updated = { ...selectedCourse, show_card_labels: checked };
       setSelectedCourse(updated);
       setCourses((prev) => prev.map((c) => (c.id === selectedCourse.id ? updated : c)));
+      setIsSavingCurriculum(true);
       try {
-        await api.saveCourse(selectedCourse.id, { show_card_labels: checked }, sections);
+        await api.saveCourse(selectedCourse.id, { show_card_labels: checked }, sectionsRef.current);
+        setSavedSuccess(true);
+        setTimeout(() => setSavedSuccess(false), 2500);
         showToast(
-          "info",
+          "success",
           checked ? "Textos en tarjetas activados" : "Textos en tarjetas desactivados",
           checked
             ? "Se mostrarán las etiquetas automáticas ('Módulo X', clases y título)."
@@ -340,7 +349,50 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
         );
       } catch (e) {
         console.warn("Could not save card labels setting", e);
+        showToast("danger", "Error al guardar", "No se pudo actualizar la configuración de textos.");
+      } finally {
+        setIsSavingCurriculum(false);
       }
+    }
+  };
+
+  // Guardado persistente automático en base de datos para módulos y lecciones
+  const persistSections = async (
+    newSections: CourseSection[],
+    customToastMsg?: { title: string; desc: string; type?: "info" | "success" }
+  ) => {
+    setSections(newSections);
+    if (!selectedCourse) return;
+
+    const updatedCourse = {
+      ...selectedCourse,
+      sections: newSections,
+      show_card_labels: showCardLabels,
+    };
+    setSelectedCourse(updatedCourse);
+    setCourses((prev) => prev.map((c) => (c.id === selectedCourse.id ? updatedCourse : c)));
+
+    setIsSavingCurriculum(true);
+    try {
+      await api.saveCourse(
+        selectedCourse.id,
+        {
+          sections: newSections,
+          show_card_labels: showCardLabels,
+        },
+        newSections
+      );
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+
+      if (customToastMsg) {
+        showToast(customToastMsg.type || "success", customToastMsg.title, customToastMsg.desc);
+      }
+    } catch (e) {
+      console.error("Error auto-saving sections:", e);
+      showToast("danger", "Error al guardar", "No se pudieron sincronizar los cambios en la base de datos.");
+    } finally {
+      setIsSavingCurriculum(false);
     }
   };
 
@@ -484,19 +536,20 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
 
   const handleSaveModuleCoverModal = () => {
     if (!editingModuleCover) return;
-    setSections((prev) =>
-      prev.map((s) =>
-        s.id === editingModuleCover.sectionId
-          ? {
-              ...s,
-              cover: editingModuleCover.cover,
-              hide_card_labels: !!editingModuleCover.hide_card_labels,
-            }
-          : s
-      )
+    const updated = sections.map((s) =>
+      s.id === editingModuleCover.sectionId
+        ? {
+            ...s,
+            cover: editingModuleCover.cover,
+            hide_card_labels: !!editingModuleCover.hide_card_labels,
+          }
+        : s
     );
     setEditingModuleCover(null);
-    showToast("success", "Portada actualizada", "La configuración de la portada del módulo se guardó correctamente.");
+    persistSections(updated, {
+      title: "Portada actualizada y guardada",
+      desc: "La configuración de la portada del módulo se guardó inmediatamente.",
+    });
   };
 
   // --- CREACIÓN DE NUEVO CURSO ---
@@ -529,15 +582,18 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
       is_separator: false,
     };
 
+    let updated: CourseSection[];
     if (typeof afterIndex === "number") {
-      const updated = [...sections];
+      updated = [...sections];
       updated.splice(afterIndex + 1, 0, newSection);
-      setSections(updated);
     } else {
-      setSections([...sections, newSection]);
+      updated = [...sections, newSection];
     }
     setCollapsedSections((prev) => ({ ...prev, [newSectionId]: false }));
-    showToast("info", "Módulo añadido", "Se ha creado un nuevo módulo en blanco.");
+    persistSections(updated, {
+      title: "Módulo añadido y guardado",
+      desc: "Se ha creado un nuevo módulo en blanco y se guardó en la base de datos.",
+    });
   };
 
   const handleAddSeparator = (afterIndex?: number) => {
@@ -551,14 +607,17 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
       is_separator: true,
     };
 
+    let updated: CourseSection[];
     if (typeof afterIndex === "number") {
-      const updated = [...sections];
+      updated = [...sections];
       updated.splice(afterIndex + 1, 0, newSeparator);
-      setSections(updated);
     } else {
-      setSections([...sections, newSeparator]);
+      updated = [...sections, newSeparator];
     }
-    showToast("info", "Separador añadido", "Se ha insertado un nuevo separador para crear otra fila de carrusel en Campus.");
+    persistSections(updated, {
+      title: "Separador añadido y guardado",
+      desc: "Se ha insertado una nueva fila de carrusel y se guardó en la base de datos.",
+    });
   };
 
   const handleDeleteSection = (sectionId: string) => {
@@ -570,9 +629,14 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
         ? `¿Estás seguro de que deseas eliminar este separador de carrusel? Los módulos que estaban debajo se integrarán en la fila anterior.`
         : `¿Estás seguro de que deseas eliminar "${sec?.title || "este módulo"}" y todas sus lecciones? Esta acción no se puede deshacer.`,
       onConfirm: () => {
-        setSections(sections.filter((s) => s.id !== sectionId));
+        const updated = sections.filter((s) => s.id !== sectionId);
         setDeleteConfirm(null);
-        showToast("info", isSep ? "Separador eliminado" : "Módulo eliminado", isSep ? "El separador de carrusel fue eliminado." : `El módulo "${sec?.title || ""}" ha sido eliminado.`);
+        persistSections(updated, {
+          title: isSep ? "Separador eliminado" : "Módulo eliminado",
+          desc: isSep
+            ? "El separador de carrusel fue eliminado y se guardó el cambio."
+            : `El módulo "${sec?.title || ""}" ha sido eliminado.`,
+        });
       },
     });
   };
@@ -679,23 +743,24 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
       title: "Eliminar Sub-clase",
       message: "¿Estás seguro de que deseas eliminar esta sub-clase?",
       onConfirm: () => {
-        setSections((prev) =>
-          prev.map((s) => {
-            if (s.id !== sectionId) return s;
-            return {
-              ...s,
-              lessons: s.lessons.map((l) => {
-                if (l.id !== topicId) return l;
-                return {
-                  ...l,
-                  subtopics: (l.subtopics || []).filter((sub) => sub.id !== subtopicId),
-                };
-              }),
-            };
-          })
-        );
+        const updated = sections.map((s) => {
+          if (s.id !== sectionId) return s;
+          return {
+            ...s,
+            lessons: s.lessons.map((l) => {
+              if (l.id !== topicId) return l;
+              return {
+                ...l,
+                subtopics: (l.subtopics || []).filter((sub) => sub.id !== subtopicId),
+              };
+            }),
+          };
+        });
         setDeleteConfirm(null);
-        showToast("info", "Sub-clase eliminada", "Se ha removido la sub-clase.");
+        persistSections(updated, {
+          title: "Sub-clase eliminada",
+          desc: "Se ha removido la sub-clase y se guardó en la base de datos.",
+        });
       },
     });
   };
@@ -709,27 +774,28 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
       return;
     }
 
-    setSections((prev) =>
-      prev.map((s) => {
-        if (s.id !== sectionId) return s;
-        return {
-          ...s,
-          lessons: s.lessons.map((l) => {
-            if (l.id !== topicId) return l;
-            const currentSubs = [...(l.subtopics || [])];
-            if (isNew) {
-              currentSubs.push(subtopic);
-            } else {
-              currentSubs[subtopicIndex] = subtopic;
-            }
-            return { ...l, subtopics: currentSubs };
-          }),
-        };
-      })
-    );
+    const updated = sections.map((s) => {
+      if (s.id !== sectionId) return s;
+      return {
+        ...s,
+        lessons: s.lessons.map((l) => {
+          if (l.id !== topicId) return l;
+          const currentSubs = [...(l.subtopics || [])];
+          if (isNew) {
+            currentSubs.push(subtopic);
+          } else {
+            currentSubs[subtopicIndex] = subtopic;
+          }
+          return { ...l, subtopics: currentSubs };
+        }),
+      };
+    });
 
     setEditingSubtopicState(null);
-    showToast("success", isNew ? "Sub-clase añadida" : "Sub-clase actualizada", `"${subtopic.title}" guardada.`);
+    persistSections(updated, {
+      title: isNew ? "Sub-clase añadida y guardada" : "Sub-clase actualizada y guardada",
+      desc: `"${subtopic.title}" se guardó en la base de datos.`,
+    });
   };
 
   // --- GESTIÓN DE DOCENTES / MENTORES (GUARDADO INMEDIATO) ---
@@ -893,13 +959,14 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
       title: "Eliminar Lección",
       message: `¿Estás seguro de que deseas eliminar la lección "${les?.title || "este topic"}"?`,
       onConfirm: () => {
-        setSections(
-          sections.map((s) =>
-            s.id === sectionId ? { ...s, lessons: s.lessons.filter((l) => l.id !== topicId) } : s
-          )
+        const updated = sections.map((s) =>
+          s.id === sectionId ? { ...s, lessons: s.lessons.filter((l) => l.id !== topicId) } : s
         );
         setDeleteConfirm(null);
-        showToast("info", "Topic eliminado", `La lección "${les?.title || ""}" ha sido eliminada.`);
+        persistSections(updated, {
+          title: "Topic eliminado",
+          desc: `La lección "${les?.title || ""}" ha sido eliminada y se guardó en la base de datos.`,
+        });
       },
     });
   };
@@ -914,21 +981,22 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
       return;
     }
 
-    setSections((prev) =>
-      prev.map((s) => {
-        if (s.id !== sectionId) return s;
-        const newLessons = [...s.lessons];
-        if (isNew) {
-          newLessons.push(topic);
-        } else {
-          newLessons[topicIndex] = topic;
-        }
-        return { ...s, lessons: newLessons };
-      })
-    );
+    const updated = sections.map((s) => {
+      if (s.id !== sectionId) return s;
+      const newLessons = [...s.lessons];
+      if (isNew) {
+        newLessons.push(topic);
+      } else {
+        newLessons[topicIndex] = topic;
+      }
+      return { ...s, lessons: newLessons };
+    });
 
     setEditingTopicState(null);
-    showToast("success", isNew ? "Topic añadido" : "Topic actualizado", `La lección "${topic.title}" fue guardada.`);
+    persistSections(updated, {
+      title: isNew ? "Topic añadido y guardado" : "Topic actualizado y guardado",
+      desc: `La lección "${topic.title}" fue guardada en la base de datos.`,
+    });
   };
 
   // Añadir archivo complementario a la lección en edición
@@ -1017,11 +1085,13 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
     const [movedLesson] = sourceSection.lessons.splice(sourceLessonIndex, 1);
     targetSection.lessons.splice(targetLessonIndex, 0, movedLesson);
 
-    setSections(newSections);
     setDraggedLesson(null);
     setDragOverTopic(null);
     setActiveTopicDrag(null);
-    showToast("info", "Lección reordenada", `La lección "${movedLesson.title || "sin título"}" fue movida.`);
+    persistSections(newSections, {
+      title: "Lección reordenada y guardada",
+      desc: `La lección "${movedLesson.title || "sin título"}" se guardó en su nueva posición.`,
+    });
   };
 
   // --- REORDENACIÓN DE MÓDULOS ---
@@ -1035,11 +1105,13 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
     const updated = [...sections];
     const [moved] = updated.splice(draggedSectionIndex, 1);
     updated.splice(targetIndex, 0, moved);
-    setSections(updated);
     setDraggedSectionIndex(null);
     setDragOverSectionIndex(null);
     setActiveDragHandleIndex(null);
-    showToast("info", "Orden de módulos actualizado", `El módulo se movió a la posición ${targetIndex + 1}.`);
+    persistSections(updated, {
+      title: "Orden de módulos actualizado y guardado",
+      desc: `El módulo se guardó en la posición ${targetIndex + 1}.`,
+    });
   };
 
   const handleMoveSectionUp = (index: number) => {
@@ -1047,7 +1119,10 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
     const updated = [...sections];
     const [moved] = updated.splice(index, 1);
     updated.splice(index - 1, 0, moved);
-    setSections(updated);
+    persistSections(updated, {
+      title: "Módulo movido y guardado",
+      desc: `El módulo subió a la posición ${index}.`,
+    });
   };
 
   const handleMoveSectionDown = (index: number) => {
@@ -1055,7 +1130,10 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
     const updated = [...sections];
     const [moved] = updated.splice(index, 1);
     updated.splice(index + 1, 0, moved);
-    setSections(updated);
+    persistSections(updated, {
+      title: "Módulo movido y guardado",
+      desc: `El módulo bajó a la posición ${index + 2}.`,
+    });
   };
 
   // --- GUARDADO DE CURRÍCULUM EN SERVIDOR ---
@@ -1658,14 +1736,20 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                 </span>
               </div>
               <div className={styles.curriculumActions}>
-                <div className={styles.cardLabelsSwitchWrap} title="Activa o desactiva la superposición de etiquetas ('Módulo X', clases y título) en Campus">
+                <label
+                  htmlFor="toggle-card-labels-switch"
+                  className={styles.cardLabelsSwitchWrap}
+                  title="Activa o desactiva la superposición de etiquetas ('Módulo X', clases y título) en Campus"
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                >
                   <span>Textos en tarjetas</span>
                   <Switch
+                    id="toggle-card-labels-switch"
                     checked={showCardLabels}
                     onCheckedChange={handleToggleCardLabels}
                     size="sm"
                   />
-                </div>
+                </label>
                 <Button variant="secondary" size="sm" onClick={() => handleAddSection()}>
                   <Plus size={15} /> Nuevo Módulo
                 </Button>
@@ -1772,6 +1856,7 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                           type="text"
                           value={section.title}
                           onChange={(e) => handleUpdateSectionTitle(section.id, e.target.value)}
+                          onBlur={() => persistSections(sectionsRef.current)}
                           className={styles.separatorTitleInput}
                           placeholder="Nombre de la fila en Campus (opcional, ej: Fase 2: Escalamiento...)"
                         />
@@ -1943,6 +2028,7 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                         type="text"
                         value={section.title}
                         onChange={(e) => handleUpdateSectionTitle(section.id, e.target.value)}
+                        onBlur={() => persistSections(sectionsRef.current)}
                         className={styles.moduleTitleInput}
                         placeholder="Nombre del Módulo..."
                       />

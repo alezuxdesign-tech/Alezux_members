@@ -314,13 +314,27 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 	wp_enqueue_script( 'crezca-dashboard-script', CREZCA_URL . 'assets/dist/alezux-dashboard.js', [], $js_ver, true );
 	
 	$current_user  = wp_get_current_user();
-	$academy_name  = get_option( 'alezux_academy_name', 'Crezca' );
+	$academy_name  = get_option( 'alezux_academy_name', 'Academia' );
 	$academy_logo  = get_option( 'alezux_academy_logo', '' );
 	$accent        = get_option( 'alezux_accent', 'violet' );
 	$theme         = get_option( 'alezux_theme', 'dark' );
 	$auth_settings = crezca_get_auth_settings();
 	$is_admin      = current_user_can( 'manage_options' );
 	$student_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
+
+	$accent_colors = [
+		'violet'  => '#7747ff',
+		'emerald' => '#10b981',
+		'blue'    => '#3b82f6',
+		'amber'   => '#f59e0b',
+		'rose'    => '#f43f5e',
+		'cyan'    => '#06b6d4',
+	];
+	$accent_color = isset( $accent_colors[ $accent ] ) ? $accent_colors[ $accent ] : '#7747ff';
+	$is_light     = ( 'light' === $theme );
+	$bg_color     = $is_light ? '#f8fafc' : '#090a0f';
+	$text_color   = $is_light ? '#0f172a' : '#f8fafc';
+	$muted_color  = $is_light ? '#64748b' : '#94a3b8';
 
 	$data = [
 		'root_url'             => esc_url_raw( rest_url( 'crezca/v1/' ) ),
@@ -347,9 +361,54 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 		window.crezca_student_data = <?php echo json_encode( $data ); ?>;
 		window.crezca_admin_data = window.crezca_admin_data || window.crezca_student_data;
 	</script>
-	<div id="crezca-student-root" data-mode="student" style="min-height:100vh;background:var(--background,#090a0f);"></div>
+	<div id="crezca-student-root" data-mode="student" style="min-height:100vh;background:<?php echo esc_attr( $bg_color ); ?>;">
+	  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:<?php echo esc_attr( $bg_color ); ?>;color:<?php echo esc_attr( $muted_color ); ?>;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;user-select:none;text-align:center;padding:20px;">
+	    <?php if ( ! empty( $academy_logo ) ) : ?>
+	      <img src="<?php echo esc_url( $academy_logo ); ?>" alt="<?php echo esc_attr( $academy_name ); ?>" style="max-height:48px;max-width:180px;object-fit:contain;margin-bottom:16px;border-radius:8px;" />
+	    <?php endif; ?>
+	    <div style="width:36px;height:36px;border:3px solid rgba(125,125,125,0.15);border-top-color:<?php echo esc_attr( $accent_color ); ?>;border-radius:50%;animation:crezca-spin 0.8s linear infinite;margin-bottom:14px;"></div>
+	    <div style="font-size:15px;font-weight:700;color:<?php echo esc_attr( $text_color ); ?>;letter-spacing:-0.01em;">
+	      <?php echo esc_html( $academy_name ); ?>
+	    </div>
+	    <div style="font-size:12px;color:<?php echo esc_attr( $muted_color ); ?>;margin-top:6px;">
+	      Cargando aula virtual...
+	    </div>
+	    <style>@keyframes crezca-spin { to { transform: rotate(360deg); } }</style>
+	  </div>
+	</div>
 	<?php
 	return ob_get_clean();
 }
 add_shortcode( 'crezca_aula', 'crezca_render_student_portal_shortcode' );
 add_shortcode( 'alezux_aula', 'crezca_render_student_portal_shortcode' );
+
+/**
+ * Preload de assets de Crezca en frontend para acelerar el Aula de Estudiantes sin caché
+ */
+add_action( 'wp_head', function() {
+	global $post;
+	$is_student = is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'crezca_aula' ) || has_shortcode( $post->post_content, 'alezux_aula' ) );
+	$student_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
+	if ( $student_page_id && is_page( $student_page_id ) ) {
+		$is_student = true;
+	}
+
+	if ( $is_student ) {
+		$dist_js  = CREZCA_PATH . 'assets/dist/alezux-dashboard.js';
+		$dist_css = CREZCA_PATH . 'assets/dist/alezux-dashboard.css';
+		$js_ver   = file_exists( $dist_js ) ? filemtime( $dist_js ) : time();
+		$css_ver  = file_exists( $dist_css ) ? filemtime( $dist_css ) : time();
+
+		echo '<link rel="preload" href="' . esc_url( CREZCA_URL . 'assets/dist/alezux-dashboard.js?ver=' . $js_ver ) . '" as="script" />' . "\n";
+		echo '<link rel="preload" href="' . esc_url( CREZCA_URL . 'assets/dist/alezux-dashboard.css?ver=' . $css_ver ) . '" as="style" />' . "\n";
+	}
+}, 1 );
+
+add_filter( 'script_loader_tag', function( $tag, $handle, $src ) {
+	if ( in_array( $handle, [ 'crezca-admin-arc-js', 'crezca-dashboard-script' ], true ) ) {
+		if ( strpos( $tag, 'defer' ) === false ) {
+			$tag = str_replace( ' src', ' defer src', $tag );
+		}
+	}
+	return $tag;
+}, 10, 3 );

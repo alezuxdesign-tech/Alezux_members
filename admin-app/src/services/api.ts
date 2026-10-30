@@ -1142,7 +1142,12 @@ const MOCK_AUTOMATIONS: MarketingAutomation[] = [
 
 class ApiService {
   private get wpData() {
-    return (window as any).crezca_admin_data || (window as any).alezux_admin_data || null;
+    return (
+      (window as any).crezca_admin_data ||
+      (window as any).alezux_admin_data ||
+      (window as any).crezca_student_data ||
+      null
+    );
   }
 
   private get rootUrl() {
@@ -1175,8 +1180,14 @@ class ApiService {
   async getCourses(): Promise<Course[]> {
     try {
       if (this.wpData) {
-        const res = await fetch(`${this.rootUrl}courses`, {
-          headers: { "X-WP-Nonce": this.nonce },
+        const bust = `?_t=${Date.now()}`;
+        const res = await fetch(`${this.rootUrl}courses${bust}`, {
+          cache: "no-store",
+          headers: {
+            "X-WP-Nonce": this.nonce,
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
         });
         if (res.ok) {
           return await res.json();
@@ -2184,8 +2195,14 @@ class ApiService {
   async getStudentProfile(): Promise<StudentProfile> {
     try {
       if (this.wpData) {
-        const res = await fetch(`${this.rootUrl}student/profile`, {
-          headers: { "X-WP-Nonce": this.nonce },
+        const bust = `?_t=${Date.now()}`;
+        const res = await fetch(`${this.rootUrl}student/profile${bust}`, {
+          cache: "no-store",
+          headers: {
+            "X-WP-Nonce": this.nonce,
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
         });
         if (res.ok) {
           return await res.json();
@@ -2258,8 +2275,14 @@ class ApiService {
   async getStudentCourses(): Promise<Course[]> {
     try {
       if (this.wpData) {
-        const res = await fetch(`${this.rootUrl}student/courses`, {
-          headers: { "X-WP-Nonce": this.nonce },
+        const bust = `?_t=${Date.now()}`;
+        const res = await fetch(`${this.rootUrl}student/courses${bust}`, {
+          cache: "no-store",
+          headers: {
+            "X-WP-Nonce": this.nonce,
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
         });
         if (res.ok) {
           return await res.json();

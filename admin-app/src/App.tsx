@@ -308,19 +308,24 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     });
   }, []);
 
-  // Cargar datos de Estudiante cuando está en modo estudiante
+  // Cargar datos de Estudiante cuando está en modo estudiante (sincronización en tiempo real)
   useEffect(() => {
-    if (appMode === "student" && !studentProfile) {
+    if (appMode === "student") {
       setStudentLoading(true);
       Promise.all([api.getStudentProfile(), api.getStudentCourses()])
         .then(([prof, crs]) => {
           setStudentProfile(prof);
           setStudentCourses(crs);
+          setSelectedCourse((prev) => {
+            if (!prev) return null;
+            const updated = crs.find((c) => c.id === prev.id);
+            return updated || prev;
+          });
         })
         .catch((err) => console.error("Error cargando datos de estudiante:", err))
         .finally(() => setStudentLoading(false));
     }
-  }, [appMode, studentProfile]);
+  }, [appMode]);
 
   // Scroll al inicio y cerrar notificaciones al cambiar de pestaña o modo
   useEffect(() => {

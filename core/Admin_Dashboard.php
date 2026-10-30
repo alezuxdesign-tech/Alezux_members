@@ -20,7 +20,17 @@ class Admin_Dashboard {
 		add_action( 'admin_post_alezux_generate_images', [ $this, 'run_image_generation' ] ); // NUEVO
 		// Configuración de modo ventana independiente / app completa y enlace del menú
 		add_action( 'admin_head', [ $this, 'setup_admin_window_mode' ] );
+		// Carga optimizada defer para el bundle de Crezca
+		add_filter( 'script_loader_tag', [ $this, 'add_defer_to_script' ], 10, 3 );
 	}
+
+	public function add_defer_to_script( $tag, $handle, $src ) {
+		if ( in_array( $handle, [ 'crezca-admin-arc-js', 'crezca-dashboard-script' ], true ) ) {
+		if ( strpos( $tag, 'defer' ) === false ) {
+			$tag = str_replace( ' src', ' defer src', $tag );
+		}
+		}
+		return $tag;
 
 	public function setup_admin_window_mode() {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
@@ -31,6 +41,16 @@ class Admin_Dashboard {
 			<link rel="icon" href="<?php echo esc_url( $academy_logo ); ?>" />
 			<link rel="shortcut icon" href="<?php echo esc_url( $academy_logo ); ?>" />
 			<link rel="apple-touch-icon" href="<?php echo esc_url( $academy_logo ); ?>" />
+		<?php endif; ?>
+		<?php if ( $is_crezca_page ) : 
+			$dist_js  = ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.js';
+			$dist_css = ALEZUX_MEMBERS_PATH . 'assets/dist/alezux-dashboard.css';
+			$js_ver   = file_exists( $dist_js ) ? filemtime( $dist_js ) : ALEZUX_MEMBERS_VERSION;
+			$css_ver  = file_exists( $dist_css ) ? filemtime( $dist_css ) : ALEZUX_MEMBERS_VERSION;
+		?>
+			<!-- Preload prioritario en <head> para carga ultrarrápida sin caché -->
+			<link rel="preload" href="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.js?ver=' . $js_ver ); ?>" as="script" />
+			<link rel="preload" href="<?php echo esc_url( ALEZUX_MEMBERS_URL . 'assets/dist/alezux-dashboard.css?ver=' . $css_ver ); ?>" as="style" />
 		<?php endif; ?>
 		<style id="crezca-admin-styles">
 			/* Icono de Crezca en el menú lateral */

@@ -13,6 +13,17 @@ class Admin_Api {
 
 	public function init() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
+		add_filter( 'rest_post_dispatch', [ $this, 'send_nocache_headers' ], 10, 3 );
+	}
+
+	public function send_nocache_headers( $response, $server, $request ) {
+		$route = $request ? $request->get_route() : '';
+		if ( strpos( $route, '/crezca/v1' ) !== false || strpos( $route, '/alezux/v1' ) !== false ) {
+			$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+			$response->header( 'Pragma', 'no-cache' );
+			$response->header( 'Expires', '0' );
+		}
+		return $response;
 	}
 
 	public function register_routes() {
@@ -612,6 +623,8 @@ class Admin_Api {
 			}
 
 			$thumb_id = get_post_thumbnail_id( $post->ID );
+			$show_card_labels_meta = get_post_meta( $post->ID, '_course_show_card_labels', true );
+			$show_card_labels = ( '0' === $show_card_labels_meta ) ? false : true;
 			$custom_thumb = get_post_meta( $post->ID, '_course_thumbnail', true );
 			$thumb_url = $custom_thumb ?: ( $thumb_id ? wp_get_attachment_image_url( $thumb_id, 'medium' ) : 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80' );
 
@@ -676,6 +689,7 @@ class Admin_Api {
 				'slack_url'    => $slack_url,
 				'zoom_url'     => $zoom_url,
 				'checkoutUrl'  => $checkout_url,
+				'show_card_labels' => $show_card_labels,
 			];
 		}
 
@@ -730,6 +744,12 @@ class Admin_Api {
 		}
 		if ( isset( $params['instructors'] ) && is_array( $params['instructors'] ) ) {
 			update_post_meta( $course_id, '_alezux_course_mentors', $params['instructors'] );
+		}
+		if ( array_key_exists( 'show_card_labels', $params ) ) {
+			$raw = $params['show_card_labels'];
+			$is_disabled = ( false === $raw || '0' === (string) $raw || 0 === $raw || 'false' === (string) $raw );
+			$val = $is_disabled ? '0' : '1';
+			update_post_meta( $course_id, '_course_show_card_labels', $val );
 		}
 
 		return rest_ensure_response( [

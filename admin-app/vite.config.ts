@@ -28,6 +28,9 @@ export default defineConfig({
   build: {
     outDir: '../assets/dist',
     emptyOutDir: true,
+    target: 'es2020',
+    cssMinify: true,
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         entryFileNames: 'alezux-dashboard.js',
@@ -40,5 +43,8 @@ export default defineConfig({
         },
       },
     },
+  },
+  esbuild: {
+    legalComments: 'none',
   },
 });
