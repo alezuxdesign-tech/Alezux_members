@@ -30,7 +30,8 @@ import {
   CourseSubtopic, 
   CourseQuestion,
   CourseFileAttachment,
-  CourseInstructor 
+  CourseInstructor,
+  api
 } from "../../services/api";
 import styles from "./StudentPortal.module.css";
 
@@ -317,6 +318,95 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
     ];
   }, [course.instructors]);
 
+  // Cache de embeds dinámicos (VdoCipher shortcodes, iframes dinámicos, etc.)
+  const [dynamicEmbeds, setDynamicEmbeds] = useState<Record<string, {
+    loading: boolean;
+    html?: string;
+    iframe_url?: string;
+    error?: string;
+  }>>({});
+
+  // Detectar si el video_url actual es un shortcode o ID protegido de VdoCipher
+  const vdoDetection = useMemo(() => {
+    if (!currentItem?.video_url) return { isVdo: false, cleanRaw: "" };
+    // Limpiar entidades HTML por si vienen codificadas
+    const raw = currentItem.video_url
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&')
+      .trim();
+
+    // 1. Shortcode [vdo id="..."]
+    const vdoShortcodeMatch = raw.match(/\[vdo\s+id=["']?([a-zA-Z0-9_-]+)["']?[^\]]*\]/i);
+    if (vdoShortcodeMatch) {
+      return { isVdo: true, cleanRaw: raw, vdoId: vdoShortcodeMatch[1] };
+    }
+
+    // 2. Cualquier shortcode de WordPress entre corchetes [ ... ]
+    if (raw.startsWith('[') && raw.endsWith(']')) {
+      return { isVdo: true, cleanRaw: raw };
+    }
+
+    // 3. ID directo de VdoCipher (32 caracteres alfanuméricos)
+    if (/^[a-f0-9]{32}$/i.test(raw)) {
+      return { isVdo: true, cleanRaw: raw, vdoId: raw };
+    }
+
+    // 4. vdo:ID
+    if (/^vdo:[a-zA-Z0-9_-]+$/i.test(raw)) {
+      return { isVdo: true, cleanRaw: raw };
+    }
+
+    return { isVdo: false, cleanRaw: raw };
+  }, [currentItem?.video_url]);
+
+  // Cargar dinámicamente embed de VdoCipher / WordPress cuando sea necesario
+  useEffect(() => {
+    if (!vdoDetection.isVdo || !vdoDetection.cleanRaw) return;
+    const key = vdoDetection.cleanRaw;
+
+    // Si ya existe y está cargando o ya resolvió (con o sin error), no re-solicitar
+    if (dynamicEmbeds[key]) {
+      return;
+    }
+
+    setDynamicEmbeds((prev) => ({
+      ...prev,
+      [key]: { loading: true },
+    }));
+
+    api.renderVideoEmbed(key)
+      .then((res) => {
+        if (res && res.success && (res.iframe_url || res.html)) {
+          setDynamicEmbeds((prev) => ({
+            ...prev,
+            [key]: {
+              loading: false,
+              iframe_url: res.iframe_url,
+              html: res.html,
+            },
+          }));
+        } else {
+          setDynamicEmbeds((prev) => ({
+            ...prev,
+            [key]: {
+              loading: false,
+              error: res?.message || "No se pudo cargar el video protegido. Verifica la configuración de VdoCipher.",
+            },
+          }));
+        }
+      })
+      .catch(() => {
+        setDynamicEmbeds((prev) => ({
+          ...prev,
+          [key]: {
+            loading: false,
+            error: "Error de conexión al cargar el reproductor de video.",
+          },
+        }));
+      });
+  }, [vdoDetection, dynamicEmbeds]);
+
   // Formateador de Embed de Video
   const renderVideoPlayer = () => {
     if (!currentItem || !currentItem.video_url || currentItem.video_url.trim() === "") {
@@ -335,17 +425,20 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
       );
     }
 
-    const url = currentItem.video_url.trim();
+    const rawUrl = currentItem.video_url
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .trim();
 
-    // YouTube
-    const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+    // 1. YouTube (Embed, Watch, Shorts, YouTu.be)
+    const ytMatch = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
     if (ytMatch) {
       return (
         <div className={styles.videoResponsiveWrapper}>
           <iframe
             src={`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0&modestbranding=1`}
             title={currentItem.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
             className={styles.videoIframe}
           />
@@ -353,13 +446,14 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
       );
     }
 
-    // Vimeo
-    const vimeoMatch = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)/);
-    if (vimeoMatch) {
+    // 2. Vimeo
+    const vimeoMatch = rawUrl.match(/(?:vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)|player\.vimeo\.com\/video\/(\d+))/);
+    const vimeoId = vimeoMatch ? (vimeoMatch[1] || vimeoMatch[2]) : null;
+    if (vimeoId) {
       return (
         <div className={styles.videoResponsiveWrapper}>
           <iframe
-            src={`https://player.vimeo.com/video/${vimeoMatch[1]}?title=0&byline=0&portrait=0`}
+            src={`https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0`}
             title={currentItem.title}
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
@@ -369,13 +463,82 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
       );
     }
 
-    // MP4 Directo
-    if (url.endsWith(".mp4") || url.includes(".mp4?")) {
+    // 3. Loom
+    const loomMatch = rawUrl.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9_-]+)/);
+    if (loomMatch) {
+      return (
+        <div className={styles.videoResponsiveWrapper}>
+          <iframe
+            src={`https://www.loom.com/embed/${loomMatch[1]}`}
+            title={currentItem.title}
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            className={styles.videoIframe}
+          />
+        </div>
+      );
+    }
+
+    // 4. Wistia
+    const wistiaMatch = rawUrl.match(/(?:wistia\.com\/medias|fast\.wistia\.net\/embed\/iframe)\/([a-zA-Z0-9_-]+)/);
+    if (wistiaMatch) {
+      return (
+        <div className={styles.videoResponsiveWrapper}>
+          <iframe
+            src={`https://fast.wistia.net/embed/iframe/${wistiaMatch[1]}`}
+            title={currentItem.title}
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            className={styles.videoIframe}
+          />
+        </div>
+      );
+    }
+
+    // 5. Bunny.net Stream
+    const bunnyMatch = rawUrl.match(/(?:iframe\.mediadelivery\.net\/embed|video\.bunnycdn\.com\/play)\/([a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+)/);
+    if (bunnyMatch) {
+      return (
+        <div className={styles.videoResponsiveWrapper}>
+          <iframe
+            src={`https://iframe.mediadelivery.net/embed/${bunnyMatch[1]}?autoplay=false&preload=true`}
+            title={currentItem.title}
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+            className={styles.videoIframe}
+          />
+        </div>
+      );
+    }
+
+    // 6. VdoCipher Direct Player URL (si la URL directa fue provista)
+    if (rawUrl.includes("player.vdocipher.com/")) {
+      return (
+        <div className={styles.videoResponsiveWrapper}>
+          <iframe
+            src={rawUrl}
+            title={currentItem.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+            className={styles.videoIframe}
+          />
+        </div>
+      );
+    }
+
+    // 7. Video HTML5 Directo (MP4, WebM, OGG, MOV)
+    const lowerUrl = rawUrl.toLowerCase();
+    if (
+      lowerUrl.endsWith(".mp4") || lowerUrl.includes(".mp4?") ||
+      lowerUrl.endsWith(".webm") || lowerUrl.includes(".webm?") ||
+      lowerUrl.endsWith(".ogg") || lowerUrl.includes(".ogg?") ||
+      lowerUrl.endsWith(".mov") || lowerUrl.includes(".mov?")
+    ) {
       return (
         <div className={styles.videoResponsiveWrapper}>
           <video
             controls
-            src={url}
+            src={rawUrl}
             poster={currentItem.cover}
             className={styles.videoHtmlTag}
           />
@@ -383,15 +546,118 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
       );
     }
 
-    // Fallback Iframe genérico
-    return (
-      <div className={styles.videoResponsiveWrapper}>
-        <iframe
-          src={url}
-          title={currentItem.title}
-          allowFullScreen
-          className={styles.videoIframe}
+    // 8. Raw Iframe tag en el campo de texto (ej: <iframe src="..."/>)
+    if (rawUrl.startsWith("<iframe") || rawUrl.includes("<iframe")) {
+      const iframeSrcMatch = rawUrl.match(/src=["']([^"']+)["']/i);
+      if (iframeSrcMatch) {
+        return (
+          <div className={styles.videoResponsiveWrapper}>
+            <iframe
+              src={iframeSrcMatch[1]}
+              title={currentItem.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
+              className={styles.videoIframe}
+            />
+          </div>
+        );
+      }
+      return (
+        <div
+          className={styles.videoResponsiveWrapper}
+          dangerouslySetInnerHTML={{ __html: rawUrl }}
         />
+      );
+    }
+
+    // 9. Shortcode VdoCipher [vdo id="..."], shortcodes WordPress o ID hexadecimal
+    if (vdoDetection.isVdo) {
+      const embedState = dynamicEmbeds[vdoDetection.cleanRaw];
+
+      if (!embedState || embedState.loading) {
+        return (
+          <div className={styles.videoLoadingContainer}>
+            <div className={styles.videoLoadingSpinner} />
+            <h4 className={styles.videoLoadingTitle}>Cargando reproductor protegido...</h4>
+            <p className={styles.videoLoadingSubtitle}>Conectando con el servidor seguro de VdoCipher</p>
+          </div>
+        );
+      }
+
+      if (embedState.error) {
+        return (
+          <div className={styles.videoErrorContainer}>
+            <div className={styles.videoErrorIcon}>
+              <Video size={36} />
+            </div>
+            <h4 className={styles.videoErrorTitle}>No se pudo reproducir este video</h4>
+            <p className={styles.videoErrorSubtitle}>{embedState.error}</p>
+            <button
+              type="button"
+              className={styles.videoRetryBtn}
+              onClick={() => {
+                setDynamicEmbeds((prev) => {
+                  const copy = { ...prev };
+                  delete copy[vdoDetection.cleanRaw];
+                  return copy;
+                });
+              }}
+            >
+              <RotateCcw size={14} /> Reintentar carga
+            </button>
+          </div>
+        );
+      }
+
+      if (embedState.iframe_url) {
+        return (
+          <div className={styles.videoResponsiveWrapper}>
+            <iframe
+              src={embedState.iframe_url}
+              title={currentItem.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
+              className={styles.videoIframe}
+            />
+          </div>
+        );
+      }
+
+      if (embedState.html) {
+        return (
+          <div
+            className={styles.videoEmbedHtmlContainer}
+            dangerouslySetInnerHTML={{ __html: embedState.html }}
+          />
+        );
+      }
+    }
+
+    // 10. Fallback Iframe genérico: SÓLO si es una URL válida con http://, https:// o //
+    if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://") || rawUrl.startsWith("//")) {
+      return (
+        <div className={styles.videoResponsiveWrapper}>
+          <iframe
+            src={rawUrl}
+            title={currentItem.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+            className={styles.videoIframe}
+          />
+        </div>
+      );
+    }
+
+    // 11. Formato no reconocido (evita enviar rutas relativas a iframe y causar 404)
+    return (
+      <div className={styles.videoErrorContainer}>
+        <div className={styles.videoErrorIcon}>
+          <Video size={36} />
+        </div>
+        <h4 className={styles.videoErrorTitle}>Formato de video no compatible</h4>
+        <p className={styles.videoErrorSubtitle}>
+          El texto registrado no corresponde a una URL válida ni a un shortcode de video soportado.
+        </p>
       </div>
     );
   };

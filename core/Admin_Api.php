@@ -322,6 +322,13 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'student_permissions_check' ],
 			] );
 
+			// Renderizado y resolución dinámica de embeds de video (Shortcodes tipo [vdo id="..."], iframe seguro, oEmbed)
+			register_rest_route( $namespace, '/video-embed', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'render_video_embed' ],
+				'permission_callback' => [ $this, 'student_permissions_check' ],
+			] );
+
 			register_rest_route( $namespace, '/student/avatar', [
 				'methods'             => 'POST',
 				'callback'            => [ $this, 'upload_student_avatar' ],
@@ -683,6 +690,13 @@ class Admin_Api {
 						$topics_data = [];
 						foreach ( $topics_posts as $top ) {
 							$video_url = get_post_meta( $top->ID, '_topic_video_url', true ) ?: '';
+							if ( empty( $video_url ) && ! empty( $top->post_content ) ) {
+								if ( preg_match( '/(\[vdo\s+id=["\']?[a-zA-Z0-9_-]+["\']?[^\]]*\])/i', $top->post_content, $vdo_m ) ) {
+									$video_url = $vdo_m[1];
+								} elseif ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $top->post_content, $if_m ) ) {
+									$video_url = $if_m[0];
+								}
+							}
 							$cover_url = get_post_meta( $top->ID, '_topic_cover', true ) ?: '';
 							$files     = get_post_meta( $top->ID, '_topic_files', true ) ?: [];
 							$duration  = get_post_meta( $top->ID, '_topic_duration', true ) ?: '15m';
@@ -703,6 +717,13 @@ class Admin_Api {
 						// Si el módulo no tiene topics hijos, convertir la propia lección en el topic principal
 						if ( empty( $topics_data ) ) {
 							$video_url = get_post_meta( $les->ID, '_topic_video_url', true ) ?: '';
+							if ( empty( $video_url ) && ! empty( $les->post_content ) ) {
+								if ( preg_match( '/(\[vdo\s+id=["\']?[a-zA-Z0-9_-]+["\']?[^\]]*\])/i', $les->post_content, $vdo_m ) ) {
+									$video_url = $vdo_m[1];
+								} elseif ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $les->post_content, $if_m ) ) {
+									$video_url = $if_m[0];
+								}
+							}
 							$cover_url = get_post_meta( $les->ID, '_topic_cover', true ) ?: '';
 							$files     = get_post_meta( $les->ID, '_topic_files', true ) ?: [];
 
@@ -3551,6 +3572,136 @@ class Admin_Api {
 	/**
 	 * Asegurar que existan las tablas para la comunidad tipo Discord
 	 */
+	/**
+	 * Renderizar y resolver dinámicamente reproductores de video seguros y shortcodes (ej: VdoCipher, iframe, oEmbed)
+	 */
+	public function render_video_embed( $request ) {
+		$params    = $request->get_json_params();
+		$video_raw = isset( $params['video_url'] ) ? trim( (string) $params['video_url'] ) : '';
+
+		if ( empty( $video_raw ) ) {
+			return rest_ensure_response( [
+				'success'    => false,
+				'html'       => '',
+				'iframe_url' => '',
+				'type'       => 'empty',
+				'message'    => 'No se proporcionó ningún enlace o shortcode de video.',
+			] );
+		}
+
+		// Decodificar entidades HTML si vienen escapadas (&quot;, &#39;, &lt;, etc.)
+		$video_raw = html_entity_decode( wp_unslash( $video_raw ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// 1. Si ya es una etiqueta <iframe> directa en HTML
+		if ( stripos( $video_raw, '<iframe' ) !== false ) {
+			$iframe_url = '';
+			if ( preg_match( '/src=["\']([^"\']+)["\']/i', $video_raw, $m ) ) {
+				$iframe_url = esc_url_raw( $m[1] );
+			}
+			return rest_ensure_response( [
+				'success'    => true,
+				'html'       => $video_raw,
+				'iframe_url' => $iframe_url,
+				'type'       => 'iframe_raw',
+			] );
+		}
+
+		// 2. Normalizar si es shortcode o ID directo de VdoCipher
+		$shortcode_to_run = $video_raw;
+		$is_shortcode     = ( str_starts_with( $video_raw, '[' ) && str_ends_with( $video_raw, ']' ) ) || str_contains( $video_raw, '[vdo' );
+
+		// Si es un ID hexadecimal de VdoCipher (32 caracteres) o formato vdo:ID
+		if ( ! $is_shortcode ) {
+			if ( preg_match( '/^vdo:([a-f0-9]{32})$/i', $video_raw, $vm ) ) {
+				$shortcode_to_run = '[vdo id="' . esc_attr( $vm[1] ) . '"]';
+				$is_shortcode     = true;
+			} elseif ( preg_match( '/^[a-f0-9]{32}$/i', $video_raw ) ) {
+				$shortcode_to_run = '[vdo id="' . esc_attr( $video_raw ) . '"]';
+				$is_shortcode     = true;
+			}
+		}
+
+		if ( $is_shortcode ) {
+			// Ejecutar shortcodes nativos de WordPress
+			$rendered = do_shortcode( $shortcode_to_run );
+
+			// Si el shortcode no se procesó mediante do_shortcode y la función vdo_shortcode existe directamente
+			if ( ( empty( $rendered ) || trim( $rendered ) === trim( $shortcode_to_run ) ) && function_exists( 'vdo_shortcode' ) ) {
+				if ( preg_match( '/id=["\']?([a-zA-Z0-9_-]+)["\']?/i', $shortcode_to_run, $id_m ) ) {
+					$rendered = vdo_shortcode( [ 'id' => $id_m[1] ] );
+				}
+			}
+
+			// Verificar si arrojó un error explícito de VdoCipher
+			if ( ! empty( $rendered ) && stripos( $rendered, 'VdoCipher Error:' ) !== false ) {
+				$clean_error = wp_strip_all_tags( $rendered );
+				return rest_ensure_response( [
+					'success'    => false,
+					'html'       => $rendered,
+					'iframe_url' => '',
+					'type'       => 'vdocipher_error',
+					'message'    => $clean_error,
+				] );
+			}
+
+			// Si se procesó con éxito
+			if ( ! empty( $rendered ) && trim( $rendered ) !== trim( $shortcode_to_run ) ) {
+				$iframe_url = '';
+				if ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $rendered, $m ) ) {
+					$iframe_url = esc_url_raw( $m[1] );
+				}
+
+				return rest_ensure_response( [
+					'success'    => true,
+					'html'       => $rendered,
+					'iframe_url' => $iframe_url,
+					'type'       => 'shortcode',
+				] );
+			}
+
+			return rest_ensure_response( [
+				'success'    => false,
+				'html'       => '',
+				'iframe_url' => '',
+				'type'       => 'unprocessed_shortcode',
+				'message'    => 'El shortcode no pudo ser procesado. Verifica que el plugin de VdoCipher esté activo y configurado con su clave API en WordPress.',
+			] );
+		}
+
+		// 3. Si es una URL http/https completa
+		if ( filter_var( $video_raw, FILTER_VALIDATE_URL ) ) {
+			// Intentar oEmbed nativo de WordPress si es aplicable
+			$oembed = wp_oembed_get( $video_raw );
+			if ( ! empty( $oembed ) ) {
+				$iframe_url = '';
+				if ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $oembed, $m ) ) {
+					$iframe_url = esc_url_raw( $m[1] );
+				}
+				return rest_ensure_response( [
+					'success'    => true,
+					'html'       => $oembed,
+					'iframe_url' => $iframe_url,
+					'type'       => 'oembed',
+				] );
+			}
+
+			return rest_ensure_response( [
+				'success'    => true,
+				'html'       => '',
+				'iframe_url' => $video_raw,
+				'type'       => 'url',
+			] );
+		}
+
+		return rest_ensure_response( [
+			'success'    => false,
+			'html'       => '',
+			'iframe_url' => '',
+			'type'       => 'invalid',
+			'message'    => 'El valor proporcionado no es un enlace de video válido ni un shortcode soportado.',
+		] );
+	}
+
 	public function init_community_tables() {
 		global $wpdb;
 

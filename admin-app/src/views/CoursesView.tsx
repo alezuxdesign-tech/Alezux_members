@@ -2476,8 +2476,8 @@ export function CoursesView({ onNavigateToInstructors, isInstructor = false }: C
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" }}>
               <div className={styles.formGroup}>
                 <Input
-                  label="Enlace del Video (YouTube, Vimeo, BunnyCDN, MP4)"
-                  placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
+                  label="Enlace del Video (YouTube, Vimeo, VdoCipher, Loom, MP4)"
+                  placeholder="URL o shortcode [vdo id=&quot;...&quot;]"
                   value={editingTopicState.topic.video_url || ""}
                   onChange={(e) =>
                     setEditingTopicState({
@@ -2851,8 +2851,8 @@ export function CoursesView({ onNavigateToInstructors, isInstructor = false }: C
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" }}>
               <div className={styles.formGroup}>
                 <Input
-                  label="Enlace del Video (YouTube, Vimeo, BunnyCDN, MP4)"
-                  placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
+                  label="Enlace del Video (YouTube, Vimeo, VdoCipher, Loom, MP4)"
+                  placeholder="URL o shortcode [vdo id=&quot;...&quot;]"
                   value={editingSubtopicState.subtopic.video_url || ""}
                   onChange={(e) =>
                     setEditingSubtopicState({

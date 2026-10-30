@@ -202,6 +202,14 @@ export interface StudentProfile {
   coverBanner?: string;
 }
 
+export interface VideoEmbedResult {
+  success: boolean;
+  html?: string;
+  iframe_url?: string;
+  type?: string;
+  message?: string;
+}
+
 export interface LMSSettingsResponse {
   mode: "auto" | "native" | "learndash";
   active_mode: "native" | "learndash";
@@ -2433,6 +2441,46 @@ class ApiService {
     }
     localStorage.setItem("crezca_completed_topics", JSON.stringify(next));
     return { isCompleted, completedTopicIds: next };
+  }
+
+  /**
+   * Renderizar y resolver dinámicamente reproductores de video seguros y shortcodes (ej: VdoCipher [vdo id="..."])
+   */
+  async renderVideoEmbed(videoUrl: string): Promise<VideoEmbedResult> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}video-embed`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ video_url: videoUrl }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn("API Error rendering video embed:", e);
+    }
+
+    // Fallback local
+    const trimmed = (videoUrl || "").trim();
+    if (trimmed.includes("<iframe")) {
+      const match = trimmed.match(/src=["']([^"']+)["']/i);
+      return {
+        success: true,
+        html: trimmed,
+        iframe_url: match ? match[1] : undefined,
+        type: "iframe_raw",
+      };
+    }
+    return {
+      success: false,
+      message: "No se pudo conectar con el servidor para reproducir el video.",
+    };
   }
 
   /* ========================================================

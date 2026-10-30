@@ -630,6 +630,13 @@ class LMS_Engine {
 					$video_url = $ld_settings['sfwd-lessons_lesson_video_url'];
 				}
 			}
+			if ( empty( $video_url ) && ! empty( $l_post->post_content ) ) {
+				if ( preg_match( '/(\[vdo\s+id=["\']?[a-zA-Z0-9_-]+["\']?[^\]]*\])/i', $l_post->post_content, $vdo_m ) ) {
+					$video_url = $vdo_m[1];
+				} elseif ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $l_post->post_content, $if_m ) ) {
+					$video_url = $if_m[0];
+				}
+			}
 
 			// Topics de esta lección (se convierten en subtopics en Crezca)
 			$subtopics = [];
@@ -668,6 +675,13 @@ class LMS_Engine {
 						$t_settings = get_post_meta( $t_id, '_sfwd-topic', true );
 						if ( is_array( $t_settings ) && ! empty( $t_settings['sfwd-topic_lesson_video_url'] ) ) {
 							$sub_video = $t_settings['sfwd-topic_lesson_video_url'];
+						}
+					}
+					if ( empty( $sub_video ) && ! empty( $t_post->post_content ) ) {
+						if ( preg_match( '/(\[vdo\s+id=["\']?[a-zA-Z0-9_-]+["\']?[^\]]*\])/i', $t_post->post_content, $vdo_m ) ) {
+							$sub_video = $vdo_m[1];
+						} elseif ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $t_post->post_content, $if_m ) ) {
+							$sub_video = $if_m[0];
 						}
 					}
 
