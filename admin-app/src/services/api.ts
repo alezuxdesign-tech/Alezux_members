@@ -2750,6 +2750,7 @@ class ApiService {
         if (res.ok) {
           const data = await res.json();
           if (data && Array.isArray(data.events)) {
+            localStorage.setItem("crezca_academy_events", JSON.stringify(data.events));
             return data.events;
           }
         }
@@ -2761,46 +2762,15 @@ class ApiService {
     const saved = localStorage.getItem("crezca_academy_events");
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
       } catch {}
     }
 
-    // Eventos por defecto
-    const defaultEvents: AcademyEvent[] = [
-      {
-        id: "evt-1",
-        title: "Mentoría Grupal en Vivo: Q&A y Revisión de Casos",
-        description: "Sesión en tiempo real con los tutores principales para resolver preguntas, revisar proyectos y dar feedback en directo.",
-        instructor: "Equipo Docente Crezca",
-        instructor_avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
-        date: new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0],
-        time: "19:00",
-        timezone: "GMT-5",
-        type: "live",
-        meeting_url: "https://zoom.us",
-        badge: "En Vivo",
-        is_active: true,
-      },
-      {
-        id: "evt-2",
-        title: "Taller Práctico: Implementación Paso a Paso",
-        description: "Laboratorio práctico interactivo donde pondremos a prueba estrategias reales de los módulos avanzados.",
-        instructor: "Docente Titular",
-        instructor_avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
-        date: new Date(Date.now() + 6 * 86400000).toISOString().split("T")[0],
-        time: "18:30",
-        timezone: "GMT-5",
-        type: "workshop",
-        meeting_url: "https://zoom.us",
-        badge: "Taller Práctico",
-        is_active: true,
-      },
-    ];
-
-    return defaultEvents;
+    return [];
   }
 
-  async saveAcademyEvents(events: AcademyEvent[]): Promise<boolean> {
+  async saveAcademyEvents(events: AcademyEvent[]): Promise<{ success: boolean; events: AcademyEvent[] }> {
     try {
       if (this.wpData) {
         const res = await fetch(`${this.rootUrl}academy/events`, {
@@ -2812,14 +2782,91 @@ class ApiService {
           body: JSON.stringify({ events }),
         });
         if (res.ok) {
-          return true;
+          const data = await res.json();
+          const returnedList = (data && Array.isArray(data.events)) ? data.events : events;
+          localStorage.setItem("crezca_academy_events", JSON.stringify(returnedList));
+          return { success: true, events: returnedList };
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || `Error del servidor (HTTP ${res.status})`);
         }
       }
-    } catch (e) {
-      console.warn("API Error saveAcademyEvents:", e);
+    } catch (e: any) {
+      console.error("API Error saveAcademyEvents:", e);
+      if (this.wpData) throw e;
     }
     localStorage.setItem("crezca_academy_events", JSON.stringify(events));
-    return true;
+    return { success: true, events };
+  }
+
+  async saveAcademyEvent(event: AcademyEvent): Promise<{ success: boolean; event: AcademyEvent; events: AcademyEvent[] }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}academy/events`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ event }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.events)) {
+            localStorage.setItem("crezca_academy_events", JSON.stringify(data.events));
+            return { success: true, event: data.event || event, events: data.events };
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || `Error del servidor (HTTP ${res.status})`);
+        }
+      }
+    } catch (e: any) {
+      console.error("API Error saveAcademyEvent:", e);
+      if (this.wpData) throw e;
+    }
+    const current = await this.getAcademyEvents();
+    const idx = current.findIndex((e) => e.id === event.id);
+    let updated: AcademyEvent[];
+    if (idx >= 0) {
+      updated = [...current];
+      updated[idx] = event;
+    } else {
+      updated = [event, ...current];
+    }
+    localStorage.setItem("crezca_academy_events", JSON.stringify(updated));
+    return { success: true, event, events: updated };
+  }
+
+  async deleteAcademyEvent(id: string): Promise<{ success: boolean; events: AcademyEvent[] }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}academy/events/${id}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.events)) {
+            localStorage.setItem("crezca_academy_events", JSON.stringify(data.events));
+            return { success: true, events: data.events };
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || `Error del servidor (HTTP ${res.status})`);
+        }
+      }
+    } catch (e: any) {
+      console.error("API Error deleteAcademyEvent:", e);
+      if (this.wpData) throw e;
+    }
+    const current = await this.getAcademyEvents();
+    const updated = current.filter((e) => e.id !== id);
+    localStorage.setItem("crezca_academy_events", JSON.stringify(updated));
+    return { success: true, events: updated };
   }
 }
 

@@ -110,10 +110,10 @@ export function EventsView() {
     try {
       const [eventsData, instData] = await Promise.all([
         api.getAcademyEvents(),
-        api.getInstructors(),
+        api.getInstructors().catch(() => ({ instructors: [], current_admin: null as any })),
       ]);
       setEvents(eventsData || []);
-      setInstructors(instData.instructors || []);
+      setInstructors(instData?.instructors || []);
     } catch (e) {
       console.warn("Error loading events", e);
     } finally {
@@ -221,16 +221,17 @@ export function EventsView() {
     }
 
     try {
-      await api.saveAcademyEvents(updatedList);
-      setEvents(updatedList);
+      const res = await api.saveAcademyEvents(updatedList);
+      const finalList = res.events || updatedList;
+      setEvents(finalList);
       setIsModalOpen(false);
       showToast(
         "success",
         editingEvent ? "Evento actualizado" : "Evento programado",
         `"${eventItem.title}" guardado en la base de datos de la academia.`
       );
-    } catch {
-      showToast("danger", "Error", "No se pudo guardar el evento.");
+    } catch (err: any) {
+      showToast("danger", "Error al guardar evento", err?.message || "No se pudo guardar el evento en el servidor.");
     } finally {
       setIsSaving(false);
     }
@@ -238,14 +239,15 @@ export function EventsView() {
 
   const executeDeleteEvent = async () => {
     if (!deleteConfirm) return;
-    const updatedList = events.filter((e) => e.id !== deleteConfirm.id);
     try {
-      await api.saveAcademyEvents(updatedList);
-      setEvents(updatedList);
+      const res = await api.deleteAcademyEvent(deleteConfirm.id);
+      const finalList = res.events || events.filter((e) => e.id !== deleteConfirm.id);
+      setEvents(finalList);
+      const removedTitle = deleteConfirm.title;
       setDeleteConfirm(null);
-      showToast("info", "Evento eliminado", `Se removió "${deleteConfirm.title}" del calendario.`);
-    } catch {
-      showToast("danger", "Error", "No se pudo eliminar el evento.");
+      showToast("info", "Evento eliminado", `Se removió "${removedTitle}" del calendario.`);
+    } catch (err: any) {
+      showToast("danger", "Error al eliminar evento", err?.message || "No se pudo eliminar el evento del servidor.");
     }
   };
 

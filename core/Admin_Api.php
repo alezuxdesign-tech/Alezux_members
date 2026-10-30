@@ -103,7 +103,7 @@ class Admin_Api {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_instructors' ],
-					'permission_callback' => [ $this, 'admin_permissions_check' ],
+					'permission_callback' => [ $this, 'admin_or_instructor_permissions_check' ],
 				],
 				[
 					'methods'             => 'POST',
@@ -338,7 +338,15 @@ class Admin_Api {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'save_academy_events' ],
-					'permission_callback' => [ $this, 'admin_permissions_check' ],
+					'permission_callback' => [ $this, 'admin_or_instructor_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/academy/events/(?P<id>[a-zA-Z0-9_\-]+)', [
+				[
+					'methods'             => 'DELETE',
+					'callback'            => [ $this, 'delete_academy_event' ],
+					'permission_callback' => [ $this, 'admin_or_instructor_permissions_check' ],
 				],
 			] );
 
@@ -4064,9 +4072,11 @@ class Admin_Api {
 	 * Obtener eventos y clases en vivo de la academia
 	 */
 	public function get_academy_events() {
+		$initialized = get_option( '_alezux_academy_events_initialized', false );
 		$events = get_option( '_alezux_academy_events', null );
-		if ( empty( $events ) || ! is_array( $events ) ) {
-			// Eventos predeterminados con fechas próximas dinámicas
+
+		// Solo sembrar valores por defecto en la primera instalación si nunca se han configurado o inicializado
+		if ( ! $initialized && $events === null ) {
 			$events = [
 				[
 					'id'                => 'evt-1',
@@ -4097,6 +4107,12 @@ class Admin_Api {
 					'is_active'         => true,
 				],
 			];
+			update_option( '_alezux_academy_events', $events );
+			update_option( '_alezux_academy_events_initialized', '1' );
+		}
+
+		if ( ! is_array( $events ) ) {
+			$events = [];
 		}
 
 		return rest_ensure_response( [
@@ -4106,16 +4122,115 @@ class Admin_Api {
 	}
 
 	/**
-	 * Guardar eventos de la academia
+	 * Guardar eventos de la academia (lista completa o evento individual)
 	 */
 	public function save_academy_events( $request ) {
 		$params = $request->get_json_params();
+		if ( empty( $params ) || ! is_array( $params ) ) {
+			$params = $request->get_params();
+		}
+
+		$current_events = get_option( '_alezux_academy_events', [] );
+		if ( ! is_array( $current_events ) ) {
+			$current_events = [];
+		}
+
+		// Opción A: Guardar/actualizar evento individual
+		if ( isset( $params['event'] ) && is_array( $params['event'] ) ) {
+			$evt = $params['event'];
+			$event_id = ! empty( $evt['id'] ) ? sanitize_text_field( $evt['id'] ) : ( 'evt-' . time() . '-' . wp_rand( 100, 999 ) );
+			$cleaned_evt = [
+				'id'                => $event_id,
+				'title'             => isset( $evt['title'] ) ? sanitize_text_field( $evt['title'] ) : '',
+				'description'       => isset( $evt['description'] ) ? sanitize_textarea_field( $evt['description'] ) : '',
+				'instructor'        => isset( $evt['instructor'] ) ? sanitize_text_field( $evt['instructor'] ) : '',
+				'instructor_avatar' => isset( $evt['instructor_avatar'] ) ? esc_url_raw( $evt['instructor_avatar'] ) : '',
+				'date'              => isset( $evt['date'] ) ? sanitize_text_field( $evt['date'] ) : date( 'Y-m-d' ),
+				'time'              => isset( $evt['time'] ) ? sanitize_text_field( $evt['time'] ) : '19:00',
+				'timezone'          => isset( $evt['timezone'] ) ? sanitize_text_field( $evt['timezone'] ) : 'GMT-5',
+				'type'              => isset( $evt['type'] ) ? sanitize_text_field( $evt['type'] ) : 'live',
+				'meeting_url'       => isset( $evt['meeting_url'] ) ? esc_url_raw( $evt['meeting_url'] ) : '',
+				'badge'             => isset( $evt['badge'] ) ? sanitize_text_field( $evt['badge'] ) : 'En Vivo',
+				'is_active'         => isset( $evt['is_active'] ) ? (bool) $evt['is_active'] : true,
+			];
+
+			$found = false;
+			foreach ( $current_events as $idx => $existing ) {
+			if ( isset( $existing['id'] ) && (string) $existing['id'] === (string) $event_id ) {
+				$current_events[ $idx ] = $cleaned_evt;
+				$found = true;
+				break;
+			}
+		}
+		if ( ! $found ) {
+			array_unshift( $current_events, $cleaned_evt );
+		}
+
+			update_option( '_alezux_academy_events', $current_events );
+			update_option( '_alezux_academy_events_initialized', '1' );
+
+			return rest_ensure_response( [
+				'success' => true,
+				'event'   => $cleaned_evt,
+				'events'  => $current_events,
+				'message' => 'Evento guardado correctamente.',
+			] );
+		}
+
+		// Opción B: Guardar lista de eventos
 		$events = isset( $params['events'] ) && is_array( $params['events'] ) ? $params['events'] : [];
-		update_option( '_alezux_academy_events', $events );
+		$clean_events = [];
+		foreach ( $events as $evt ) {
+			if ( ! is_array( $evt ) ) {
+				continue;
+			}
+			$clean_events[] = [
+				'id'                => ! empty( $evt['id'] ) ? sanitize_text_field( $evt['id'] ) : ( 'evt-' . time() . '-' . wp_rand( 100, 999 ) ),
+				'title'             => isset( $evt['title'] ) ? sanitize_text_field( $evt['title'] ) : '',
+				'description'       => isset( $evt['description'] ) ? sanitize_textarea_field( $evt['description'] ) : '',
+				'instructor'        => isset( $evt['instructor'] ) ? sanitize_text_field( $evt['instructor'] ) : '',
+				'instructor_avatar' => isset( $evt['instructor_avatar'] ) ? esc_url_raw( $evt['instructor_avatar'] ) : '',
+				'date'              => isset( $evt['date'] ) ? sanitize_text_field( $evt['date'] ) : date( 'Y-m-d' ),
+				'time'              => isset( $evt['time'] ) ? sanitize_text_field( $evt['time'] ) : '19:00',
+				'timezone'          => isset( $evt['timezone'] ) ? sanitize_text_field( $evt['timezone'] ) : 'GMT-5',
+				'type'              => isset( $evt['type'] ) ? sanitize_text_field( $evt['type'] ) : 'live',
+				'meeting_url'       => isset( $evt['meeting_url'] ) ? esc_url_raw( $evt['meeting_url'] ) : '',
+				'badge'             => isset( $evt['badge'] ) ? sanitize_text_field( $evt['badge'] ) : 'En Vivo',
+				'is_active'         => isset( $evt['is_active'] ) ? (bool) $evt['is_active'] : true,
+			];
+		}
+
+		update_option( '_alezux_academy_events', $clean_events );
+		update_option( '_alezux_academy_events_initialized', '1' );
+
 		return rest_ensure_response( [
 			'success' => true,
-			'events'  => $events,
+			'events'  => $clean_events,
 			'message' => 'Eventos de la academia guardados correctamente.',
+		] );
+	}
+
+	/**
+	 * Eliminar evento de la academia
+	 */
+	public function delete_academy_event( $request ) {
+		$id = (string) $request->get_param( 'id' );
+		$events = get_option( '_alezux_academy_events', [] );
+		if ( ! is_array( $events ) ) {
+			$events = [];
+		}
+
+		$filtered = array_values( array_filter( $events, function( $evt ) use ( $id ) {
+			return isset( $evt['id'] ) && (string) $evt['id'] !== $id;
+		} ) );
+
+		update_option( '_alezux_academy_events', $filtered );
+		update_option( '_alezux_academy_events_initialized', '1' );
+
+		return rest_ensure_response( [
+			'success' => true,
+			'events'  => $filtered,
+			'message' => 'Evento eliminado correctamente de la academia.',
 		] );
 	}
 }

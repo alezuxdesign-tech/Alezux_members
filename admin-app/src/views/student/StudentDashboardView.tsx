@@ -380,7 +380,10 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
 
   useEffect(() => {
     api.getAcademyEvents()
-      .then((data) => setEvents(data || []))
+      .then((data) => {
+        const activeEvents = (data || []).filter((e) => e.is_active !== false);
+        setEvents(activeEvents);
+      })
       .catch(() => setEvents([]));
   }, []);
 
