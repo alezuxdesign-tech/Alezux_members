@@ -275,6 +275,20 @@ class Admin_Api {
 				],
 			] );
 
+			// Personalización de Login y Flujos de Autenticación
+			register_rest_route( $namespace, '/auth/settings', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_auth_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'save_auth_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
 			// Modo Estudiante / Campus Virtual
 			register_rest_route( $namespace, '/student/profile', [
 				[
@@ -2834,6 +2848,76 @@ class Admin_Api {
 	/**
 	 * Obtener perfil del estudiante conectado
 	 */
+	/**
+	 * Obtener configuración de autenticación y pantalla de login
+	 */
+	public function get_auth_settings() {
+		$settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+		return rest_ensure_response( $settings );
+	}
+
+	/**
+	 * Guardar configuración de autenticación y pantalla de login
+	 */
+	public function save_auth_settings( $request ) {
+		$params = $request->get_json_params();
+		$current = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+
+		$allowed_keys = [
+			'logo_url',
+			'logo_width',
+			'bg_type',
+			'bg_color',
+			'bg_gradient_start',
+			'bg_gradient_end',
+			'bg_image_url',
+			'accent_color',
+			'hero_badge_enabled',
+			'hero_badge_text',
+			'hero_title',
+			'hero_subtitle',
+			'steps_enabled',
+			'step_1_num',
+			'step_1_text',
+			'step_2_num',
+			'step_2_text',
+			'step_3_num',
+			'step_3_text',
+			'login_title',
+			'login_subtitle',
+			'allow_registration',
+			'terms_url',
+			'privacy_url',
+			'custom_css',
+			'student_default_view',
+			'admin_default_redirect',
+		];
+
+		foreach ( $allowed_keys as $key ) {
+			if ( isset( $params[ $key ] ) ) {
+				if ( in_array( $key, [ 'hero_badge_enabled', 'steps_enabled', 'allow_registration' ], true ) ) {
+					$current[ $key ] = (bool) $params[ $key ];
+				} elseif ( in_array( $key, [ 'logo_width' ], true ) ) {
+					$current[ $key ] = absint( $params[ $key ] );
+				} elseif ( in_array( $key, [ 'terms_url', 'privacy_url', 'logo_url', 'bg_image_url' ], true ) ) {
+					$current[ $key ] = esc_url_raw( $params[ $key ] );
+				} elseif ( $key === 'custom_css' ) {
+					$current[ $key ] = wp_strip_all_tags( $params[ $key ] );
+				} else {
+					$current[ $key ] = sanitize_text_field( $params[ $key ] );
+				}
+			}
+		}
+
+		update_option( 'crezca_auth_settings', $current );
+
+		return rest_ensure_response( [
+			'success'  => true,
+			'message'  => 'Configuración de acceso y login guardada correctamente.',
+			'settings' => $current,
+		] );
+	}
+
 	public function get_student_profile() {
 		$user = wp_get_current_user();
 		if ( ! $user || ! $user->ID ) {

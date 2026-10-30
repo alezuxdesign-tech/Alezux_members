@@ -218,6 +218,83 @@ add_filter( 'show_admin_bar', function( $show ) {
 } );
 
 /**
+ * Obtener configuración de login y autenticación personalizada
+ */
+function crezca_get_auth_settings() {
+	$defaults = [
+		'logo_url'               => get_option( 'alezux_academy_logo', '' ),
+		'logo_width'             => 160,
+		'bg_type'                => 'gradient', // 'gradient' | 'solid' | 'image'
+		'bg_color'               => '#090d16',
+		'bg_gradient_start'      => '#1d68ed',
+		'bg_gradient_end'        => '#0b3294',
+		'bg_image_url'           => '',
+		'accent_color'           => '#1d68ed',
+		'hero_badge_enabled'     => true,
+		'hero_badge_text'        => 'Join Us to Build 🤩',
+		'hero_title'             => 'Start your Journey',
+		'hero_subtitle'          => 'Follow these simple steps to set up your account and start learning today.',
+		'steps_enabled'          => true,
+		'step_1_num'             => '1',
+		'step_1_text'            => "Register your\naccount",
+		'step_2_num'             => '2',
+		'step_2_text'            => "Set up your profile\ninformation",
+		'step_3_num'             => '3',
+		'step_3_text'            => "Access your courses\ninstantly",
+		'login_title'            => 'Welcome Back',
+		'login_subtitle'         => 'Inicia sesión en tu cuenta para continuar',
+		'allow_registration'     => true,
+		'terms_url'              => get_privacy_policy_url() ? get_privacy_policy_url() : home_url( '/terminos-y-condiciones' ),
+		'privacy_url'            => get_privacy_policy_url() ? get_privacy_policy_url() : home_url( '/politica-de-privacidad' ),
+		'custom_css'             => '',
+		'student_default_view'   => 'courses', // 'courses' | 'dashboard'
+		'admin_default_redirect' => 'academy', // 'academy' | 'wp'
+	];
+
+	$saved = get_option( 'crezca_auth_settings', [] );
+	if ( ! is_array( $saved ) ) {
+		$saved = [];
+	}
+
+	return wp_parse_args( $saved, $defaults );
+}
+
+/**
+ * Obtener la URL del Campus Virtual / Portal del Estudiante
+ */
+function crezca_get_student_portal_url() {
+	$student_page_id = get_option( 'alezux_student_dashboard_page_id' );
+	if ( $student_page_id && get_post_status( $student_page_id ) === 'publish' ) {
+		return get_permalink( $student_page_id );
+	}
+
+	global $wpdb;
+	$found_page_id = $wpdb->get_var( "
+		SELECT ID FROM {$wpdb->posts}
+		WHERE post_type = 'page'
+		  AND post_status = 'publish'
+		  AND (post_content LIKE '%[crezca_aula%' OR post_content LIKE '%[alezux_aula%')
+		ORDER BY ID ASC LIMIT 1
+	" );
+
+	if ( $found_page_id ) {
+		update_option( 'alezux_student_dashboard_page_id', (int) $found_page_id );
+		return get_permalink( $found_page_id );
+	}
+
+	$slugs = [ 'aula', 'campus', 'cursos', 'estudiantes', 'mi-cuenta' ];
+	foreach ( $slugs as $slug ) {
+		$page = get_page_by_path( $slug );
+		if ( $page && $page->post_status === 'publish' ) {
+			update_option( 'alezux_student_dashboard_page_id', (int) $page->ID );
+			return get_permalink( $page->ID );
+		}
+	}
+
+	return home_url( '/' );
+}
+
+/**
  * Shortcode [crezca_aula] / [alezux_aula] para renderizar el Campus Virtual de Estudiantes
  */
 function crezca_render_student_portal_shortcode( $atts = [] ) {
@@ -235,25 +312,32 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 	wp_enqueue_style( 'crezca-dashboard-style', CREZCA_URL . 'assets/dist/alezux-dashboard.css', [], $css_ver );
 	wp_enqueue_script( 'crezca-dashboard-script', CREZCA_URL . 'assets/dist/alezux-dashboard.js', [], $js_ver, true );
 	
-	$current_user = wp_get_current_user();
-	$academy_name = get_option( 'alezux_academy_name', 'Crezca' );
-	$academy_logo = get_option( 'alezux_academy_logo', '' );
-	$accent       = get_option( 'alezux_accent', 'violet' );
-	$theme        = get_option( 'alezux_theme', 'dark' );
+	$current_user  = wp_get_current_user();
+	$academy_name  = get_option( 'alezux_academy_name', 'Crezca' );
+	$academy_logo  = get_option( 'alezux_academy_logo', '' );
+	$accent        = get_option( 'alezux_accent', 'violet' );
+	$theme         = get_option( 'alezux_theme', 'dark' );
+	$auth_settings = crezca_get_auth_settings();
+	$is_admin      = current_user_can( 'manage_options' );
+	$student_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
 
 	$data = [
-		'root_url'        => esc_url_raw( rest_url( 'crezca/v1/' ) ),
-		'legacy_root_url' => esc_url_raw( rest_url( 'alezux/v1/' ) ),
-		'nonce'           => wp_create_nonce( 'wp_rest' ),
-		'is_student_mode' => true,
-		'is_logged_in'    => is_user_logged_in(),
-		'user_id'         => $current_user ? $current_user->ID : 0,
-		'academy_name'    => $academy_name,
-		'academy_logo'    => $academy_logo,
-		'accent'          => $accent,
-		'theme'           => $theme,
-		'login_url'       => wp_login_url( get_permalink() ),
-		'logout_url'      => wp_logout_url( home_url() ),
+		'root_url'             => esc_url_raw( rest_url( 'crezca/v1/' ) ),
+		'legacy_root_url'      => esc_url_raw( rest_url( 'alezux/v1/' ) ),
+		'nonce'                => wp_create_nonce( 'wp_rest' ),
+		'is_student_mode'      => true,
+		'is_logged_in'         => is_user_logged_in(),
+		'user_id'              => $current_user ? $current_user->ID : 0,
+		'is_admin'             => $is_admin,
+		'initial_tab'          => $student_view,
+		'student_default_view' => $student_view,
+		'academy_name'         => $academy_name,
+		'academy_logo'         => $academy_logo,
+		'accent'               => $accent,
+		'theme'                => $theme,
+		'wp_admin_url'         => $is_admin ? esc_url_raw( admin_url( 'index.php' ) ) : '',
+		'login_url'            => wp_login_url( get_permalink() ),
+		'logout_url'           => wp_logout_url( home_url() ),
 	];
 
 	ob_start();

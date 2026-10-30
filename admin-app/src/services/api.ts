@@ -420,6 +420,36 @@ export interface PlatformSettings {
   accent: string;
 }
 
+export interface AuthSettings {
+  logo_url: string;
+  logo_width: number;
+  bg_type: "gradient" | "solid" | "image";
+  bg_color: string;
+  bg_gradient_start: string;
+  bg_gradient_end: string;
+  bg_image_url: string;
+  accent_color: string;
+  hero_badge_enabled: boolean;
+  hero_badge_text: string;
+  hero_title: string;
+  hero_subtitle: string;
+  steps_enabled: boolean;
+  step_1_num: string;
+  step_1_text: string;
+  step_2_num: string;
+  step_2_text: string;
+  step_3_num: string;
+  step_3_text: string;
+  login_title: string;
+  login_subtitle: string;
+  allow_registration: boolean;
+  terms_url: string;
+  privacy_url: string;
+  custom_css: string;
+  student_default_view: "courses" | "dashboard";
+  admin_default_redirect: "academy" | "wp";
+}
+
 export interface EmailLogItem {
   id: number;
   type?: string;
@@ -1980,6 +2010,73 @@ class ApiService {
       }
     } catch (e) {
       console.warn("API Error saving platform settings:", e);
+    }
+    return true;
+  }
+
+  // --- AUTH / LOGIN CUSTOMIZATION SETTINGS ---
+  async getAuthSettings(): Promise<AuthSettings> {
+    const defaultSettings: AuthSettings = {
+      logo_url: "",
+      logo_width: 160,
+      bg_type: "gradient",
+      bg_color: "#090d16",
+      bg_gradient_start: "#1d68ed",
+      bg_gradient_end: "#0b3294",
+      bg_image_url: "",
+      accent_color: "#1d68ed",
+      hero_badge_enabled: true,
+      hero_badge_text: "Join Us to Build 🤩",
+      hero_title: "Start your Journey",
+      hero_subtitle: "Follow these simple steps to set up your account and start learning today.",
+      steps_enabled: true,
+      step_1_num: "1",
+      step_1_text: "Register your\naccount",
+      step_2_num: "2",
+      step_2_text: "Set up your profile\ninformation",
+      step_3_num: "3",
+      step_3_text: "Access your courses\ninstantly",
+      login_title: "Welcome Back",
+      login_subtitle: "Inicia sesión en tu cuenta para continuar",
+      allow_registration: true,
+      terms_url: "/terminos-y-condiciones",
+      privacy_url: "/politica-de-privacidad",
+      custom_css: "",
+      student_default_view: "courses",
+      admin_default_redirect: "academy",
+    };
+
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}auth/settings`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return { ...defaultSettings, ...data };
+        }
+      }
+    } catch (e) {
+      console.warn("API Error fetching auth settings:", e);
+    }
+    return defaultSettings;
+  }
+
+  async saveAuthSettings(settings: Partial<AuthSettings>): Promise<boolean> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}auth/settings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(settings),
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.warn("API Error saving auth settings:", e);
     }
     return true;
   }

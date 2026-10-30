@@ -590,6 +590,25 @@ div.alezux-auth-body .alezux-form-panel {
   }
 }
 
+/* Mobile Brand Header (Visible solo en dispositivos móviles sobre el formulario) */
+.mobile-brand-header {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.mobile-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--auth-text-dark, #0f172a);
+}
+
 /* ==========================================================================
    RESPONSIVE DESIGN (TABLETS & MOBILE)
    ========================================================================== */
@@ -612,16 +631,16 @@ div.alezux-auth-body .alezux-form-panel {
 
   .alezux-hero-panel {
     min-height: auto;
-    padding: 40px 24px;
+    padding: 36px 24px;
   }
 
   .hero-middle {
-    margin: 24px 0;
+    margin: 20px 0;
     padding: 0;
   }
 
   .hero-title {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .hero-cards-grid {
@@ -643,10 +662,65 @@ div.alezux-auth-body .alezux-form-panel {
 
   .alezux-form-panel {
     min-height: auto;
-    padding: 40px 24px 60px 24px;
+    padding: 36px 24px 60px 24px;
   }
 
   .auth-row-2col {
     grid-template-columns: 1fr;
+  }
+}
+
+/* En teléfonos móviles: Solo mostrar el formulario con el logo arriba a petición del usuario */
+@media (max-width: 768px) {
+  body.alezux-auth-body {
+    height: auto;
+    min-height: 100vh;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .alezux-auth-wrapper {
+    height: auto;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  .alezux-auth-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 440px;
+    min-height: auto;
+    height: auto;
+    margin: auto;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  /* Ocultar completamente el panel Hero en móviles */
+  .alezux-hero-panel {
+    display: none !important;
+  }
+
+  /* Mostrar el logo encima del formulario */
+  .mobile-brand-header {
+    display: flex !important;
+  }
+
+  .alezux-form-panel {
+    padding: 12px 4px 32px 4px !important;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .auth-view {
+    max-width: 100%;
+    margin: 0 auto;
   }
 }

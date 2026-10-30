@@ -656,3 +656,83 @@
     justify-content: flex-start;
   }
 }
+
+/* ==============================================================
+   CLASES AUXILIARES PARA PERSONALIZACIÓN DE LOGIN & FLUJOS
+   ============================================================== */
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.fieldLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 2px;
+}
+
+.fieldHint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.grid2Col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: 100%;
+}
+
+.grid3Col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.authStepCardBox {
+  background: var(--surface-muted, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-control, 8px);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.textareaCustom {
+  width: 100%;
+  min-height: 80px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--foreground);
+  background: var(--surface-muted, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 8px);
+  padding: 10px 12px;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.textareaCustom:focus {
+  border-color: var(--control-on, #7747ff);
+}
+
+.securityBadgeNotice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(13, 184, 121, 0.1);
+  border: 1px solid rgba(13, 184, 121, 0.25);
+  border-radius: var(--radius-control, 8px);
+  color: #0db879;
+  font-size: 12.5px;
+  font-weight: 500;
+}

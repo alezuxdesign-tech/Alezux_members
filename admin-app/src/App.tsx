@@ -132,11 +132,28 @@ const defaultStudentProfile: StudentProfile = {
 
 export function App({ initialMode = "admin", isStandaloneStudent = false }: AppProps = {}) {
   const wpData = (window as any).crezca_admin_data || (window as any).alezux_admin_data || {};
+  const wpStudentData = (window as any).crezca_student_data || {};
   const mainAreaRef = useRef<HTMLDivElement | null>(null);
+
+  // Determinar pestaña inicial para el estudiante ('courses' o 'dashboard')
+  const defaultStudentTab = ((): StudentTabId => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get("tab") || urlParams.get("view");
+      if (tabParam === "courses" || tabParam === "dashboard" || tabParam === "community" || tabParam === "profile") {
+        return tabParam as StudentTabId;
+      }
+    }
+    const configuredTab = wpStudentData.initial_tab || wpData.student_default_view;
+    if (configuredTab === "dashboard" || configuredTab === "courses") {
+      return configuredTab as StudentTabId;
+    }
+    return "courses";
+  })();
 
   const [appMode, setAppMode] = useState<"admin" | "student">(initialMode);
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTabId>("overview");
-  const [activeStudentTab, setActiveStudentTab] = useState<StudentTabId>("dashboard");
+  const [activeStudentTab, setActiveStudentTab] = useState<StudentTabId>(defaultStudentTab);
 
   // Estado del Estudiante
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -421,6 +438,14 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
 
   const logoutUrl = (window as any).crezca_student_data?.logout_url || "/wp-login.php?action=logout";
 
+  // Determinar inequívocamente si el usuario actual es administrador
+  const isActualAdmin = Boolean(
+    wpData?.is_admin ||
+    wpStudentData?.is_admin ||
+    studentProfile?.isAdmin ||
+    (!isStandaloneStudent && initialMode === "admin")
+  );
+
   // Determinar si la vista actual requiere pantalla completa sin padding
   const isCourseFluid = appMode === "student" && activeStudentTab === "courses" && Boolean(selectedCourse);
   const isCommunityFluid = (appMode === "student" && activeStudentTab === "community") || (appMode === "admin" && activeAdminTab === "community");
@@ -593,18 +618,18 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             </button>
           </div>
 
-          {/* Acción inferior: Volver a WordPress o Alternar Modo */}
-          {appMode === "admin" ? (
-            <a
-              href={wpAdminUrl}
-              className={styles.backToWpBtn}
-              title="Regresar al panel tradicional de WordPress"
-            >
-              <ArrowLeft size={14} />
-              {!isCollapsed && <span>Volver a WordPress</span>}
-            </a>
-          ) : (
-            !isStandaloneStudent ? (
+          {/* Acción inferior: Volver a WordPress o Alternar Modo - EXCLUSIVO PARA ADMINISTRADORES */}
+          {isActualAdmin ? (
+            appMode === "admin" ? (
+              <a
+                href={wpAdminUrl}
+                className={styles.backToWpBtn}
+                title="Regresar al panel tradicional de WordPress"
+              >
+                <ArrowLeft size={14} />
+                {!isCollapsed && <span>Volver a WordPress</span>}
+              </a>
+            ) : (
               <button
                 type="button"
                 onClick={() => setAppMode("admin")}
@@ -614,16 +639,16 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 <ShieldCheck size={14} />
                 {!isCollapsed && <span>Modo Administrador</span>}
               </button>
-            ) : (
-              <a
-                href={logoutUrl}
-                className={styles.backToWpBtn}
-                title="Cerrar sesión del campus virtual"
-              >
-                <LogOut size={14} />
-                {!isCollapsed && <span>Cerrar sesión</span>}
-              </a>
             )
+          ) : (
+            <a
+              href={logoutUrl}
+              className={styles.backToWpBtn}
+              title="Cerrar sesión del campus virtual"
+            >
+              <LogOut size={14} />
+              {!isCollapsed && <span>Cerrar sesión</span>}
+            </a>
           )}
         </div>
       </aside>
@@ -691,7 +716,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 <span>Modo Estudiante</span>
               </button>
             ) : (
-              !isStandaloneStudent ? (
+              isActualAdmin && !isStandaloneStudent ? (
                 <button
                   type="button"
                   className={styles.studentModeBtn}

@@ -2,7 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { 
   Check, 
   ArrowRightLeft, 
-  RefreshCw 
+  RefreshCw, 
+  ExternalLink, 
+  ShieldCheck, 
+  Lock, 
+  Sparkles, 
+  LogIn, 
+  Eye 
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Input } from "../components/arc/input/input";
@@ -10,7 +16,7 @@ import { Switch } from "../components/arc/switch/switch";
 import { Alert } from "../components/arc/alert/alert";
 import { Modal } from "../components/arc/modal/modal";
 import { ColorPicker } from "../components/arc/color-picker/color-picker";
-import { api, LMSSettingsResponse, LMSMigrationResponse } from "../services/api";
+import { api, LMSSettingsResponse, LMSMigrationResponse, AuthSettings } from "../services/api";
 import styles from "./SettingsView.module.css";
 
 interface SettingsViewProps {
@@ -124,6 +130,47 @@ export function SettingsView({
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationResult, setMigrationResult] = useState<LMSMigrationResponse | null>(null);
   const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
+  // Configuración de Login y Acceso Personalizable
+  const [authSettings, setAuthSettings] = useState<AuthSettings>({
+    logo_url: "",
+    logo_width: 160,
+    bg_type: "gradient",
+    bg_color: "#090d16",
+    bg_gradient_start: "#1d68ed",
+    bg_gradient_end: "#0b3294",
+    bg_image_url: "",
+    accent_color: "#1d68ed",
+    hero_badge_enabled: true,
+    hero_badge_text: "Join Us to Build 🤩",
+    hero_title: "Start your Journey",
+    hero_subtitle: "Follow these simple steps to set up your account and start learning today.",
+    steps_enabled: true,
+    step_1_num: "1",
+    step_1_text: "Register your\naccount",
+    step_2_num: "2",
+    step_2_text: "Set up your profile\ninformation",
+    step_3_num: "3",
+    step_3_text: "Access your courses\ninstantly",
+    login_title: "Welcome Back",
+    login_subtitle: "Inicia sesión en tu cuenta para continuar",
+    allow_registration: true,
+    terms_url: "/terminos-y-condiciones",
+    privacy_url: "/politica-de-privacidad",
+    custom_css: "",
+    student_default_view: "courses",
+    admin_default_redirect: "academy",
+  });
+
+  useEffect(() => {
+    let active = true;
+    api.getAuthSettings().then((data) => {
+      if (active && data) {
+        setAuthSettings(data);
+      }
+    });
+    return () => { active = false; };
+  }, []);
+
 
   useEffect(() => {
     api.getLMSSettings().then((data) => {
@@ -252,6 +299,7 @@ export function SettingsView({
   const handleCancel = () => {
     setLocalName(academyName);
     setLocalLogo(academyLogo);
+    api.getAuthSettings().then((data) => setAuthSettings(data));
     showToast("info", "Cambios descartados", "Se restablecieron los datos guardados.");
   };
 
@@ -259,12 +307,16 @@ export function SettingsView({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const ok = await api.savePlatformSettings({
-        academy_name: localName,
-        academy_logo: localLogo,
-        theme: currentTheme,
-        accent: currentAccent,
-      });
+      const [platformOk, authOk] = await Promise.all([
+        api.savePlatformSettings({
+          academy_name: localName,
+          academy_logo: localLogo,
+          theme: currentTheme,
+          accent: currentAccent,
+        }),
+        api.saveAuthSettings(authSettings),
+      ]);
+      const ok = platformOk && authOk;
 
       if (ok) {
         localStorage.setItem("crezca_academy_name", localName);
@@ -746,6 +798,417 @@ export function SettingsView({
             )}
           </div>
         </div>
+        {/* ============================================================== */}
+        {/* FILA 9: FLUJOS DE ACCESO Y REDIRECCIONES POR ROL */}
+        {/* ============================================================== */}
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <h3 className={styles.rowTitle}>Flujos de Acceso & Destinos</h3>
+            <p className={styles.rowDesc}>
+              Define a dónde aterriza cada rol tras iniciar sesión en la academia.
+            </p>
+          </div>
+          <div className={styles.rowContent}>
+            <div className={styles.inputGroup}>
+              <label className={styles.fieldLabel}>Destino inicial de Estudiantes al ingresar:</label>
+              <div className={styles.lmsModeGrid}>
+                <div
+                  className={[styles.lmsModeTile, authSettings.student_default_view === "courses" ? styles.lmsModeTileActive : ""].join(" ")}
+                  onClick={() => setAuthSettings((prev) => ({ ...prev, student_default_view: "courses" }))}
+                >
+                  <div className={styles.lmsRadioDot}>
+                    {authSettings.student_default_view === "courses" && <div className={styles.lmsRadioInner} />}
+                  </div>
+                  <div>
+                    <div className={styles.lmsModeHeading}>
+                      <span>Mis Cursos / Catálogo</span>
+                      <span className={styles.recommendedBadge}>Recomendado</span>
+                    </div>
+                    <p className={styles.lmsModeText}>
+                      Los alumnos van directo al listado de sus cursos para reanudar lecciones al instante.
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className={[styles.lmsModeTile, authSettings.student_default_view === "dashboard" ? styles.lmsModeTileActive : ""].join(" ")}
+                  onClick={() => setAuthSettings((prev) => ({ ...prev, student_default_view: "dashboard" }))}
+                >
+                  <div className={styles.lmsRadioDot}>
+                    {authSettings.student_default_view === "dashboard" && <div className={styles.lmsRadioInner} />}
+                  </div>
+                  <div>
+                    <div className={styles.lmsModeHeading}>Dashboard del Estudiante</div>
+                    <p className={styles.lmsModeText}>
+                      Muestra resumen de avance, estadísticas de estudio, métricas y accesos rápidos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <span className={styles.securityBadgeNotice}>
+                  <ShieldCheck size={16} />
+                  <span><strong>Blindaje de WordPress Activo:</strong> Los estudiantes nunca verán el panel de WordPress ni tendrán acceso a <code>/wp-admin/</code>.</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* FILA 10: LOGOTIPO DE LA PANTALLA DE LOGIN */}
+        {/* ============================================================== */}
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <h3 className={styles.rowTitle}>Logotipo de la Pantalla de Login</h3>
+            <p className={styles.rowDesc}>
+              Logo que se muestra en el panel de bienvenida y en smartphones sobre el formulario.
+            </p>
+          </div>
+          <div className={styles.rowContent}>
+            <div className={styles.inputGroup}>
+              <div className={styles.grid2Col}>
+                <div>
+                  <label className={styles.fieldLabel}>URL del Logotipo (opcional si es el mismo):</label>
+                  <Input
+                    placeholder={localLogo || "https://tu-academia.com/logo.png"}
+                    value={authSettings.logo_url}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, logo_url: e.target.value }))}
+                  />
+                  <span className={styles.fieldHint}>Si se deja vacío, utilizará el logotipo principal de la academia.</span>
+                </div>
+                <div>
+                  <label className={styles.fieldLabel}>Ancho Máximo del Logo (px):</label>
+                  <Input
+                    type="number"
+                    min={60}
+                    max={400}
+                    value={String(authSettings.logo_width || 160)}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, logo_width: Number(e.target.value) || 160 }))}
+                  />
+                  <span className={styles.fieldHint}>Recomendado: 140px a 200px para nitidez.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* FILA 11: ESTILO Y FONDO DEL PANEL HERO */}
+        {/* ============================================================== */}
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <h3 className={styles.rowTitle}>Fondo y Color de Acento del Login</h3>
+            <p className={styles.rowDesc}>
+              Personaliza el fondo del Hero (degradado, sólido o imagen) y el color de acento.
+            </p>
+          </div>
+          <div className={styles.rowContent}>
+            <div className={styles.inputGroup}>
+              <label className={styles.fieldLabel}>Tipo de Fondo:</label>
+              <div className={styles.selectWrap} style={{ maxWidth: 280, marginBottom: 12 }}>
+                <select
+                  className={styles.customSelect}
+                  value={authSettings.bg_type}
+                  onChange={(e) => setAuthSettings((prev) => ({ ...prev, bg_type: e.target.value as any }))}
+                >
+                  <option value="gradient">Degradado Moderno</option>
+                  <option value="solid">Color Plano / Sólido</option>
+                  <option value="image">Imagen de Fondo con Superposición</option>
+                </select>
+              </div>
+
+              {authSettings.bg_type === "gradient" && (
+                <div className={styles.grid2Col}>
+                  <div>
+                    <label className={styles.fieldLabel}>Color Inicial del Degradado:</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="color"
+                        value={authSettings.bg_gradient_start.startsWith("#") ? authSettings.bg_gradient_start : "#1d68ed"}
+                        onChange={(e) => setAuthSettings((prev) => ({ ...prev, bg_gradient_start: e.target.value }))}
+                        style={{ width: 36, height: 36, border: "none", borderRadius: 8, cursor: "pointer", background: "none" }}
+                      />
+                      <Input
+                        value={authSettings.bg_gradient_start}
+                        onChange={(e) => setAuthSettings((prev) => ({ ...prev, bg_gradient_start: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={styles.fieldLabel}>Color Final del Degradado:</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="color"
+                        value={authSettings.bg_gradient_end.startsWith("#") ? authSettings.bg_gradient_end : "#0b3294"}
+                        onChange={(e) => setAuthSettings((prev) => ({ ...prev, bg_gradient_end: e.target.value }))}
+                        style={{ width: 36, height: 36, border: "none", borderRadius: 8, cursor: "pointer", background: "none" }}
+                      />
+                      <Input
+                        value={authSettings.bg_gradient_end}
+                        onChange={(e) => setAuthSettings((prev) => ({ ...prev, bg_gradient_end: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {authSettings.bg_type === "solid" && (
+                <div style={{ maxWidth: 320 }}>
+                  <label className={styles.fieldLabel}>Color de Fondo Sólido:</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="color"
+                      value={authSettings.bg_color.startsWith("#") ? authSettings.bg_color : "#090d16"}
+                      onChange={(e) => setAuthSettings((prev) => ({ ...prev, bg_color: e.target.value }))}
+                      style={{ width: 36, height: 36, border: "none", borderRadius: 8, cursor: "pointer", background: "none" }}
+                    />
+                    <Input
+                      value={authSettings.bg_color}
+                      onChange={(e) => setAuthSettings((prev) => ({ ...prev, bg_color: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {authSettings.bg_type === "image" && (
+                <div>
+                  <label className={styles.fieldLabel}>URL de la Imagen de Fondo:</label>
+                  <Input
+                    placeholder="https://tu-sitio.com/fondo-hero.jpg"
+                    value={authSettings.bg_image_url}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, bg_image_url: e.target.value }))}
+                  />
+                  <span className={styles.fieldHint}>Se aplicará una capa oscura translúcida automática para garantizar contraste legible.</span>
+                </div>
+              )}
+
+              <div style={{ marginTop: 12 }}>
+                <label className={styles.fieldLabel}>Color de Acento (Botones y enlaces del login):</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, maxWidth: 320 }}>
+                  <input
+                    type="color"
+                    value={authSettings.accent_color.startsWith("#") ? authSettings.accent_color : "#1d68ed"}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, accent_color: e.target.value }))}
+                    style={{ width: 36, height: 36, border: "none", borderRadius: 8, cursor: "pointer", background: "none" }}
+                  />
+                  <Input
+                    value={authSettings.accent_color}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, accent_color: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* FILA 12: CONTENIDOS DEL HERO DE BIENVENIDA */}
+        {/* ============================================================== */}
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <h3 className={styles.rowTitle}>Textos del Hero & Tarjetas</h3>
+            <p className={styles.rowDesc}>
+              Personaliza el mensaje motivacional, la píldora superior y las 3 tarjetas de beneficios.
+            </p>
+          </div>
+          <div className={styles.rowContent}>
+            <div className={styles.inputGroup}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span className={styles.fieldLabel}>Píldora / Badge superior destacada:</span>
+                <Switch
+                  checked={authSettings.hero_badge_enabled}
+                  onCheckedChange={(checked) => setAuthSettings((prev) => ({ ...prev, hero_badge_enabled: checked }))}
+                />
+              </div>
+
+              {authSettings.hero_badge_enabled && (
+                <div style={{ marginBottom: 12 }}>
+                  <Input
+                    value={authSettings.hero_badge_text}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, hero_badge_text: e.target.value }))}
+                    placeholder="Ej. Join Us to Build 🤩"
+                  />
+                </div>
+              )}
+
+              <div style={{ marginBottom: 12 }}>
+                <label className={styles.fieldLabel}>Título Principal:</label>
+                <Input
+                  value={authSettings.hero_title}
+                  onChange={(e) => setAuthSettings((prev) => ({ ...prev, hero_title: e.target.value }))}
+                  placeholder="Ej. Start your Journey"
+                />
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label className={styles.fieldLabel}>Subtítulo Descriptivo:</label>
+                <Input
+                  value={authSettings.hero_subtitle}
+                  onChange={(e) => setAuthSettings((prev) => ({ ...prev, hero_subtitle: e.target.value }))}
+                  placeholder="Ej. Follow these simple steps to set up your account and start learning today."
+                />
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "14px 0 10px 0" }}>
+                <span className={styles.fieldLabel}>Tarjetas de Pasos / Beneficios:</span>
+                <Switch
+                  checked={authSettings.steps_enabled}
+                  onCheckedChange={(checked) => setAuthSettings((prev) => ({ ...prev, steps_enabled: checked }))}
+                />
+              </div>
+
+              {authSettings.steps_enabled && (
+                <div className={styles.grid3Col}>
+                  <div className={styles.authStepCardBox}>
+                    <label className={styles.fieldLabel}>Paso 1:</label>
+                    <Input
+                      style={{ height: 32 }}
+                      value={authSettings.step_1_num}
+                      onChange={(e) => setAuthSettings((prev) => ({ ...prev, step_1_num: e.target.value }))}
+                      placeholder="1"
+                    />
+                    <Input
+                      value={authSettings.step_1_text.replace(/\n/g, " ")}
+                      onChange={(e) => setAuthSettings((prev) => ({ ...prev, step_1_text: e.target.value }))}
+                      placeholder="Crea tu cuenta"
+                    />
+                  </div>
+
+                  <div className={styles.authStepCardBox}>
+                    <label className={styles.fieldLabel}>Paso 2:</label>
+                    <Input
+                      style={{ height: 32 }}
+                      value={authSettings.step_2_num}
+                      onChange={(e) => setAuthSettings((prev) => ({ ...prev, step_2_num: e.target.value }))}
+                      placeholder="2"
+                    />
+                    <Input
+                      value={authSettings.step_2_text.replace(/\n/g, " ")}
+                      onChange={(e) => setAuthSettings((prev) => ({ ...prev, step_2_text: e.target.value }))}
+                      placeholder="Completa tu perfil"
+                    />
+                  </div>
+
+                  <div className={styles.authStepCardBox}>
+                    <label className={styles.fieldLabel}>Paso 3:</label>
+                    <Input
+                      style={{ height: 32 }}
+                      value={authSettings.step_3_num}
+                      onChange={(e) => setAuthSettings((prev) => ({ ...prev, step_3_num: e.target.value }))}
+                      placeholder="3"
+                    />
+                    <Input
+                      value={authSettings.step_3_text.replace(/\n/g, " ")}
+                      onChange={(e) => setAuthSettings((prev) => ({ ...prev, step_3_text: e.target.value }))}
+                      placeholder="Accede a tus cursos"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* FILA 13: FORMULARIO Y ENLACES LEGALES */}
+        {/* ============================================================== */}
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <h3 className={styles.rowTitle}>Formulario & Políticas Legales</h3>
+            <p className={styles.rowDesc}>
+              Personaliza el saludo del formulario, registro público y enlaces legales.
+            </p>
+          </div>
+          <div className={styles.rowContent}>
+            <div className={styles.inputGroup}>
+              <div className={styles.grid2Col} style={{ marginBottom: 12 }}>
+                <div>
+                  <label className={styles.fieldLabel}>Título del Formulario:</label>
+                  <Input
+                    value={authSettings.login_title}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, login_title: e.target.value }))}
+                    placeholder="Welcome Back"
+                  />
+                </div>
+                <div>
+                  <label className={styles.fieldLabel}>Subtítulo del Formulario:</label>
+                  <Input
+                    value={authSettings.login_subtitle}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, login_subtitle: e.target.value }))}
+                    placeholder="Inicia sesión en tu cuenta para continuar"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: "var(--foreground)" }}>Permitir Registro Público Directo</div>
+                  <div className={styles.fieldHint}>Si lo desactivas, solo los usuarios matriculados podrán acceder.</div>
+                </div>
+                <Switch
+                  checked={authSettings.allow_registration}
+                  onCheckedChange={(checked) => setAuthSettings((prev) => ({ ...prev, allow_registration: checked }))}
+                />
+              </div>
+
+              <div className={styles.grid2Col}>
+                <div>
+                  <label className={styles.fieldLabel}>URL de Términos y Condiciones:</label>
+                  <Input
+                    value={authSettings.terms_url}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, terms_url: e.target.value }))}
+                    placeholder="/terminos-y-condiciones"
+                  />
+                </div>
+                <div>
+                  <label className={styles.fieldLabel}>URL de Política de Privacidad:</label>
+                  <Input
+                    value={authSettings.privacy_url}
+                    onChange={(e) => setAuthSettings((prev) => ({ ...prev, privacy_url: e.target.value }))}
+                    placeholder="/politica-de-privacidad"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* FILA 14: CSS PERSONALIZADO Y PREVISUALIZACIÓN */}
+        {/* ============================================================== */}
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <h3 className={styles.rowTitle}>CSS Adicional & Vista Previa</h3>
+            <p className={styles.rowDesc}>
+              Añade reglas CSS personalizadas y prueba tu pantalla de login en vivo.
+            </p>
+          </div>
+          <div className={styles.rowContent}>
+            <div className={styles.inputGroup}>
+              <label className={styles.fieldLabel}>Reglas CSS Personalizadas (opcional):</label>
+              <textarea
+                className={styles.textareaCustom}
+                placeholder=".alezux-auth-card { /* Tus estilos adicionales aquí */ }"
+                value={authSettings.custom_css}
+                onChange={(e) => setAuthSettings((prev) => ({ ...prev, custom_css: e.target.value }))}
+              />
+
+              <div style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "center" }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => window.open("/wp-login.php?preview_auth=1", "_blank")}
+                >
+                  <Eye size={14} /> Previsualizar Pantalla de Login
+                </Button>
+                <span className={styles.fieldHint}>Abre la pantalla de acceso en una nueva pestaña sin cerrar tu sesión actual.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* ============================================================== */}

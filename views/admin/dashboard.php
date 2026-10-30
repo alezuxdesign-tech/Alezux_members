@@ -56,6 +56,7 @@ $css_ver = file_exists( $dist_css ) ? filemtime( $dist_css ) : time();
     'wp_admin_url'    => esc_url_raw( admin_url( 'index.php' ) ),
     'nonce'           => wp_create_nonce( 'wp_rest' ),
     'ajax_url'        => admin_url( 'admin-ajax.php' ),
+    'is_admin'        => current_user_can( 'manage_options' ),
   ]); ?>;
   window.alezux_admin_data = window.crezca_admin_data;
 </script>

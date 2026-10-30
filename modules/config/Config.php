@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 namespace Alezux_Members\Modules\Config;
 
 use Alezux_Members\Core\Module_Base;
@@ -12,20 +12,11 @@ class Config extends Module_Base {
 	public function init() {
         $log_file = ALEZUX_MEMBERS_PATH . 'debug_status.txt';
         // USAMOS UNA MARCA DE VERSIÓN ÚNICA PARA CONFIRMAR LA CARGA
-        file_put_contents( $log_file, "--- NUEVA VERSIÓN 1.0.5 CARGADA: " . date('Y-m-d H:i:s') . " ---\n", FILE_APPEND );
-
+        file_put_contents( $log_file, "--- NUEVA VERSIÓN 1.0.5 CARGADA: " . date('Y-m-d H:i:s') . " ---
+", FILE_APPEND );
 
 		// Encolar estilos específicos del módulo
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
-
-		// Forzar Barra de Administración para Administradores
-		add_filter( 'show_admin_bar', function( $show ) {
-			if ( current_user_can( 'administrator' ) ) {
-				return true;
-			}
-			return $show;
-		}, 999 );
-
 
 		// Registrar Widgets de Elementor
 		add_action( 'elementor/widgets/register', [ $this, 'register_elementor_widgets' ] );
@@ -59,7 +50,6 @@ class Config extends Module_Base {
 		add_action( 'wp_ajax_alezux_change_password', [ $this, 'handle_change_password' ] );
         file_put_contents( $log_file, "Hooks AJAX registrados correctamente.\n", FILE_APPEND );
 
-
 		// Shortcode de Autenticación personalizada (Split-Screen)
 		$this->register_shortcode( 'alezux_auth', [ $this, 'render_auth_shortcode' ], 'Renderiza la página moderna de autenticación split-screen.' );
 		$this->register_shortcode( 'alezux_custom_login', [ $this, 'render_auth_shortcode' ], 'Alias de alezux_auth' );
@@ -77,97 +67,6 @@ class Config extends Module_Base {
 
 		// Filtro para Avatar Personalizado
 		add_filter( 'get_avatar_url', [ $this, 'custom_avatar_url' ], 10, 3 );
-	}
-
-    /**
-     * Renderiza la URL de logout
-     */
-    public function render_logout_url( $atts ) {
-        $atts = \shortcode_atts( [
-            'redirect' => \home_url(),
-        ], $atts );
-
-        return \wp_logout_url( $atts['redirect'] );
-    }
-
-	/**
-	 * Configura los filtros y redirecciones de autenticación
-	 */
-	public function setup_custom_auth_logic() {
-        // Redirección de páginas restringidas (Admin Only) y Privadas (Solo Logueados)
-        add_action( 'template_redirect', [ $this, 'check_restricted_pages' ] );
-        add_action( 'template_redirect', [ $this, 'check_private_pages' ] );
-
-		// Sobrescribir URLs nativas de WordPress
-		add_filter( 'login_url', [ $this, 'custom_login_url' ], 10, 3 );
-		add_filter( 'lostpassword_url', [ $this, 'custom_lostpassword_url' ], 10, 2 );
-		add_filter( 'retrieve_password_message', [ $this, 'custom_retrieve_password_message' ], 10, 4 );
-
-		// Reemplazar completamente la plantilla de la página de login por la interfaz moderna standalone (Imagen 2)
-		// Bypasea cualquier tema, cabecera, pie o columnas de Elementor.
-		add_filter( 'template_include', [ $this, 'override_login_page_template' ], 999 );
-
-		$login_page_id = get_option( 'alezux_login_page_id' );
-		if ( $login_page_id && get_post_status( $login_page_id ) === 'publish' ) {
-			// Redirección de /wp-login.php a la página personalizada si aplica
-			add_action( 'template_redirect', [ $this, 'redirect_to_custom_login' ] );
-		}
-	}
-
-	/**
-	 * Sobrescribe la plantilla de la página de login para renderizar la página standalone completa (Imagen 2)
-	 */
-	public function override_login_page_template( $template ) {
-		// Permitir editar la página con Elementor sin bloquear el constructor visual
-		if ( ( class_exists( '\Elementor\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) || isset( $_GET['elementor-preview'] ) ) {
-			return $template;
-		}
-
-		$login_page_id = get_option( 'alezux_login_page_id' );
-		$is_login_page = false;
-
-		// 1. Si coincide con la página de login configurada en opciones de Alezux
-		if ( $login_page_id && is_page( $login_page_id ) ) {
-			$is_login_page = true;
-		}
-
-		// 2. Si no hay ID o coincide con slugs habituales de login o registro
-		if ( ! $is_login_page && is_page( [ 'login', 'iniciar-sesion', 'acceso', 'members-login', 'auth', 'registro', 'register' ] ) ) {
-			$is_login_page = true;
-		}
-
-		// 3. Verificación por URI directa en caso de reglas de reescritura o permalinks
-		if ( ! $is_login_page && isset( $_SERVER['REQUEST_URI'] ) ) {
-			$req_path = trim( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' );
-			if ( in_array( $req_path, [ 'login', 'iniciar-sesion', 'acceso', 'members-login', 'auth', 'registro', 'register' ], true ) ) {
-				$is_login_page = true;
-			}
-		}
-
-		// 4. Si se solicita expresamente vía query param (ej: ?preview_auth=1 o ?alezux_auth=1)
-		if ( isset( $_GET['preview_auth'] ) || isset( $_GET['alezux_auth'] ) ) {
-			$is_login_page = true;
-		}
-
-		if ( $is_login_page ) {
-			$action = isset( $_REQUEST['action'] ) ? sanitize_text_field( $_REQUEST['action'] ) : 'login';
-
-			// Si el usuario ya está conectado y no viene a previsualizar ni a restablecer contraseña
-			if ( is_user_logged_in() && ! isset( $_GET['preview_auth'] ) && ! isset( $_GET['preview'] ) && ! in_array( $action, [ 'rp', 'resetpass' ], true ) ) {
-				if ( current_user_can( 'administrator' ) ) {
-					wp_safe_redirect( admin_url() );
-				} else {
-					$student_page = get_option( 'alezux_student_dashboard_page_id' );
-					wp_safe_redirect( $student_page ? get_permalink( $student_page ) : home_url() );
-				}
-				exit;
-			}
-
-			$this->render_auth_page( true );
-			exit;
-		}
-
-		return $template;
 	}
 
     /**
@@ -209,6 +108,107 @@ class Config extends Module_Base {
             }
         }
     }
+
+	
+	/**
+	 * Configura los filtros y redirecciones de autenticación
+	 */
+	public function setup_custom_auth_logic() {
+        // Redirección de páginas restringidas (Admin Only) y Privadas (Solo Logueados)
+        add_action( 'template_redirect', [ $this, 'check_restricted_pages' ] );
+        add_action( 'template_redirect', [ $this, 'check_private_pages' ] );
+
+		// Sobrescribir URLs nativas de WordPress
+		add_filter( 'login_url', [ $this, 'custom_login_url' ], 10, 3 );
+		add_filter( 'lostpassword_url', [ $this, 'custom_lostpassword_url' ], 10, 2 );
+		add_filter( 'retrieve_password_message', [ $this, 'custom_retrieve_password_message' ], 10, 4 );
+
+		// Reemplazar completamente la plantilla de la página de login por la interfaz moderna standalone (Imagen 2)
+		add_filter( 'template_include', [ $this, 'override_login_page_template' ], 999 );
+
+		$login_page_id = get_option( 'alezux_login_page_id' );
+		if ( $login_page_id && get_post_status( $login_page_id ) === 'publish' ) {
+			// Redirección de /wp-login.php a la página personalizada si aplica
+			add_action( 'template_redirect', [ $this, 'redirect_to_custom_login' ] );
+		}
+
+		// Redirección automática por roles tras iniciar sesión (Admin a Academia, Estudiantes a Cursos/Dashboard)
+		add_filter( 'login_redirect', [ $this, 'custom_role_login_redirect' ], 99, 3 );
+
+		// Blindaje: bloquear acceso al backend nativo de WordPress (/wp-admin/) para estudiantes y suscriptores
+		add_action( 'admin_init', [ $this, 'block_wp_admin_for_students' ] );
+	}
+
+	/**
+	 * Filtro login_redirect para forzar el destino de administradores y estudiantes
+	 */
+	public function custom_role_login_redirect( $redirect_to, $requested_redirect_to, $user ) {
+		if ( is_wp_error( $user ) || ! ( $user instanceof \WP_User ) ) {
+			return $redirect_to;
+		}
+
+		if ( user_can( $user, 'manage_options' ) ) {
+			return admin_url( 'admin.php?page=crezca' );
+		}
+
+		$portal_url    = function_exists( 'crezca_get_student_portal_url' ) ? crezca_get_student_portal_url() : home_url();
+		$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+		$default_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
+
+		return add_query_arg( 'tab', $default_view, $portal_url );
+	}
+
+	/**
+	 * Blindaje de seguridad: impide a estudiantes y usuarios sin rol de administración acceder a /wp-admin/
+	 */
+	public function block_wp_admin_for_students() {
+		if ( wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+			return;
+		}
+
+		if ( is_user_logged_in() && ! current_user_can( 'manage_options' ) ) {
+			$portal_url    = function_exists( 'crezca_get_student_portal_url' ) ? crezca_get_student_portal_url() : home_url();
+			$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+			$default_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
+
+		wp_safe_redirect( add_query_arg( 'tab', $default_view, $portal_url ) );
+			exit;
+		}
+	}
+
+	/**
+	 * Sobrescribe la plantilla de la página de login para renderizar la página standalone completa (Imagen 2)
+	 */
+	public function override_login_page_template( $template ) {
+		if ( ( class_exists( '\\Elementor\\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) || isset( $_GET['elementor-preview'] ) ) {
+			return $template;
+		}
+
+		$login_page_id = get_option( 'alezux_login_page_id' );
+		$is_login_page = false;
+
+		if ( $login_page_id && is_page( $login_page_id ) ) {
+			$is_login_page = true;
+		}
+
+		if ( ! $is_login_page && is_page( [ 'login', 'iniciar-sesion', 'acceso', 'members-login', 'auth', 'registro', 'register' ] ) ) {
+			$is_login_page = true;
+		}
+
+		if ( ! $is_login_page && isset( $_SERVER['REQUEST_URI'] ) ) {
+			$uri = trim( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' );
+			if ( in_array( $uri, [ 'login', 'iniciar-sesion', 'acceso', 'members-login', 'auth', 'registro', 'register' ], true ) ) {
+				$is_login_page = true;
+			}
+		}
+
+		if ( $is_login_page ) {
+			$this->render_auth_page( true );
+			exit;
+		}
+
+		return $template;
+	}
 
 	public function custom_login_url( $login_url, $redirect, $force_reauth ) {
 		$login_page_id = get_option( 'alezux_login_page_id' );
@@ -477,23 +477,23 @@ class Config extends Module_Base {
                 $redirect_url = esc_url_raw( $_POST['redirect_to'] );
             }
 
-            // 2. Lógica por Roles
+            // 2. Lógica por Roles (Admin a Academia, Estudiantes a Cursos/Dashboard)
             $roles = (array) $user_signon->roles;
 
-            if ( in_array( 'administrator', $roles, true ) ) {
+            if ( in_array( 'administrator', $roles, true ) || user_can( $user_signon, 'manage_options' ) ) {
                 if ( ! empty( $_POST['redirect_admin'] ) ) {
                     $redirect_url = esc_url_raw( $_POST['redirect_admin'] );
                 } else {
-                    $redirect_url = admin_url();
+                    $redirect_url = admin_url( 'admin.php?page=crezca' );
                 }
-            } elseif ( in_array( 'subscriber', $roles, true ) || in_array( 'student', $roles, true ) ) {
+            } else {
                 if ( ! empty( $_POST['redirect_student'] ) ) {
                     $redirect_url = esc_url_raw( $_POST['redirect_student'] );
                 } else {
-                    $student_page = get_option( 'alezux_student_dashboard_page_id' );
-                    if ( $student_page ) {
-                        $redirect_url = get_permalink( $student_page );
-                    }
+                    $portal_url    = function_exists( 'crezca_get_student_portal_url' ) ? crezca_get_student_portal_url() : home_url();
+                    $auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+                    $default_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
+                    $redirect_url  = add_query_arg( 'tab', $default_view, $portal_url );
                 }
             }
 
@@ -935,3 +935,4 @@ class Config extends Module_Base {
         return number_format( \Alezux_Members\Modules\Config\Includes\Admin_Dashboard_Stats::get_online_users_count() );
     }
 }
+
