@@ -279,8 +279,17 @@ class Config extends Module_Base {
 	public function intercept_wp_login() {
 		$action = isset( $_REQUEST['action'] ) ? sanitize_text_field( $_REQUEST['action'] ) : 'login';
 
-		// Permitir logout y postpass nativos de WordPress
-		if ( in_array( $action, [ 'logout', 'postpass' ], true ) ) {
+		// Cierre de sesion directo sin pasar por pantallas de confirmacion de WordPress
+		if ( $action === 'logout' ) {
+		wp_logout();
+		$login_page_id = (int) get_option( 'alezux_login_page_id' );
+		$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+		wp_safe_redirect( add_query_arg( 'loggedout', 'true', $login_url ) );
+		exit;
+		}
+
+		// Permitir postpass nativo de WordPress si aplica
+		if ( 'postpass' === $action ) {
 			return;
 		}
 

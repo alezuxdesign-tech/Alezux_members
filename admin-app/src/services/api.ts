@@ -1081,6 +1081,18 @@ const MOCK_AUTOMATIONS: MarketingAutomation[] = [
     description: "Se envía cuando una suscripción es cancelada por el usuario o administrador.",
   },
   {
+    id: "admin_transfer_alert",
+    name: "Finanzas - Alerta de Transferencia (Admin)",
+    category: "finanzas",
+    triggerEvent: "Al recibir comprobante de pago manual",
+    subject: "Comprobante de pago pendiente de revisión - {{plan_name}}",
+    body: "¡Hola Administrador!\n\nSe ha recibido un nuevo comprobante de pago mediante transferencia/pago móvil para el plan {{plan_name}}.\n\nAlumno: {{student_name}} ({{student_email}})\nMonto: {{amount}}\nMétodo: {{payment_method}}\nReferencia: {{reference}}\n\nPuedes revisar el comprobante y aprobar el acceso desde el panel administrativo: {{admin_url}}",
+    enabled: true,
+    sentCount: 12,
+    variables: ["{{student_name}}", "{{student_email}}", "{{student_phone}}", "{{plan_name}}", "{{amount}}", "{{payment_method}}", "{{reference}}", "{{receipt_url}}", "{{admin_url}}", "{{site_name}}", "{{logo_url}}"],
+    description: "Notifica al administrador cuando un alumno adjunta un comprobante para su revisión y activación manual.",
+  },
+  {
     id: "achievement_assigned",
     name: "Logros - Nuevo Logro Desbloqueado",
     category: "logros",
@@ -2293,6 +2305,40 @@ class ApiService {
     };
     localStorage.setItem("crezca_student_profile_custom", JSON.stringify(updated));
     return updated;
+  }
+
+  async uploadStudentAvatar(file: File): Promise<string> {
+    try {
+      if (this.wpData) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(`${this.rootUrl}student/avatar`, {
+          method: "POST",
+          headers: {
+            "X-WP-Nonce": this.nonce,
+          },
+          body: formData,
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.avatar) {
+            return json.avatar;
+          }
+        } else {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || "Error al subir la imagen");
+        }
+      }
+    } catch (e: any) {
+      console.warn("Avatar upload error:", e);
+      throw e;
+    }
+    // Local development fallback
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
   }
 
   async getStudentCourses(): Promise<Course[]> {

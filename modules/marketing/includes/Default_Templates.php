@@ -381,7 +381,7 @@ class Default_Templates {
 							<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: ' . $colors['text_muted'] . '; margin-bottom: 8px;">
 								🔑 Contraseña de Acceso
 							</div>
-							<div style="display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', Courier, monospace; font-size: 19px; font-weight: 800; letter-spacing: 2px; color: ' . $accent_data['accent'] . '; padding: 9px 22px; background-color: ' . $colors['card_bg'] . '; border: 1px solid ' . $colors['card_border'] . '; border-radius: 8px; -webkit-user-select: all; -moz-user-select: all; user-select: all; cursor: pointer;" title="Toca o haz doble clic para seleccionar toda la contraseña">
+							<div style="display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 19px; font-weight: 800; letter-spacing: 2px; color: ' . $accent_data['accent'] . '; padding: 9px 22px; background-color: ' . $colors['card_bg'] . '; border: 1px solid ' . $colors['card_border'] . '; border-radius: 8px; -webkit-user-select: all; -moz-user-select: all; user-select: all; cursor: pointer;" title="Toca o haz doble clic para seleccionar toda la contraseña">
 								' . $password_var . '
 							</div>
 							<div style="font-size: 11px; color: ' . $colors['text_muted'] . '; margin-top: 10px; line-height: 1.4;">

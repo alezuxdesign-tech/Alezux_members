@@ -256,9 +256,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             onProfileUpdate={(updated) => setProfile(updated)}
             onBack={handleBackToCatalog}
             onLogout={() => {
-              const logoutUrl = (window as any).crezca_student_data?.logout_url || "/wp-login.php?action=logout";
+              const logoutUrl = (window as any).crezca_student_data?.logout_url || "/?crezca_logout=1";
               window.location.href = logoutUrl;
             }}
+            onSelectCourse={handleSelectCourse}
           />
         )}
       </main>

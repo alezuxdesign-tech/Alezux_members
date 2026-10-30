@@ -322,6 +322,12 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'student_permissions_check' ],
 			] );
 
+			register_rest_route( $namespace, '/student/avatar', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'upload_student_avatar' ],
+				'permission_callback' => 'is_user_logged_in',
+			] );
+
 			// Eventos de la Academia (Sesiones en vivo, webinars, mentorías)
 			register_rest_route( $namespace, '/academy/events', [
 				[
@@ -2445,10 +2451,10 @@ class Admin_Api {
 		$email_theme = get_option( 'alezux_marketing_email_theme', 'clean' );
 		$accent = get_option( 'alezux_accent', 'violet' );
 
-		// Sincronizar automáticamente la base de datos si el acento o tema cambió
+		// Sincronizar automáticamente la base de datos si el acento o tema cambió o si faltan plantillas registradas
 		$synced_accent = get_option( 'alezux_marketing_templates_accent', '' );
 		$synced_theme  = get_option( 'alezux_marketing_templates_theme', '' );
-		if ( $synced_accent !== $accent || $synced_theme !== $email_theme ) {
+		if ( count( $saved_templates ) < count( $registered_types ) || $synced_accent !== $accent || $synced_theme !== $email_theme ) {
 			if ( class_exists( '\Alezux_Members\Modules\Marketing\Includes\Default_Templates' ) ) {
 				\Alezux_Members\Modules\Marketing\Includes\Default_Templates::sync_database_templates( $accent, $email_theme, false );
 				if ( $wpdb->get_var( "SHOW TABLES LIKE '$table'" ) === $table ) {
@@ -3065,6 +3071,41 @@ class Admin_Api {
 		}
 
 		return $this->get_student_profile();
+	}
+
+	/**
+	 * Permite al estudiante subir su avatar de perfil directamente desde su PC
+	 */
+	public function upload_student_avatar( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new \WP_Error( 'not_logged_in', 'Debes iniciar sesión para subir tu avatar', [ 'status' => 401 ] );
+		}
+
+		$files = $request->get_file_params();
+		if ( empty( $files['file'] ) && empty( $_FILES['file'] ) ) {
+			return new \WP_Error( 'no_file', 'No se ha proporcionado ningún archivo para subir', [ 'status' => 400 ] );
+		}
+
+		if ( ! function_exists( 'media_handle_upload' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+		}
+
+		$attachment_id = media_handle_upload( 'file', 0 );
+		if ( is_wp_error( $attachment_id ) ) {
+			return new \WP_Error( 'upload_failed', $attachment_id->get_error_message(), [ 'status' => 500 ] );
+		}
+
+		$url = wp_get_attachment_url( $attachment_id );
+		update_user_meta( $user_id, '_crezca_custom_avatar', esc_url_raw( $url ) );
+
+		return rest_ensure_response( [
+			'success' => true,
+			'avatar'  => $url,
+			'message' => 'Avatar actualizado correctamente',
+		] );
 	}
 
 	/**

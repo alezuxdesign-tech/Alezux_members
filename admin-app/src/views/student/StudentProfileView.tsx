@@ -1,26 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   ArrowLeft, 
   Check, 
-  MoreHorizontal, 
-  Video, 
-  Edit3, 
   Camera, 
-  Globe, 
-  ExternalLink, 
   Mail, 
   ShieldCheck, 
   BookOpen, 
   CheckCircle2, 
   Calendar, 
-  Save, 
   Lock,
   LogOut,
-  Sparkles
+  UploadCloud,
+  Eye,
+  EyeOff,
+  Play,
+  AlertCircle,
+  Loader2,
+  Sparkles,
+  KeyRound
 } from "lucide-react";
 import { StudentProfile, Course, api } from "../../services/api";
-import { Modal } from "../../components/arc/modal/modal";
-import { Button } from "../../components/arc/button/button";
 import styles from "./StudentPortal.module.css";
 
 interface StudentProfileViewProps {
@@ -29,6 +28,7 @@ interface StudentProfileViewProps {
   onProfileUpdate: (updated: StudentProfile) => void;
   onBack: () => void;
   onLogout?: () => void;
+  onSelectCourse?: (course: Course) => void;
 }
 
 export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
@@ -37,81 +37,127 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
   onProfileUpdate,
   onBack,
   onLogout,
+  onSelectCourse,
 }) => {
-  // Modal de edición
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [showFullBio, setShowFullBio] = useState(false);
+  // Input oculto para selección nativa de archivo desde la PC
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Estados editables del perfil
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email);
-  const [headline, setHeadline] = useState(profile.headline || "Diseñador de Producto & Estratega Digital");
-  const [experience, setExperience] = useState(profile.experience || "Especializado en diseño UX/UI, brand strategy y desarrollo de arquitecturas escalables.");
-  const [bio, setBio] = useState(
-    profile.bio || 
-    "Apasionado por crear experiencias digitales de alto impacto, plataformas escalables y estrategias de crecimiento para startups y creadores. Formándome continuamente en los programas de Crezca para llevar proyectos al siguiente nivel.\n\nHe trabajado en múltiples proyectos de diseño, desarrollo frontend y adquisición de usuarios, combinando buenas prácticas de experiencia de usuario con una mentalidad ágil y orientada a métricas."
-  );
-  const [location, setLocation] = useState(profile.location || "Bogotá, Colombia");
-  const [website, setWebsite] = useState(profile.website || "alezux.com");
-  const [avatar, setAvatar] = useState(profile.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80");
-  const [coverBanner, setCoverBanner] = useState(profile.coverBanner || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&auto=format&fit=crop&q=80");
-  const [password, setPassword] = useState("");
+  // Estados del Dropzone y Avatar
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarMessage, setAvatarMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  // Estados de Seguridad y Cambio de Contraseña
+  const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  // Filtrar exclusivamente los cursos que el estudiante tiene habilitados
+  const enabledCourses = courses.filter((c) => {
+    const hasDirectAccess = Boolean(c.hasAccess);
+    const isEnrolled = profile.enrolledCourseIds && profile.enrolledCourseIds.map(Number).includes(Number(c.id));
+    return hasDirectAccess || isEnrolled;
+  });
 
-  const enrolledCount = profile.enrolledCourseIds.length;
-  const completedCount = profile.completedTopicIds.length;
+  const enrolledCount = enabledCourses.length > 0 ? enabledCourses.length : profile.enrolledCourseIds.length;
+  const completedCount = profile.completedTopicIds ? profile.completedTopicIds.length : 0;
 
-  // Manejo de guardado en el Modal
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password && password !== confirmPassword) {
-      setMessage({ text: "Las contraseñas no coinciden.", type: "error" });
+  // Manejo de subida de archivo de avatar desde PC (Click o Dropzone)
+  const processAvatarFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setAvatarMessage({ text: "Por favor selecciona un archivo de imagen válido (JPG, PNG o WEBP).", type: "error" });
       return;
     }
 
-    setIsSaving(true);
-    setMessage(null);
+    if (file.size > 8 * 1024 * 1024) {
+      setAvatarMessage({ text: "La imagen excede el límite permitido de 8MB.", type: "error" });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setAvatarMessage(null);
+
     try {
-      const payload: Partial<StudentProfile> & { password?: string } = {
-        name,
-        email,
-        headline,
-        experience,
-        bio,
-        location,
-        website,
-        avatar,
-        coverBanner,
-      };
-      if (password) {
-        payload.password = password;
-      }
-      const updated = await api.updateStudentProfile(payload);
-      onProfileUpdate(updated);
-      setMessage({ text: "Perfil actualizado correctamente.", type: "success" });
-      setPassword("");
-      setConfirmPassword("");
-      setTimeout(() => {
-        setIsEditModalOpen(false);
-        setMessage(null);
-      }, 1000);
+      const newAvatarUrl = await api.uploadStudentAvatar(file);
+      const updatedProfile = await api.updateStudentProfile({ avatar: newAvatarUrl });
+      onProfileUpdate(updatedProfile);
+      setAvatarMessage({ text: "¡Foto de perfil actualizada exitosamente!", type: "success" });
+      setTimeout(() => setAvatarMessage(null), 3500);
     } catch (err: any) {
-      setMessage({ text: err.message || "Error al actualizar el perfil.", type: "error" });
+      setAvatarMessage({ text: err.message || "Error al subir la imagen. Intenta de nuevo.", type: "error" });
     } finally {
-      setIsSaving(false);
+      setIsUploadingAvatar(false);
     }
   };
 
-  // Dividir biografía en párrafos
-  const bioParagraphs = (profile.bio || bio).split("\n").filter((p) => p.trim() !== "");
-  const displayedBio = showFullBio ? bioParagraphs : bioParagraphs.slice(0, 2);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processAvatarFile(file);
+    }
+    // Resetear valor para permitir volver a seleccionar el mismo archivo si es necesario
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
-  const websiteUrl = (profile.website || website).startsWith("http")
-    ? (profile.website || website)
-    : `https://${profile.website || website}`;
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processAvatarFile(file);
+    }
+  };
+
+  // Manejo de actualización de contraseña
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword.trim()) {
+      setPasswordMessage({ text: "Por favor ingresa tu nueva contraseña.", type: "error" });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordMessage({ text: "La contraseña debe tener al menos 6 caracteres.", type: "error" });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ text: "Las contraseñas no coinciden. Verifícalas e inténtalo de nuevo.", type: "error" });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    setPasswordMessage(null);
+
+    try {
+      const updated = await api.updateStudentProfile({ password: newPassword });
+      onProfileUpdate(updated);
+      setPasswordMessage({ text: "¡Tu contraseña ha sido actualizada correctamente!", type: "success" });
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setPasswordMessage(null), 4000);
+    } catch (err: any) {
+      setPasswordMessage({ text: err.message || "Error al actualizar la contraseña.", type: "error" });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
 
   return (
     <div className={styles.profileContainer}>
@@ -130,386 +176,276 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         )}
       </div>
 
-      {/* 2. TARJETA PRINCIPAL DEL PERFIL (SHOWCASE TIPO REFERENCIA) */}
+      {/* Input de archivo invisible para subir foto desde la PC */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/png, image/jpeg, image/jpg, image/webp"
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+      />
+
+      {/* 2. TARJETA PRINCIPAL DE IDENTIDAD DEL ESTUDIANTE */}
       <div className={styles.profileShowcaseCard}>
         {/* Banner Panorámico Superior */}
         <div className={styles.profileCoverWrap}>
           <img
-            src={profile.coverBanner || coverBanner}
+            src={profile.coverBanner || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&auto=format&fit=crop&q=80"}
             alt="Portada del perfil"
             className={styles.profileCoverImg}
           />
-          <button
-            type="button"
-            className={styles.editCoverBtn}
-            onClick={() => {
-              const url = prompt("Ingresa la URL de tu imagen de portada / banner:", profile.coverBanner || coverBanner);
-              if (url) {
-                setCoverBanner(url);
-                api.updateStudentProfile({ coverBanner: url }).then(onProfileUpdate);
-              }
-            }}
-            title="Cambiar imagen de portada"
-          >
-            <Camera size={13} />
-            <span>Cambiar portada</span>
-          </button>
         </div>
 
-        {/* Sección de Avatar, Verificación y Acciones */}
+        {/* Sección de Avatar con Dropzone y Datos de Identidad */}
         <div className={styles.profileHeaderBody}>
           <div className={styles.profileAvatarAndActions}>
-            {/* Avatar circular con badge verificado */}
-            <div className={styles.profileAvatarWrapper}>
+            {/* Avatar interactivo tipo DROPZONE: Click abre explorador de archivos de PC, o arrastrar & soltar */}
+            <div
+              className={`${styles.profileAvatarWrapper} ${isDragging ? styles.avatarDragging : ""}`}
+              onClick={() => !isUploadingAvatar && fileInputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              title="Haz clic o arrastra una imagen para subirla desde tu computador"
+              style={{ cursor: isUploadingAvatar ? "wait" : "pointer" }}
+            >
               <img
-                src={profile.avatar || avatar}
+                src={profile.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80"}
                 alt={profile.name}
                 className={styles.profileAvatarImg}
               />
-              {/* Badge azul con checkmark verificado (igual a la referencia) */}
+
+              {/* Overlay hover / dragover indicando subir desde PC */}
+              <div className={styles.avatarChangeOverlayBtn}>
+                {isUploadingAvatar ? (
+                  <Loader2 size={24} className={styles.spinIcon} />
+                ) : (
+                  <div className={styles.avatarDropzonePrompt}>
+                    <Camera size={22} />
+                    <span>{isDragging ? "Soltar imagen" : "Cambiar foto"}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Badge azul con checkmark verificado */}
               <div className={styles.verifiedBadge} title="Perfil verificado de estudiante">
                 <Check size={16} strokeWidth={3.5} />
               </div>
-              <button
-                type="button"
-                className={styles.avatarChangeOverlayBtn}
-                onClick={() => {
-                  const url = prompt("Ingresa la URL de tu nueva foto de perfil:", profile.avatar || avatar);
-                  if (url) {
-                    setAvatar(url);
-                    api.updateStudentProfile({ avatar: url }).then(onProfileUpdate);
-                  }
-                }}
-                title="Cambiar foto de perfil"
-              >
-                <Camera size={18} />
-              </button>
             </div>
 
-            {/* Grupo de botones de acción a la derecha */}
+            {/* Botón explícito para cambiar foto desde PC */}
             <div className={styles.profileActionBtnsGroup}>
               <button
                 type="button"
-                className={styles.iconCircleBtn}
-                title="Copiar enlace del perfil"
-                onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
-                  alert("¡Enlace del perfil copiado al portapapeles!");
-                }}
-              >
-                <MoreHorizontal size={18} />
-              </button>
-
-              <button
-                type="button"
                 className={styles.outlineActionBtn}
-                onClick={onBack}
-                title="Ir a tus cursos y lecciones"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
               >
-                <Video size={15} />
-                <span>Aula Virtual</span>
-              </button>
-
-              <button
-                type="button"
-                className={styles.solidActionBtn}
-                onClick={() => setIsEditModalOpen(true)}
-              >
-                <Edit3 size={15} />
-                <span>Editar perfil</span>
+                {isUploadingAvatar ? <Loader2 size={15} className={styles.spinIcon} /> : <UploadCloud size={15} />}
+                <span>{isUploadingAvatar ? "Subiendo foto..." : "Subir foto desde PC"}</span>
               </button>
             </div>
           </div>
 
-          {/* Nombre e Identidad del Estudiante */}
+          {/* Feedback de subida de avatar */}
+          {avatarMessage && (
+            <div className={`${styles.avatarAlertNotice} ${avatarMessage.type === "success" ? styles.alertSuccess : styles.alertError}`}>
+              {avatarMessage.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+              <span>{avatarMessage.text}</span>
+            </div>
+          )}
+
+          {/* Nombre y Correo del Estudiante */}
           <div className={styles.profileIdentity}>
             <h1 className={styles.profileMainName}>{profile.name}</h1>
-            <p className={styles.profileHeadline}>
-              {profile.headline || headline}
-            </p>
+            <div className={styles.profileEmailRow}>
+              <Mail size={14} className={styles.metaIconInline} />
+              <span>{profile.email}</span>
+            </div>
           </div>
-        </div>
 
-        {/* Sección "Experience" */}
-        <div className={styles.profileExperienceSection}>
-          <div className={styles.experienceHeaderRow}>
-            <h3 className={styles.experienceHeading}>Experience</h3>
-            <button
-              type="button"
-              className={styles.experienceMoreBtn}
-              onClick={() => setIsEditModalOpen(true)}
-              title="Editar especialidad"
-            >
-              <MoreHorizontal size={16} />
-            </button>
-          </div>
-          <p className={styles.experienceText}>
-            {profile.experience || experience}
-          </p>
-        </div>
-
-        {/* Línea Divisoria */}
-        <div className={styles.profileDividerLine} />
-
-        {/* Grilla Principal de Contenido: About me (Izq) y Detalles (Der) */}
-        <div className={styles.profileContentGrid}>
-          {/* Columna Izquierda: About me */}
-          <div className={styles.profileAboutCol}>
-            <h3 className={styles.aboutHeading}>About me</h3>
-            {displayedBio.map((paragraph, idx) => (
-              <p key={idx} className={styles.aboutParagraph}>
-                {paragraph}
-              </p>
-            ))}
-
-            {bioParagraphs.length > 2 && (
-              <button
-                type="button"
-                className={styles.readMoreBtn}
-                onClick={() => setShowFullBio(!showFullBio)}
-              >
-                {showFullBio ? "Leer menos" : "Read more"}
-              </button>
-            )}
-
-            {/* Badges de Progreso y Aprendizaje en Crezca */}
-            <div className={styles.profileBadgesRow}>
-              <div className={styles.profilePillBadge} title="Cursos con acceso activo">
-                <BookOpen size={14} />
-                <span><strong>{enrolledCount}</strong> Cursos Habilitados</span>
-              </div>
-              <div className={styles.profilePillBadge} title="Clases completadas">
+          {/* Badges de Estado y Membresía */}
+          <div className={styles.profileBadgesRow}>
+            <div className={styles.profilePillBadge} title="Plan activo en la academia">
+              <ShieldCheck size={14} style={{ color: "var(--accent)" }} />
+              <span>{profile.planName || "Membresía Activa"}</span>
+            </div>
+            <div className={styles.profilePillBadge} title="Cursos con acceso activo">
+              <BookOpen size={14} />
+              <span><strong>{enrolledCount}</strong> Cursos Habilitados</span>
+            </div>
+            {completedCount > 0 && (
+              <div className={styles.profilePillBadge} title="Lecciones completadas">
                 <CheckCircle2 size={14} />
                 <span><strong>{completedCount}</strong> Lecciones Completadas</span>
               </div>
-              <div className={styles.profilePillBadge} title="Plan de suscripción">
-                <ShieldCheck size={14} />
-                <span>{profile.planName}</span>
-              </div>
-              <div className={styles.profilePillBadge} title="Fecha de registro">
-                <Calendar size={14} />
-                <span>Miembro desde {profile.joinedDate}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Columna Derecha: Metadata 2x2 (Location, Website, Membresía, Email) */}
-          <div className={styles.profileMetaCol}>
-            {/* Ubicación */}
-            <div className={styles.profileMetaItem}>
-              <span className={styles.profileMetaLabel}>Location</span>
-              <div className={styles.profileMetaValue}>
-                <Globe size={15} className={styles.metaIconInline} />
-                <span>{profile.location || location}</span>
-              </div>
-            </div>
-
-            {/* Website / Portafolio */}
-            <div className={styles.profileMetaItem}>
-              <span className={styles.profileMetaLabel}>Website</span>
-              <a
-                href={websiteUrl}
-                target="_blank"
-                rel="noreferrer"
-                className={styles.profileMetaLink}
-                title={websiteUrl}
-              >
-                <span>{profile.website || website}</span>
-                <ExternalLink size={13} />
-              </a>
-            </div>
-
-            {/* Membresía / Plan */}
-            <div className={styles.profileMetaItem}>
-              <span className={styles.profileMetaLabel}>Membresía</span>
-              <div className={styles.profileMetaValue}>
-                <ShieldCheck size={15} className={styles.metaIconInline} />
-                <span>{profile.planName}</span>
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className={styles.profileMetaItem}>
-              <span className={styles.profileMetaLabel}>Email</span>
-              <a
-                href={`mailto:${profile.email}`}
-                className={styles.profileMetaLink}
-                title={profile.email}
-              >
-                <span>{profile.email}</span>
-                <ExternalLink size={13} />
-              </a>
+            )}
+            <div className={styles.profilePillBadge} title="Fecha de inicio">
+              <Calendar size={14} />
+              <span>Miembro desde {profile.joinedDate || "este año"}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 3. MODAL DE EDICIÓN DEL PERFIL */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Editar Perfil"
-        description="Actualiza tu información pública, bio y datos de contacto de tu perfil."
-        maxWidth="680px"
-        footer={
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", width: "100%" }}>
-            <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="primary" onClick={handleSave} disabled={isSaving}>
-              <Save size={15} />
-              <span>{isSaving ? "Guardando..." : "Guardar Cambios"}</span>
-            </Button>
+      {/* 3. SECCIÓN: MIS CURSOS HABILITADOS */}
+      <div className={styles.profileSectionCard}>
+        <div className={styles.sectionHeaderRow}>
+          <div className={styles.sectionTitleWrap}>
+            <BookOpen size={20} style={{ color: "var(--accent)" }} />
+            <h2 className={styles.sectionHeading}>Mis Cursos Habilitados</h2>
           </div>
-        }
-      >
-        <form onSubmit={handleSave} className={styles.modalFormBody}>
-          {message && (
-            <div className={message.type === "success" ? styles.alertSuccess : styles.alertError}>
-              {message.text}
+          <span className={styles.sectionBadgeCount}>
+            {enabledCourses.length} {enabledCourses.length === 1 ? "curso disponible" : "cursos disponibles"}
+          </span>
+        </div>
+
+        {enabledCourses.length > 0 ? (
+          <div className={styles.profileCoursesGrid}>
+            {enabledCourses.map((course) => {
+              const totalLessons = course.sections?.reduce((acc, s) => acc + (s.lessons?.length || 0), 0) || 0;
+              const progressPct = Math.round(course.progress || 0);
+
+              return (
+                <div key={course.id} className={styles.profileCourseCard}>
+                  <div className={styles.courseThumbWrap}>
+                    <img
+                      src={course.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80"}
+                      alt={course.title}
+                      className={styles.courseThumbImg}
+                    />
+                    <div className={styles.courseLevelBadge}>
+                      {(course as any).level || "Habilitado"}
+                    </div>
+                  </div>
+
+                  <div className={styles.courseCardBody}>
+                    <h3 className={styles.courseCardTitle}>{course.title}</h3>
+                    
+                    <div className={styles.courseMetaLine}>
+                      <span>{totalLessons} {totalLessons === 1 ? "lección" : "lecciones"}</span>
+                      {progressPct > 0 && <span>• {progressPct}% completado</span>}
+                    </div>
+
+                    {/* Barra de progreso */}
+                    <div className={styles.profileProgressBarTrack}>
+                      <div
+                        className={styles.profileProgressBarFill}
+                        style={{ width: `${progressPct}%` }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className={styles.enterCourseBtn}
+                      onClick={() => (onSelectCourse ? onSelectCourse(course) : onBack())}
+                    >
+                      <Play size={14} fill="currentColor" />
+                      <span>{progressPct > 0 ? "Continuar Aprendiendo" : "Entrar al curso"}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className={styles.emptyCoursesBox}>
+            <Sparkles size={36} style={{ color: "var(--accent)", opacity: 0.8 }} />
+            <h4 className={styles.emptyTitle}>Aún no tienes cursos activos</h4>
+            <p className={styles.emptyText}>
+              Tus cursos matriculados aparecerán automáticamente en esta sección para que accedas a ellos directamente.
+            </p>
+            <button type="button" className={styles.solidActionBtn} onClick={onBack}>
+              Explorar Catálogo de Cursos
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 4. SECCIÓN: SEGURIDAD Y CAMBIO DE CONTRASEÑA */}
+      <div className={styles.profileSectionCard}>
+        <div className={styles.sectionHeaderRow}>
+          <div className={styles.sectionTitleWrap}>
+            <KeyRound size={20} style={{ color: "var(--accent)" }} />
+            <h2 className={styles.sectionHeading}>Seguridad y Contraseña</h2>
+          </div>
+        </div>
+
+        <p className={styles.securitySubtext}>
+          Puedes actualizar tu contraseña de acceso en cualquier momento. Te recomendamos utilizar al menos 8 caracteres combinando letras y números.
+        </p>
+
+        <form onSubmit={handlePasswordSubmit} className={styles.passwordForm}>
+          <div className={styles.passwordFieldsRow}>
+            {/* Campo Nueva Contraseña */}
+            <div className={styles.passwordFieldGroup}>
+              <label className={styles.passwordFieldLabel}>Nueva Contraseña</label>
+              <div className={styles.passwordInputContainer}>
+                <Lock size={16} className={styles.inputPrefixIcon} />
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Escribe tu nueva contraseña"
+                  className={styles.passwordInput}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className={styles.passwordEyeBtn}
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  title={showNewPassword ? "Ocultar" : "Mostrar"}
+                >
+                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Campo Confirmar Contraseña */}
+            <div className={styles.passwordFieldGroup}>
+              <label className={styles.passwordFieldLabel}>Confirmar Nueva Contraseña</label>
+              <div className={styles.passwordInputContainer}>
+                <Lock size={16} className={styles.inputPrefixIcon} />
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirma tu nueva contraseña"
+                  className={styles.passwordInput}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className={styles.passwordEyeBtn}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  title={showConfirmPassword ? "Ocultar" : "Mostrar"}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mensaje de éxito / error en cambio de contraseña */}
+          {passwordMessage && (
+            <div className={`${styles.passwordNoticeAlert} ${passwordMessage.type === "success" ? styles.alertSuccess : styles.alertError}`}>
+              {passwordMessage.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+              <span>{passwordMessage.text}</span>
             </div>
           )}
 
-          <div className={styles.modalFormRow}>
-            <div className={styles.modalFormGroup}>
-              <label>Nombre Completo</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className={styles.modalInput}
-                placeholder="Ej. Alejandro Zuñiga"
-              />
-            </div>
-
-            <div className={styles.modalFormGroup}>
-              <label>Correo Electrónico</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className={styles.modalInput}
-                placeholder="ejemplo@correo.com"
-              />
-            </div>
-          </div>
-
-          <div className={styles.modalFormGroup}>
-            <label>Titular / Headline</label>
-            <input
-              type="text"
-              value={headline}
-              onChange={(e) => setHeadline(e.target.value)}
-              className={styles.modalInput}
-              placeholder="Ej. Diseñador de Producto & Estratega Digital"
-            />
-          </div>
-
-          <div className={styles.modalFormGroup}>
-            <label>Especialidad / Experience</label>
-            <input
-              type="text"
-              value={experience}
-              onChange={(e) => setExperience(e.target.value)}
-              className={styles.modalInput}
-              placeholder="Ej. Especializado en UX/UI, funnels de conversión y Webflow."
-            />
-          </div>
-
-          <div className={styles.modalFormGroup}>
-            <label>Sobre mí (Biografía completa)</label>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              className={styles.modalTextarea}
-              rows={4}
-              placeholder="Escribe tu trayectoria, objetivos de aprendizaje y experiencia..."
-            />
-          </div>
-
-          <div className={styles.modalFormRow}>
-            <div className={styles.modalFormGroup}>
-              <label>Ubicación (Location)</label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className={styles.modalInput}
-                placeholder="Ej. Bogotá, Colombia"
-              />
-            </div>
-
-            <div className={styles.modalFormGroup}>
-              <label>Sitio Web / Portafolio</label>
-              <input
-                type="text"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                className={styles.modalInput}
-                placeholder="Ej. miportafolio.com"
-              />
-            </div>
-          </div>
-
-          <div className={styles.modalSectionDivider} />
-          <h4 className={styles.modalSectionHeading}>Imágenes de Perfil</h4>
-
-          <div className={styles.modalFormRow}>
-            <div className={styles.modalFormGroup}>
-              <label>URL Foto de Perfil (Avatar)</label>
-              <input
-                type="url"
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                className={styles.modalInput}
-                placeholder="https://images.unsplash.com/..."
-              />
-            </div>
-
-            <div className={styles.modalFormGroup}>
-              <label>URL Banner de Portada</label>
-              <input
-                type="url"
-                value={coverBanner}
-                onChange={(e) => setCoverBanner(e.target.value)}
-                className={styles.modalInput}
-                placeholder="https://images.unsplash.com/..."
-              />
-            </div>
-          </div>
-
-          <div className={styles.modalSectionDivider} />
-          <h4 className={styles.modalSectionHeading}>Seguridad y Contraseña (Opcional)</h4>
-
-          <div className={styles.modalFormRow}>
-            <div className={styles.modalFormGroup}>
-              <label>Nueva Contraseña</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={styles.modalInput}
-                placeholder="Mínimo 6 caracteres"
-                minLength={6}
-              />
-            </div>
-
-            <div className={styles.modalFormGroup}>
-              <label>Confirmar Contraseña</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={styles.modalInput}
-                placeholder="Repetir contraseña"
-                minLength={6}
-              />
-            </div>
+          <div className={styles.passwordActionsRow}>
+            <button
+              type="submit"
+              className={styles.solidActionBtn}
+              disabled={isUpdatingPassword || (!newPassword && !confirmPassword)}
+            >
+              {isUpdatingPassword ? <Loader2 size={15} className={styles.spinIcon} /> : <Lock size={15} />}
+              <span>{isUpdatingPassword ? "Guardando..." : "Guardar Nueva Contraseña"}</span>
+            </button>
           </div>
         </form>
-      </Modal>
+      </div>
     </div>
   );
 };

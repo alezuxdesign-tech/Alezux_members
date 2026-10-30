@@ -393,7 +393,7 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 		'theme'                => $theme,
 		'wp_admin_url'         => $is_admin ? esc_url_raw( admin_url( 'index.php' ) ) : '',
 		'login_url'            => wp_login_url( get_permalink() ),
-		'logout_url'           => wp_logout_url( home_url() ),
+		'logout_url'           => home_url( '/?crezca_logout=1' ),
 	];
 
 	ob_start();
@@ -410,6 +410,36 @@ add_shortcode( 'crezca_aula', 'crezca_render_student_portal_shortcode' );
 add_shortcode( 'alezux_aula', 'crezca_render_student_portal_shortcode' );
 
 /**
+ * Endpoint de cierre de sesión limpio para estudiantes y usuarios de Crezca
+ * Bypasea cualquier pantalla o aviso nativo de confirmación de WordPress
+ */
+add_action( 'init', 'crezca_clean_logout_handler' );
+function crezca_clean_logout_handler() {
+	if ( isset( $_GET['crezca_logout'] ) || ( isset( $_GET['action'] ) && $_GET['action'] === 'crezca_logout' ) ) {
+		wp_logout();
+		$login_page_id = (int) get_option( 'alezux_login_page_id' );
+		$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+		wp_safe_redirect( add_query_arg( 'loggedout', 'true', $login_url ) );
+		exit;
+	}
+}
+
+/**
+ * Intercepta cualquier llamada nativa a wp-login.php?action=logout para cerrar sesión directo
+ * y evitar la pantalla de confirmación "¿Realmente deseas cerrar sesión?" de WordPress.
+ */
+add_action( 'login_init', 'crezca_intercept_wp_logout_prompt', 1 );
+function crezca_intercept_wp_logout_prompt() {
+	if ( isset( $_GET['action'] ) && $_GET['action'] === 'logout' ) {
+		wp_logout();
+		$login_page_id = (int) get_option( 'alezux_login_page_id' );
+		$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+		wp_safe_redirect( add_query_arg( 'loggedout', 'true', $login_url ) );
+		exit;
+	}
+}
+
+/**
  * Intercepta accesos a ?tab=courses en la raíz o páginas del tema para redirigir al Campus Virtual
  */
 add_action( 'template_redirect', 'crezca_redirect_student_tabs_to_campus', 5 );
@@ -419,14 +449,27 @@ function crezca_redirect_student_tabs_to_campus() {
 	}
 
 	if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
+		// Si no está autenticado, redirigir a login directamente
+		if ( ! is_user_logged_in() ) {
+			$login_page_id = (int) get_option( 'alezux_login_page_id' );
+			$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+			$portal_url    = crezca_get_student_portal_url();
+			$redirect_dest = add_query_arg( 'tab', sanitize_text_field( $_GET['tab'] ), $portal_url );
+			wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $redirect_dest ), $login_url ) );
+			exit;
+		}
+
 		$portal_url     = crezca_get_student_portal_url();
 		$portal_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
 
 		// Si no estamos en la página del portal del estudiante, redirigir
 		if ( ! is_page( $portal_page_id ) ) {
 			$target = add_query_arg( 'tab', sanitize_text_field( $_GET['tab'] ), $portal_url );
-			wp_safe_redirect( $target );
-			exit;
+			$current_req = ( is_ssl() ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+			if ( untrailingslashit( $current_req ) !== untrailingslashit( $target ) ) {
+				wp_safe_redirect( $target );
+				exit;
+			}
 		}
 	}
 }
@@ -448,9 +491,19 @@ function crezca_student_portal_canvas_template( $template ) {
 		$is_portal = true;
 	} elseif ( is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'crezca_aula' ) || has_shortcode( $post->post_content, 'alezux_aula' ) ) ) {
 		$is_portal = true;
+	} elseif ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
+		$is_portal = true;
 	}
 
 	if ( $is_portal ) {
+		// Si es acceso no autenticado al aula, redirigir al login personalizado
+		if ( ! is_user_logged_in() ) {
+			$login_page_id = (int) get_option( 'alezux_login_page_id' );
+			$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+			$current_url   = ( is_ssl() ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+			wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
+			exit;
+		}
 		add_filter( 'show_admin_bar', '__return_false' );
 
 		$theme        = get_option( 'alezux_theme', 'dark' );
