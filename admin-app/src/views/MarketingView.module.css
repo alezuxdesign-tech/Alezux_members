@@ -700,3 +700,97 @@
   font-weight: 500;
 }
 
+/* ==========================================================================
+   OPTIMIZACIONES RESPONSIVE MOBILE & TABLET PARA MARKETING
+   ========================================================================== */
+@media (max-width: 768px) {
+  .container {
+    gap: 14px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-bottom: 2px;
+  }
+
+  .title {
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+    margin: 3px 0 0 !important;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .header button {
+    width: 100%;
+    justify-content: center;
+    font-size: 12px !important;
+    padding: 7px 10px !important;
+    height: 38px !important;
+    margin-top: 4px;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .metricsGrid > *:nth-child(3):last-child {
+    grid-column: 1 / -1;
+  }
+
+  .filterBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .searchWrapper {
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .automationsGrid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  .card {
+    padding: 16px 14px;
+    border-radius: 16px;
+    gap: 10px;
+  }
+
+  .cardTitle {
+    font-size: 15.5px !important;
+  }
+
+  .cardDescription {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .cardFooter {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+  }
+}
+

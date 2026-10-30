@@ -231,3 +231,120 @@
   align-items: center;
   gap: 12px;
 }
+
+/* ==========================================================================
+   OPTIMIZACIONES RESPONSIVE MOBILE & TABLET PARA EVENTOS
+   ========================================================================== */
+@media (max-width: 768px) {
+  .container {
+    gap: 14px;
+  }
+
+  .pageHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-bottom: 2px;
+  }
+
+  .pageTitle {
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+    letter-spacing: -0.01em;
+  }
+
+  .pageDescription {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+    margin: 3px 0 0 !important;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .pageHeader button {
+    width: 100%;
+    justify-content: center;
+    font-size: 12px !important;
+    padding: 7px 10px !important;
+    height: 38px !important;
+    margin-top: 4px;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .filterBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .searchInputWrap {
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tabsGroup {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    padding: 3px;
+    gap: 4px;
+  }
+
+  .tabsGroup::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabBtn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 11.5px;
+    padding: 5px 12px;
+  }
+
+  .eventsGrid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  .eventCard {
+    padding: 16px 14px;
+    border-radius: 16px;
+    gap: 10px;
+  }
+
+  .eventCardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .eventTitle {
+    font-size: 15.5px !important;
+  }
+
+  .eventDescription {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .eventCardFooter {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+  }
+}
