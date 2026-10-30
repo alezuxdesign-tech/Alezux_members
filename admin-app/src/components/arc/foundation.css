@@ -79,6 +79,16 @@
   --duration-instant: 120ms; --duration-fast: 160ms; --duration-standard: 240ms; --duration-considered: 480ms; --duration-spring: 580ms;
 }
 
+@media (max-width: 768px) {
+  :root {
+    --text-2xl: 1.25rem;
+    --text-3xl: 1.5rem;
+    --text-4xl: 1.85rem;
+    --space-6: 1rem;
+    --space-8: 1.25rem;
+  }
+}
+
 :root[data-theme="light"] {
   color-scheme: light;
   --background: var(--neutral-0);

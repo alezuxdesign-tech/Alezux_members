@@ -53,3 +53,16 @@
   line-height: 1;
 }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 768px) {
+  .counter {
+    font-size: 1.25rem;
+  }
+  .prefix {
+    font-size: 0.85em;
+  }
+  .suffix {
+    font-size: 10px;
+    margin-left: 3px;
+  }
+}

@@ -7,6 +7,15 @@
   padding: 3px;
   position: relative;
   user-select: none;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.container::-webkit-scrollbar {
+  display: none;
 }
 
 .sm {
@@ -32,9 +41,23 @@
   padding: 0 var(--space-4);
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   outline: none;
   transition: color var(--duration-fast) var(--ease-standard);
   height: 100%;
+}
+
+@media (max-width: 768px) {
+  .sm {
+    height: 30px;
+  }
+  .md {
+    height: 34px;
+  }
+  .button {
+    padding: 0 11px;
+    font-size: 12px;
+  }
 }
 
 .button:hover {

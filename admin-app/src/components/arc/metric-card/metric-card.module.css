@@ -79,3 +79,41 @@
   font-size: var(--text-xs); 
   line-height: var(--leading-body); 
 }
+
+@media (max-width: 768px) {
+  .card {
+    padding: 10px 12px;
+    border-radius: var(--radius-control, 12px);
+  }
+
+  .top {
+    margin-bottom: 3px;
+    gap: 4px;
+  }
+
+  .labelText {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .badge {
+    padding: 1px 5px;
+    font-size: 9.5px;
+  }
+
+  .numberWrapper {
+    margin: 2px 0;
+  }
+
+  .context {
+    font-size: 10px;
+    line-height: 1.2;
+    margin: 2px 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

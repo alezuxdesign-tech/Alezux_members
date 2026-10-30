@@ -4573,7 +4573,13 @@
   }
 
   .cleanGreetingTitle {
-    font-size: 20px;
+    font-size: 19px;
+  }
+
+  .cleanGreetingSubtitle {
+    font-size: 12px;
+    margin-top: 3px;
+    line-height: 1.35;
   }
 
   .studentPlanCleanBadge {
