@@ -511,14 +511,20 @@ class Admin_Api {
 	/**
 	 * Obtener cursos con su estructura de secciones y lecciones para el Builder
 	 */
-	public function get_courses() {
+	public function get_courses( $request = null ) {
 		$course_types = class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) 
 			? \Alezux_Members\Core\LMS_Engine::get_course_post_types() 
 			: [ 'crezca_course', 'sfwd-courses' ];
 
+		$status = [ 'publish', 'draft' ];
+		if ( $request instanceof \WP_REST_Request && $request->get_param( 'status' ) ) {
+			$req_status = sanitize_text_field( $request->get_param( 'status' ) );
+			$status = ( 'publish' === $req_status || 'active' === $req_status ) ? [ 'publish' ] : [ $req_status ];
+		}
+
 		$courses_posts = get_posts( [
 			'post_type'      => $course_types,
-			'post_status'    => [ 'publish', 'draft' ],
+			'post_status'    => $status,
 			'posts_per_page' => 50,
 		] );
 
@@ -1100,9 +1106,73 @@ class Admin_Api {
 			: [];
 		update_user_meta( $user_id, '_alezux_enabled_courses', $course_ids );
 
+		if ( class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+			foreach ( $course_ids as $c_id ) {
+				\Alezux_Members\Core\LMS_Engine::enroll_student( $user_id, $c_id );
+			}
+		}
+
 		if ( function_exists( 'ld_update_course_access' ) ) {
 			foreach ( $course_ids as $c_id ) {
 				ld_update_course_access( $user_id, $c_id, false );
+			}
+		}
+
+		// Registrar venta en Finanzas (Canal de venta, monto, referencia y suscripción)
+		$sales_channel = ! empty( $params['salesChannel'] ) ? sanitize_text_field( $params['salesChannel'] ) : ( ! empty( $params['paymentMethod'] ) ? sanitize_text_field( $params['paymentMethod'] ) : 'Venta Manual' );
+		$sale_amount   = isset( $params['saleAmount'] ) ? floatval( $params['saleAmount'] ) : 0.00;
+		$sale_ref      = ! empty( $params['saleReference'] ) ? sanitize_text_field( $params['saleReference'] ) : 'MAN-' . strtoupper( wp_generate_password( 8, false ) );
+		$plan_id       = ! empty( $params['planId'] ) ? (int) $params['planId'] : 0;
+		$record_sale   = isset( $params['recordSale'] ) ? (bool) $params['recordSale'] : true;
+
+		update_user_meta( $user_id, '_alezux_sales_channel', $sales_channel );
+		update_user_meta( $user_id, '_alezux_payment_method', $sales_channel );
+		if ( $sale_amount > 0 ) {
+			update_user_meta( $user_id, '_alezux_sale_amount', $sale_amount );
+		}
+		if ( $plan_id > 0 ) {
+			update_user_meta( $user_id, '_alezux_plan_id', $plan_id );
+		}
+
+		if ( $record_sale || $sale_amount > 0 ) {
+			global $wpdb;
+			$t_trans = $wpdb->prefix . 'alezux_finanzas_transactions';
+			$t_subs  = $wpdb->prefix . 'alezux_finanzas_subscriptions';
+
+			$subscription_id = 0;
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$t_subs'" ) === $t_subs && $plan_id > 0 ) {
+				$wpdb->insert( $t_subs, [
+					'user_id'           => $user_id,
+					'plan_id'           => $plan_id,
+					'status'            => 'active',
+					'quotas_paid'       => 1,
+					'last_payment_date' => current_time( 'mysql' ),
+					'created_at'        => current_time( 'mysql' ),
+				] );
+				$subscription_id = (int) $wpdb->insert_id;
+			}
+
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$t_trans'" ) === $t_trans ) {
+				$extra_data = [
+					'student_name'    => $name,
+					'student_email'   => $email,
+					'sales_channel'   => $sales_channel,
+					'manual_sale'     => true,
+					'registered_by'   => get_current_user_id(),
+				];
+
+				$wpdb->insert( $t_trans, [
+					'user_id'         => $user_id,
+					'subscription_id' => $subscription_id ?: null,
+					'plan_id'         => $plan_id ?: null,
+					'amount'          => $sale_amount,
+					'currency'        => 'USD',
+					'method'          => $sales_channel,
+					'transaction_ref' => $sale_ref,
+					'status'          => 'paid',
+					'data'            => wp_json_encode( $extra_data ),
+					'created_at'      => current_time( 'mysql' ),
+				] );
 			}
 		}
 
@@ -3026,6 +3096,8 @@ class Admin_Api {
 			is_array( $completed_meta ) ? $completed_meta : []
 		) ) );
 
+		$is_blocked = (bool) get_user_meta( $user->ID, 'alezux_is_blocked', true );
+
 		return rest_ensure_response( [
 			'id'                => $user->ID,
 			'name'              => $user->display_name ?: $user->user_login,
@@ -3037,6 +3109,8 @@ class Admin_Api {
 			'enrolledCourseIds' => $enrolled_ids,
 			'completedTopicIds' => array_values( array_map( 'strval', $completed ) ),
 			'isAdmin'           => current_user_can( 'administrator' ),
+			'isBlocked'         => $is_blocked,
+			'status'            => $is_blocked ? 'blocked' : 'active',
 		] );
 	}
 
@@ -3126,8 +3200,13 @@ class Admin_Api {
 		}
 
 		$user_id = get_current_user_id();
+		$is_blocked = (bool) get_user_meta( $user_id, 'alezux_is_blocked', true );
 
 		foreach ( $courses as &$c ) {
+			if ( $is_blocked && ! current_user_can( 'administrator' ) ) {
+				$c['hasAccess'] = false;
+				continue;
+			}
 			// Comprobar acceso mediante LMS_Engine
 			$has_acc = in_array( (int) $c['id'], $enrolled_ids, true );
 			if ( ! $has_acc && class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {

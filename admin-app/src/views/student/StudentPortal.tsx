@@ -8,7 +8,11 @@ import {
   Eye, 
   ShieldCheck,
   Sparkles,
-  Layers
+  Layers,
+  ShieldAlert,
+  MessageCircle,
+  Mail,
+  Lock
 } from "lucide-react";
 import { Course, CourseSection, CourseLesson, CourseTopic, StudentProfile, api } from "../../services/api";
 import { StudentCatalogView } from "./StudentCatalogView";
@@ -44,6 +48,17 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
   const academyName = propAcademyName || localStorage.getItem("crezca_academy_name") || "Academia";
   const academyLogo = propAcademyLogo || localStorage.getItem("crezca_academy_logo") || "";
+
+  const isStudentBlocked = !isAdminPreview && (
+    Boolean(profile?.isBlocked) || 
+    profile?.status === "blocked" || 
+    Boolean((window as any).crezca_student_data?.is_blocked)
+  );
+
+  const supportWhatsapp = (window as any).crezca_student_data?.support_whatsapp;
+  const supportEmail = (window as any).crezca_student_data?.support_email || "administracion@alezux.com";
+  const cleanWhatsapp = supportWhatsapp ? String(supportWhatsapp).replace(/[^0-9]/g, "") : "";
+  const logoutUrl = (window as any).crezca_student_data?.logout_url || "/?crezca_logout=1";
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -209,6 +224,65 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             </button>
           </div>
         </header>
+      )}
+
+      {/* PopUp No Descartable de Cuenta Bloqueada */}
+      {isStudentBlocked && (
+        <div className={styles.blockedOverlay}>
+          <div className={styles.blockedCard}>
+            <div className={styles.blockedIconWrap}>
+              <ShieldAlert size={38} />
+            </div>
+
+            <div className={styles.blockedBadge}>
+              <Lock size={12} />
+              <span>Acceso Suspendido</span>
+            </div>
+
+            <h2 className={styles.blockedTitle}>Tu cuenta se encuentra bloqueada</h2>
+
+            <p className={styles.blockedText}>
+              Hola <strong>{profile?.name || "Estudiante"}</strong>, tu acceso a los cursos y lecciones formativas ha sido restringido por la administración de la academia.
+            </p>
+
+            <p className={styles.blockedSubtext}>
+              Para consultar el estado de tu cuenta o reactivar tu acceso de inmediato, por favor comunícate con nuestro equipo de administración:
+            </p>
+
+            <div className={styles.blockedContactBox}>
+              {cleanWhatsapp ? (
+                <a
+                  href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(`Hola, mi nombre es ${profile?.name || ""} (${profile?.email || ""}) y solicito asistencia sobre el estado de mi cuenta en ${academyName}.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.blockedWhatsappBtn}
+                >
+                  <MessageCircle size={17} />
+                  <span>Contactar a Administración por WhatsApp</span>
+                </a>
+              ) : null}
+
+              <a
+                href={`mailto:${supportEmail}?subject=${encodeURIComponent(`Reactivación de Cuenta - ${profile?.name || "Estudiante"}`)}&body=${encodeURIComponent(`Hola administración,\n\nMi cuenta (${profile?.email || ""}) se encuentra bloqueada y deseo reactivar mi acceso a la plataforma.`)}`}
+                className={styles.blockedEmailBtn}
+              >
+                <Mail size={16} />
+                <span>Escribir a Administración por Correo</span>
+              </a>
+
+              <button
+                type="button"
+                className={styles.blockedLogoutBtn}
+                onClick={() => {
+                  window.location.href = logoutUrl;
+                }}
+              >
+                <LogOut size={15} />
+                <span>Cerrar sesión</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 3. VISTAS DEL PORTAL */}

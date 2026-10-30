@@ -355,8 +355,11 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 	wp_enqueue_script( 'crezca-dashboard-script', CREZCA_URL . 'assets/dist/alezux-dashboard.js', [], $js_ver, true );
 	
 	$current_user  = wp_get_current_user();
+	$is_blocked    = ( $current_user && $current_user->ID ) ? (bool) get_user_meta( $current_user->ID, 'alezux_is_blocked', true ) : false;
 	$academy_name  = get_option( 'alezux_academy_name', 'Academia' );
 	$academy_logo  = get_option( 'alezux_academy_logo', '' );
+	$support_wa    = get_option( 'alezux_support_whatsapp', '' );
+	$support_email = get_option( 'admin_email', '' );
 	$accent        = get_option( 'alezux_accent', 'violet' );
 	$theme         = get_option( 'alezux_theme', 'dark' );
 	$auth_settings = crezca_get_auth_settings();
@@ -385,6 +388,9 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 		'is_logged_in'         => is_user_logged_in(),
 		'user_id'              => $current_user ? $current_user->ID : 0,
 		'is_admin'             => $is_admin,
+		'is_blocked'           => $is_blocked,
+		'support_whatsapp'     => $support_wa,
+		'support_email'        => $support_email,
 		'initial_tab'          => $student_view,
 		'student_default_view' => $student_view,
 		'academy_name'         => $academy_name,

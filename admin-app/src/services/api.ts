@@ -51,6 +51,12 @@ export interface CreateStudentPayload {
   planName?: string;
   enabledCourseIds?: number[];
   sendWelcomeEmail?: boolean;
+  salesChannel?: string;
+  paymentMethod?: string;
+  saleAmount?: number;
+  saleReference?: string;
+  planId?: number;
+  recordSale?: boolean;
 }
 
 export interface UpdateStudentPayload {
@@ -186,6 +192,8 @@ export interface StudentProfile {
   enrolledCourseIds: number[];
   completedTopicIds: string[];
   isAdmin: boolean;
+  isBlocked?: boolean;
+  status?: "active" | "inactive" | "blocked";
   headline?: string;
   experience?: string;
   bio?: string;
@@ -1191,11 +1199,13 @@ class ApiService {
   }
 
   // --- COURSES ---
-  async getCourses(): Promise<Course[]> {
+  async getCourses(options?: { status?: string; activeOnly?: boolean }): Promise<Course[]> {
     try {
       if (this.wpData) {
-        const bust = `?_t=${Date.now()}`;
-        const res = await fetch(`${this.rootUrl}courses${bust}`, {
+        const statusParam = options?.status || (options?.activeOnly ? "publish" : "");
+        const queryParams = new URLSearchParams({ _t: Date.now().toString() });
+        if (statusParam) queryParams.set("status", statusParam);
+        const res = await fetch(`${this.rootUrl}courses?${queryParams.toString()}`, {
           cache: "no-store",
           headers: {
             "X-WP-Nonce": this.nonce,
@@ -1210,7 +1220,10 @@ class ApiService {
     } catch (e) {
       console.warn("API Error, using mock courses fallback:", e);
     }
-    return MOCK_COURSES;
+    const mockList = (options?.status === "publish" || options?.activeOnly)
+      ? MOCK_COURSES.filter((c) => c.status === "publish")
+      : MOCK_COURSES;
+    return mockList;
   }
 
   async saveCourse(courseId: number, courseData: Partial<Course>, sections?: CourseSection[]): Promise<boolean> {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Search,
   ShieldAlert,
@@ -16,7 +16,12 @@ import {
   CheckCircle2,
   Clock,
   Ban,
+  DollarSign,
+  CreditCard,
+  Receipt,
+  ShoppingCart
 } from "lucide-react";
+import { FinancePlan } from "../services/api";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
 import { Modal } from "../components/arc/modal/modal";
@@ -32,6 +37,17 @@ const STATUS_ITEMS = [
   { value: "active" as const, label: "Activo", icon: <CheckCircle2 size={15} /> },
   { value: "inactive" as const, label: "Inactivo", icon: <Clock size={15} /> },
   { value: "blocked" as const, label: "Bloqueado", icon: <Ban size={15} /> },
+];
+
+const SALES_CHANNEL_OPTIONS = [
+  { value: "transfer", label: "Transferencia Bancaria" },
+  { value: "zelle", label: "Zelle" },
+  { value: "pago_movil", label: "Pago Móvil" },
+  { value: "cash", label: "Efectivo / En persona" },
+  { value: "whatsapp", label: "WhatsApp / Venta Directa" },
+  { value: "hotmart", label: "Hotmart" },
+  { value: "stripe", label: "Stripe / Tarjeta" },
+  { value: "other", label: "Otro Canal" },
 ];
 
 const CREATE_STATUS_ITEMS = [
@@ -73,7 +89,7 @@ export function StudentsView() {
 
   // Modal de Crear Nuevo Alumno
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [createTab, setCreateTab] = useState<"info" | "courses">("info");
+  const [createTab, setCreateTab] = useState<"info" | "sale" | "courses">("info");
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newStatus, setNewStatus] = useState<"active" | "inactive" | "blocked">("active");
@@ -86,16 +102,45 @@ export function StudentsView() {
   const [createFeedback, setCreateFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Estados de Venta & Finanzas para el registro manual
+  const [plans, setPlans] = useState<FinancePlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<number>(0);
+  const [salesChannel, setSalesChannel] = useState<string>("transfer");
+  const [saleAmount, setSaleAmount] = useState<string>("");
+  const [saleReference, setSaleReference] = useState<string>("");
+  const [recordSale, setRecordSale] = useState<boolean>(true);
+
+  // Filtrar exclusivamente los cursos activos/publicados para que no salgan borradores
+  const activeCourses = useMemo(() => {
+    const published = courses.filter((c) => c.status === "publish");
+    return published.length > 0 ? published : courses;
+  }, [courses]);
+
   useEffect(() => {
-    Promise.all([api.getStudents(), api.getCourses()])
-      .then(([studentsData, coursesData]) => {
+    Promise.all([api.getStudents(), api.getCourses({ activeOnly: true }), api.getPlans()])
+      .then(([studentsData, coursesData, plansData]) => {
         setStudents(studentsData);
         setCourses(coursesData);
+        setPlans(plansData);
       })
       .finally(() => {
         setIsLoading(false);
       });
   }, []);
+
+  const handlePlanChange = (planIdStr: string) => {
+    const id = Number(planIdStr);
+    setSelectedPlanId(id);
+    const p = plans.find((item) => item.id === id);
+    if (p) {
+      if (p.totalAmount || p.quotaAmount) {
+        setSaleAmount(String(p.totalAmount || p.quotaAmount));
+      }
+      if (p.courseId) {
+        setNewCourses([Number(p.courseId)]);
+      }
+    }
+  };
 
   // Abrir Modal de Gestión
   const openManageModal = (student: Student) => {
@@ -223,7 +268,13 @@ export function StudentsView() {
     setNewPassword("");
     setNewSendWelcome(true);
     setShowNewPassword(false);
-    setNewCourses(courses.length > 0 ? [courses[0].id] : []);
+    const pub = courses.filter((c) => c.status === "publish");
+    setNewCourses(pub.length > 0 ? [pub[0].id] : (courses.length > 0 ? [courses[0].id] : []));
+    setSelectedPlanId(0);
+    setSalesChannel("transfer");
+    setSaleAmount("");
+    setSaleReference("");
+    setRecordSale(true);
     setCreateFeedback(null);
     setCreateTab("info");
     setIsCreateOpen(true);
@@ -254,6 +305,7 @@ export function StudentsView() {
     setIsCreating(true);
     setCreateFeedback(null);
 
+    const selectedPlan = plans.find((p) => p.id === selectedPlanId);
     const res = await api.createStudent({
       name: newName.trim(),
       email: newEmail.trim(),
@@ -262,6 +314,13 @@ export function StudentsView() {
       password: newPassword,
       sendWelcomeEmail: newSendWelcome,
       enabledCourseIds: newCourses,
+      planId: selectedPlanId > 0 ? selectedPlanId : undefined,
+      planName: selectedPlan ? selectedPlan.name : "Acceso Manual",
+      salesChannel: salesChannel,
+      paymentMethod: salesChannel,
+      saleAmount: saleAmount ? parseFloat(saleAmount) : 0,
+      saleReference: saleReference.trim(),
+      recordSale: recordSale,
     });
 
     setIsCreating(false);
@@ -638,7 +697,7 @@ export function StudentsView() {
               <p className={styles.switchDesc}>
                 Activa o desactiva qué formaciones están habilitadas para este estudiante de manera inmediata:
               </p>
-              {courses.map((course) => {
+              {activeCourses.map((course) => {
                 const isEnabled = editCourses.includes(course.id);
                 return (
                   <div
@@ -652,7 +711,7 @@ export function StudentsView() {
                     <div className={styles.courseDetails}>
                       <h4 className={styles.courseRowTitle}>{course.title}</h4>
                       <span className={styles.courseModulesCount}>
-                        {course.sections.length} Módulos estructurados
+                        {course.sections?.length || 0} Módulos estructurados
                       </span>
                     </div>
                     <div onClick={(e) => e.stopPropagation()}>
@@ -700,12 +759,13 @@ export function StudentsView() {
       >
         <div className={styles.modalBody}>
           <div className={styles.modalTabs}>
-            <SegmentedControl<"info" | "courses">
+            <SegmentedControl<"info" | "sale" | "courses">
               options={[
-                { value: "info", label: "Datos & Credenciales", icon: <User size={14} /> },
+                { value: "info", label: "Datos & Clave", icon: <User size={14} /> },
+                { value: "sale", label: "Venta & Canal", icon: <DollarSign size={14} /> },
                 {
                   value: "courses",
-                  label: `Cursos Iniciales (${newCourses.length})`,
+                  label: `Cursos Habilitados (${newCourses.length})`,
                   icon: <GraduationCap size={14} />,
                 },
               ]}
@@ -845,12 +905,110 @@ export function StudentsView() {
             </>
           )}
 
+          {createTab === "sale" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+              <div className={styles.sectionCard}>
+                <div className={styles.sectionHeader}>
+                  <h4 className={styles.sectionTitle}>Registro de Venta en Finanzas</h4>
+                  <p className={styles.sectionSubtitle}>
+                    Como esta es una venta manual, registra por dónde compró el alumno para que se contabilice en tus ingresos y reportes.
+                  </p>
+                </div>
+
+                <div className={styles.switchRow} style={{ marginTop: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+                  <div className={styles.switchLabel}>
+                    <span className={styles.switchTitle}>Contabilizar como venta en Finanzas</span>
+                    <span className={styles.switchDesc}>
+                      Registra de inmediato esta transacción como cobro exitoso (paid) en el historial de finanzas.
+                    </span>
+                  </div>
+                  <Switch checked={recordSale} onCheckedChange={setRecordSale} />
+                </div>
+
+                {recordSale && (
+                  <div className={styles.formGrid} style={{ marginTop: "var(--space-3)" }}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>¿Por dónde compró? (Canal de Venta) *</label>
+                      <select
+                        value={salesChannel}
+                        onChange={(e) => setSalesChannel(e.target.value)}
+                        style={{
+                          width: "100%",
+                          height: "38px",
+                          borderRadius: "8px",
+                          padding: "0 10px",
+                          background: "var(--surface)",
+                          border: "1px solid var(--border)",
+                          color: "var(--foreground)",
+                          fontSize: "13px",
+                          outline: "none"
+                        }}
+                      >
+                        {SALES_CHANNEL_OPTIONS.map((ch) => (
+                          <option key={ch.value} value={ch.value}>
+                            {ch.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Plan o Membresía Vinculada</label>
+                      <select
+                        value={selectedPlanId}
+                        onChange={(e) => handlePlanChange(e.target.value)}
+                        style={{
+                          width: "100%",
+                          height: "38px",
+                          borderRadius: "8px",
+                          padding: "0 10px",
+                          background: "var(--surface)",
+                          border: "1px solid var(--border)",
+                          color: "var(--foreground)",
+                          fontSize: "13px",
+                          outline: "none"
+                        }}
+                      >
+                        <option value={0}>Venta Directa / Sin Plan Específico</option>
+                        {plans.map((pl) => (
+                          <option key={pl.id} value={pl.id}>
+                            {`${pl.name} ($${pl.totalAmount || pl.quotaAmount || 0})`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Monto de la Venta ($ USD) *</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={saleAmount}
+                        onChange={(e) => setSaleAmount(e.target.value)}
+                        placeholder="Ej. 197.00"
+                      />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Referencia / Comprobante (Opcional)</label>
+                      <Input
+                        value={saleReference}
+                        onChange={(e) => setSaleReference(e.target.value)}
+                        placeholder="Ej. Ref #984218, Comprobante Zelle..."
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {createTab === "courses" && (
             <div className={styles.courseAccessList}>
               <p className={styles.switchDesc}>
                 Habilita los cursos a los que este alumno tendrá acceso desde el momento de su registro:
               </p>
-              {courses.map((course) => {
+              {activeCourses.map((course) => {
                 const isEnabled = newCourses.includes(course.id);
                 return (
                   <div
@@ -864,7 +1022,7 @@ export function StudentsView() {
                     <div className={styles.courseDetails}>
                       <h4 className={styles.courseRowTitle}>{course.title}</h4>
                       <span className={styles.courseModulesCount}>
-                        {course.sections.length} Módulos estructurados
+                        {course.sections?.length || 0} Módulos estructurados
                       </span>
                     </div>
                     <div onClick={(e) => e.stopPropagation()}>
