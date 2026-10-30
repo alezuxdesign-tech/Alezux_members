@@ -411,6 +411,24 @@ class Default_Templates {
 						$footer
 				];
 
+			case 'instructor_welcome':
+				return [
+					'subject' => '¡Bienvenido(a) al equipo docente de {{site_name}}! Tus credenciales de acceso',
+					'content' => $header .
+						$badge( 'Cuenta Docente Creada', 'sparkles' ) .
+						$title( '¡Hola, {{user.name}}!' ) .
+						$paragraph( 'Nos entusiasma darte la bienvenida al equipo docente de <strong>{{site_name}}</strong>. Tu cuenta con rol de Docente ya está activa para gestionar tus formaciones y dar seguimiento a tus estudiantes.' ) .
+						$box_start( 'Tus Credenciales de Acceso', 'key' ) .
+						$row( 'Usuario / Correo', '{{user.email}}' ) .
+						$row( 'Rol Asignado', 'Docente Titular' ) .
+						$row( 'Cursos Asignados', '{{assigned_courses}}', false, true ) .
+						$box_end() .
+						$password_card( '{{password}}' ) .
+						$paragraph( 'Por motivos de seguridad, te sugerimos actualizar tu contraseña desde los ajustes de tu perfil tras tu primer ingreso.' ) .
+						$button( 'Acceder al Panel Docente &rarr;', '{{login_url}}' ) .
+						$footer
+				];
+
 			case 'user_recover_password':
 				return [
 					'subject' => 'Recuperación de Contraseña - {{site_name}}',

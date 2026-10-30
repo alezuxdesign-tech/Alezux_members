@@ -52,9 +52,14 @@ class Email_Engine {
 	public function get_registered_types() {
 		$types = [
 			'student_welcome' => [
-				'title'       => 'Registro - Bienvenida',
+				'title'       => 'Registro - Bienvenida Alumno',
 				'description' => 'Se envía automáticamente cuando un estudiante se registra exitosamente en la plataforma.',
 				'variables'   => [ '{{user.name}}', '{{user.username}}', '{{user.email}}', '{{password}}', '{{course_title}}', '{{login_url}}', '{{site_name}}', '{{logo_url}}' ]
+			],
+			'instructor_welcome' => [
+				'title'       => 'Docentes - Bienvenida & Credenciales',
+				'description' => 'Se envía automáticamente cuando se registra un nuevo profesor o docente con sus credenciales de acceso a la plataforma.',
+				'variables'   => [ '{{user.name}}', '{{user.email}}', '{{password}}', '{{assigned_courses}}', '{{login_url}}', '{{site_name}}', '{{logo_url}}' ]
 			],
 			'user_recover_password' => [
 				'title'       => 'Seguridad - Recuperar Contraseña',

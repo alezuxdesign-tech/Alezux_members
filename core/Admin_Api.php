@@ -516,6 +516,96 @@ class Admin_Api {
 	}
 
 	/**
+	 * Obtener los IDs de cursos asignados a un docente
+	 */
+	public function get_instructor_assigned_course_ids( $user_id = 0 ) {
+		if ( ! $user_id ) {
+			$user_id = get_current_user_id();
+		}
+		if ( ! $user_id ) {
+			return [];
+		}
+
+		$user = get_userdata( $user_id );
+		$user_email = $user ? strtolower( trim( $user->user_email ) ) : '';
+		$user_name  = $user ? strtolower( trim( $user->display_name ) ) : '';
+
+		// 1. Cursos guardados directamente en user_meta
+		$meta_cids = get_user_meta( $user_id, '_alezux_assigned_courses', true );
+		$assigned = is_array( $meta_cids ) ? array_map( 'intval', $meta_cids ) : [];
+
+		// 2. Buscar IDs y nombres de este docente en la lista global de instructores
+		$global_instructors = get_option( '_alezux_global_instructors', [] );
+		$matching_inst_ids = [];
+		$matching_names = [];
+		if ( is_array( $global_instructors ) ) {
+			foreach ( $global_instructors as $gi ) {
+				$gi_uid   = isset( $gi['userId'] ) ? (int) $gi['userId'] : 0;
+				$gi_email = isset( $gi['email'] ) ? strtolower( trim( $gi['email'] ) ) : '';
+				$gi_name  = isset( $gi['name'] ) ? strtolower( trim( $gi['name'] ) ) : '';
+
+				if ( ( $gi_uid && $gi_uid === (int) $user_id ) || ( $user_email && $gi_email === $user_email ) || ( $user_name && $gi_name === $user_name ) ) {
+					if ( ! empty( $gi['id'] ) ) {
+						$matching_inst_ids[] = (string) $gi['id'];
+					}
+					if ( ! empty( $gi['name'] ) ) {
+						$matching_names[] = strtolower( trim( $gi['name'] ) );
+					}
+				}
+			}
+		}
+
+		// 3. Revisar en todos los cursos del LMS
+		$course_types = class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) 
+			? \Alezux_Members\Core\LMS_Engine::get_course_post_types() 
+			: [ 'crezca_course', 'sfwd-courses' ];
+		$all_courses = get_posts( [
+			'post_type'      => $course_types,
+			'post_status'    => [ 'publish', 'draft' ],
+			'posts_per_page' => -1,
+		] );
+
+		foreach ( $all_courses as $c ) {
+			$cid = (int) $c->ID;
+			if ( in_array( $cid, $assigned, true ) ) {
+				continue;
+			}
+			if ( (int) $c->post_author === (int) $user_id ) {
+				$assigned[] = $cid;
+				continue;
+			}
+
+			$mentors = get_post_meta( $cid, '_alezux_course_mentors', true );
+			if ( is_array( $mentors ) ) {
+				foreach ( $mentors as $m ) {
+					$m_uid   = isset( $m['userId'] ) ? (int) $m['userId'] : 0;
+					$m_email = isset( $m['email'] ) ? strtolower( trim( $m['email'] ) ) : '';
+					$m_id    = isset( $m['id'] ) ? (string) $m['id'] : '';
+					$m_name  = isset( $m['name'] ) ? strtolower( trim( $m['name'] ) ) : '';
+
+					if (
+						( $m_uid && $m_uid === (int) $user_id ) ||
+						( $user_email && $m_email === $user_email ) ||
+						( $m_id && in_array( $m_id, $matching_inst_ids, true ) ) ||
+						( $m_name && in_array( $m_name, $matching_names, true ) ) ||
+						( $user_name && $m_name === $user_name )
+					) {
+						$assigned[] = $cid;
+						break;
+					}
+				}
+			}
+		}
+
+		// Sincronizar en user_meta para ultra-rápido acceso futuro
+		if ( ! empty( $assigned ) ) {
+			update_user_meta( $user_id, '_alezux_assigned_courses', array_values( array_unique( $assigned ) ) );
+		}
+
+		return array_values( array_unique( $assigned ) );
+	}
+
+	/**
 	 * Obtener cursos con su estructura de secciones y lecciones para el Builder
 	 */
 	/**
@@ -542,27 +632,10 @@ class Admin_Api {
 		$is_admin_user = current_user_can( 'manage_options' );
 		$is_inst_user = ! $is_admin_user && function_exists( 'crezca_is_user_instructor' ) && crezca_is_user_instructor( $current_uid );
 		if ( $is_inst_user ) {
-			$filtered_inst_posts = [];
-			$curr_user_email = wp_get_current_user()->user_email;
-			foreach ( $courses_posts as $cp ) {
-				$mentors = get_post_meta( $cp->ID, '_alezux_course_mentors', true );
-				$assigned_here = false;
-				if ( is_array( $mentors ) ) {
-					foreach ( $mentors as $m ) {
-						if ( ( ! empty( $m['userId'] ) && (int) $m['userId'] === (int) $current_uid ) || ( ! empty( $m['email'] ) && $curr_user_email === $m['email'] ) ) {
-							$assigned_here = true;
-							break;
-						}
-					}
-				}
-				if ( (int) $cp->post_author === (int) $current_uid ) {
-					$assigned_here = true;
-				}
-				if ( $assigned_here ) {
-					$filtered_inst_posts[] = $cp;
-				}
-			}
-			$courses_posts = $filtered_inst_posts;
+			$assigned_cids = $this->get_instructor_assigned_course_ids( $current_uid );
+			$courses_posts = array_values( array_filter( $courses_posts, function( $cp ) use ( $assigned_cids ) {
+				return in_array( (int) $cp->ID, $assigned_cids, true );
+			} ) );
 		}
 
 		$courses = [];
@@ -1017,24 +1090,7 @@ class Admin_Api {
 		$is_admin_user = current_user_can( 'manage_options' );
 		$is_inst_user = ! $is_admin_user && function_exists( 'crezca_is_user_instructor' ) && crezca_is_user_instructor( $current_uid );
 		if ( $is_inst_user ) {
-			$instructor_course_ids = [];
-			$curr_user_email = wp_get_current_user()->user_email;
-			$all_c = get_posts( [ 'post_type' => [ 'crezca_course', 'sfwd-courses' ], 'post_status' => [ 'publish', 'draft' ], 'posts_per_page' => -1 ] );
-			foreach ( $all_c as $c ) {
-				$mentors = get_post_meta( $c->ID, '_alezux_course_mentors', true );
-				if ( is_array( $mentors ) ) {
-					foreach ( $mentors as $m ) {
-						if ( ( ! empty( $m['userId'] ) && (int) $m['userId'] === (int) $current_uid ) || ( ! empty( $m['email'] ) && $curr_user_email === $m['email'] ) ) {
-							$instructor_course_ids[] = (int) $c->ID;
-							break;
-						}
-					}
-				}
-				if ( (int) $c->post_author === (int) $current_uid ) {
-					$instructor_course_ids[] = (int) $c->ID;
-				}
-			}
-			$instructor_course_ids = array_unique( $instructor_course_ids );
+			$instructor_course_ids = $this->get_instructor_assigned_course_ids( $current_uid );
 			$students = array_values( array_filter( $students, function( $st ) use ( $instructor_course_ids ) {
 				$enrolled = isset( $st['enabledCourseIds'] ) ? (array) $st['enabledCourseIds'] : [];
 				return count( array_intersect( $enrolled, $instructor_course_ids ) ) > 0;
@@ -1401,6 +1457,9 @@ class Admin_Api {
 			} else {
 				$msg .= ' La contraseña ha sido cambiada.';
 			}
+			if ( $user_id ) {
+				update_user_meta( $user_id, '_alezux_assigned_courses', $assigned_cids );
+			}
 		}
 
 		return rest_ensure_response( [
@@ -1562,9 +1621,98 @@ class Admin_Api {
 			if ( ! empty( $params['sendWelcomeEmail'] ) && ! empty( $user_plain_password ) ) {
 				$login_url = function_exists( 'crezca_get_login_page_url' ) ? crezca_get_login_page_url() : wp_login_url();
 				$academy_name = get_option( 'alezux_academy_name', get_bloginfo( 'name' ) );
-				$subject = '¡Bienvenido(a) al equipo docente de ' . $academy_name . '!';
-				$body = "Hola {$name},\n\nSe ha creado tu cuenta con rol de Docente en {$academy_name}.\n\nTus credenciales de acceso:\n- URL: {$login_url}\n- Usuario / Correo: {$email}\n- Contraseña: {$user_plain_password}\n\nInicia sesión para gestionar tus cursos asignados y dar seguimiento a tus estudiantes.\n\nSaludos,\nEquipo {$academy_name}";
-				wp_mail( $email, $subject, $body, [ 'Content-Type: text/plain; charset=UTF-8' ] );
+
+				// Nombres de cursos asignados
+				$courses_names = [];
+				if ( ! empty( $params['assignedCourseIds'] ) && is_array( $params['assignedCourseIds'] ) ) {
+					foreach ( $params['assignedCourseIds'] as $acid ) {
+						$c_post = get_post( (int) $acid );
+						if ( $c_post ) {
+							$courses_names[] = $c_post->post_title;
+						}
+					}
+				}
+				$courses_str = ! empty( $courses_names ) ? implode( ', ', $courses_names ) : 'Sin cursos asignados aún';
+
+				$sent_via_marketing = false;
+				if ( class_exists( '\Alezux_Members\Modules\Marketing\Marketing' ) ) {
+					try {
+						$engine = \Alezux_Members\Modules\Marketing\Marketing::get_instance()->get_engine();
+						if ( $engine && method_exists( $engine, 'send_email' ) ) {
+							$user_obj = $user_id ? get_user_by( 'ID', $user_id ) : null;
+							$mail_data = [
+								'user'             => $user_obj ?: (object) [ 'display_name' => $name, 'name' => $name, 'user_email' => $email, 'user_login' => $email ],
+								'password'         => $user_plain_password,
+								'new_password'     => $user_plain_password,
+								'assigned_courses' => $courses_str,
+								'login_url'        => $login_url,
+								'site_name'        => $academy_name,
+							];
+							$sent_via_marketing = $engine->send_email( 'instructor_welcome', $email, $mail_data, false );
+						}
+					} catch ( \Exception $e ) {
+						error_log( 'Crezca Instructor Welcome Mail Error: ' . $e->getMessage() );
+					}
+				}
+
+				if ( ! $sent_via_marketing ) {
+					$accent = get_option( 'alezux_accent_color', '#7747ff' );
+					$logo_url = get_option( 'alezux_academy_logo', '' );
+					$subject = '¡Bienvenido(a) al equipo docente de ' . $academy_name . '!';
+					$logo_html = ! empty( $logo_url ) ? '<img src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( $academy_name ) . '" style="max-height:48px;display:block;margin:0 auto 20px auto;">' : '<h2 style="margin:0 0 20px 0;text-align:center;color:#ffffff;font-size:24px;">' . esc_html( $academy_name ) . '</h2>';
+
+					$html_body = '<!DOCTYPE html>
+					<html>
+					<head><meta charset="UTF-8"><title>' . esc_html( $subject ) . '</title></head>
+					<body style="margin:0;padding:40px 15px;background:#090d16;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#f8fafc;">
+					<table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#111625;border-radius:16px;border:1px solid #1e293b;overflow:hidden;">
+						<tr>
+							<td style="padding:36px 32px 24px 32px;text-align:center;">
+								' . $logo_html . '
+								<span style="display:inline-block;padding:6px 14px;border-radius:30px;background:rgba(119,71,255,0.15);color:' . esc_attr( $accent ) . ';font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Cuenta Docente Creada</span>
+								<h1 style="color:#ffffff;font-size:22px;margin:16px 0 8px 0;font-weight:700;">¡Hola, ' . esc_html( $name ) . '!</h1>
+								<p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 24px 0;">Nos entusiasma darte la bienvenida al equipo docente de <strong>' . esc_html( $academy_name ) . '</strong>. Tu cuenta con rol de Docente ya está activa para gestionar tus formaciones y dar seguimiento a tus estudiantes.</p>
+							</td>
+						</tr>
+						<tr>
+							<td style="padding:0 32px 24px 32px;">
+								<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#172033;border-radius:12px;border:1px solid #1e293b;margin-bottom:20px;">
+									<tr><td colspan="2" style="padding:14px 18px;border-bottom:1px solid #1e293b;color:#ffffff;font-weight:600;font-size:13px;">Tus Credenciales de Acceso</td></tr>
+									<tr>
+										<td style="padding:12px 18px;color:#94a3b8;font-size:13px;width:40%;">Usuario / Correo:</td>
+										<td style="padding:12px 18px;color:#ffffff;font-size:13px;font-weight:600;">' . esc_html( $email ) . '</td>
+									</tr>
+									<tr>
+										<td style="padding:12px 18px;color:#94a3b8;font-size:13px;border-top:1px solid rgba(255,255,255,0.05);">Rol Asignado:</td>
+										<td style="padding:12px 18px;color:' . esc_attr( $accent ) . ';font-size:13px;font-weight:600;border-top:1px solid rgba(255,255,255,0.05);">Docente Titular</td>
+									</tr>
+									<tr>
+										<td style="padding:12px 18px;color:#94a3b8;font-size:13px;border-top:1px solid rgba(255,255,255,0.05);">Cursos Asignados:</td>
+										<td style="padding:12px 18px;color:#ffffff;font-size:13px;font-weight:500;border-top:1px solid rgba(255,255,255,0.05);">' . esc_html( $courses_str ) . '</td>
+									</tr>
+								</table>
+
+								<div style="background:#0a0f1d;border:1px dashed ' . esc_attr( $accent ) . ';border-radius:12px;padding:16px 20px;text-align:center;margin-bottom:24px;">
+									<div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Contraseña de Acceso</div>
+									<div style="font-family:Courier,monospace;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:2px;">' . esc_html( $user_plain_password ) . '</div>
+								</div>
+
+								<div style="text-align:center;">
+									<a href="' . esc_url( $login_url ) . '" style="display:inline-block;padding:14px 32px;background:' . esc_attr( $accent ) . ';color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;border-radius:50px;box-shadow:0 8px 24px rgba(119,71,255,0.35);">Acceder al Panel Docente &rarr;</a>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<td style="padding:20px 32px 32px 32px;text-align:center;border-top:1px solid #1e293b;color:#64748b;font-size:12px;">
+								<p style="margin:0;">Mensaje enviado por ' . esc_html( $academy_name ) . '. Si tienes alguna duda, responde directamente a este correo.</p>
+							</td>
+						</tr>
+					</table>
+					</body>
+					</html>';
+
+					wp_mail( $email, $subject, $html_body, [ 'Content-Type: text/html; charset=UTF-8' ] );
+				}
 			}
 		}
 
@@ -1630,6 +1778,8 @@ class Admin_Api {
 					// Debe estar asignado
 					$new_mentors[] = [
 						'id'     => $id,
+						'userId' => $user_id,
+						'email'  => $email,
 						'name'   => $name,
 						'role'   => $role,
 						'avatar' => $avatar,

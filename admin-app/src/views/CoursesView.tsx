@@ -3168,9 +3168,13 @@ export function CoursesView({ onNavigateToInstructors, isInstructor = false }: C
       {/* Barra Superior */}
       <div className={styles.topHeader}>
         <div>
-          <h1 className={styles.pageTitle}>Gestión y Creación de Cursos</h1>
+          <h1 className={styles.pageTitle}>
+            {isInstructor ? "Mis Formaciones Asignadas" : "Gestión y Creación de Cursos"}
+          </h1>
           <p className={styles.pageSubtitle}>
-            Administra tus formaciones en cuadrícula, crea módulos y gestiona cada lección con sus videos y recursos.
+            {isInstructor
+              ? "Accede al temario, estructura los módulos y gestiona las lecciones de tus cursos a cargo."
+              : "Administra tus formaciones en cuadrícula, crea módulos y gestiona cada lección con sus videos y recursos."}
           </p>
         </div>
         <div className={styles.topHeaderActions}>
@@ -3381,11 +3385,17 @@ export function CoursesView({ onNavigateToInstructors, isInstructor = false }: C
         {filteredCourses.length === 0 && (
           <div className={styles.emptyGrid}>
             <BookOpen size={40} />
-            <h3>No se encontraron cursos</h3>
-            <p>Intenta con otro término de búsqueda o crea una nueva formación.</p>
-            <Button variant="secondary" onClick={() => setIsNewCourseModalOpen(true)}>
-              <Plus size={16} /> Crear Curso
-            </Button>
+            <h3>{isInstructor ? "No tienes formaciones asignadas aún" : "No se encontraron cursos"}</h3>
+            <p>
+              {isInstructor
+                ? "Aún no tienes cursos asignados a tu cuenta docente. Contacta a la administración para habilitar tus accesos."
+                : "Intenta con otro término de búsqueda o crea una nueva formación."}
+            </p>
+            {!isInstructor && (
+              <Button variant="secondary" onClick={() => setIsNewCourseModalOpen(true)}>
+                <Plus size={16} /> Crear Curso
+              </Button>
+            )}
           </div>
         )}
       </div>
