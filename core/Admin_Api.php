@@ -627,38 +627,36 @@ class Admin_Api {
 			$zoom_url     = get_post_meta( $post->ID, '_alezux_course_zoom', true ) ?: '';
 
 			$checkout_url = '';
-			if ( ! empty( $linked_plan_id ) ) {
-				global $wpdb;
+			static $plans_table_exists = null;
+			global $wpdb;
+			if ( null === $plans_table_exists ) {
 				$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
-				if ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table ) {
-					$token = $wpdb->get_var( $wpdb->prepare( "SELECT token FROM $plans_table WHERE id = %d", $linked_plan_id ) );
-					if ( $token ) {
-						$checkout_url = home_url( "/?alezux_action=checkout&token={$token}" );
+				$plans_table_exists = ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table );
+			}
+			if ( $plans_table_exists && ! empty( $linked_plan_id ) ) {
+				$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
+				$token = $wpdb->get_var( $wpdb->prepare( "SELECT token FROM $plans_table WHERE id = %d", $linked_plan_id ) );
+				if ( $token ) {
+					$checkout_url = home_url( "/?alezux_action=checkout&token={$token}" );
+				}
+			}
+
+			// Contar estudiantes reales (Optimizado con cache en post_meta para evitar escaneos pesados de tabla)
+			$saved_count = get_post_meta( $post->ID, '_student_count', true );
+			if ( '' !== $saved_count && false !== $saved_count ) {
+				$real_students = (int) $saved_count;
+			} else {
+				$real_students = (int) $wpdb->get_var( $wpdb->prepare(
+					"SELECT COUNT(DISTINCT user_id) FROM {$wpdb->usermeta} WHERE meta_key = '_alezux_enabled_courses' AND meta_value LIKE %s",
+					'%' . $wpdb->esc_like( (string) $post->ID ) . '%'
+				) );
+				if ( 0 === $real_students && function_exists( 'learndash_get_course_users' ) ) {
+					$ld_users = learndash_get_course_users( $post->ID );
+					if ( is_array( $ld_users ) && ! empty( $ld_users ) ) {
+						$real_students = count( $ld_users );
 					}
 				}
-			}
-
-			// Contar estudiantes reales con acceso habilitado
-			$real_students = 0;
-			global $wpdb;
-			$meta_count = (int) $wpdb->get_var( $wpdb->prepare(
-				"SELECT COUNT(DISTINCT user_id) FROM {$wpdb->usermeta} WHERE meta_key = '_alezux_enabled_courses' AND meta_value LIKE %s",
-				'%' . $wpdb->esc_like( (string) $post->ID ) . '%'
-			) );
-			$real_students = $meta_count;
-
-			if ( function_exists( 'learndash_get_course_users' ) ) {
-				$ld_users = learndash_get_course_users( $post->ID );
-				if ( is_array( $ld_users ) && ! empty( $ld_users ) ) {
-					$real_students = max( $real_students, count( $ld_users ) );
-				}
-			}
-
-			if ( 0 === $real_students ) {
-				$saved_count = get_post_meta( $post->ID, '_student_count', true );
-				if ( false !== $saved_count && '' !== $saved_count ) {
-					$real_students = (int) $saved_count;
-				}
+				update_post_meta( $post->ID, '_student_count', $real_students );
 			}
 
 			$courses[] = [
@@ -2968,7 +2966,11 @@ class Admin_Api {
 		global $wpdb;
 		$table_progress = $wpdb->prefix . 'crezca_topic_progress';
 		$completed_from_db = [];
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_progress'" ) === $table_progress ) {
+		static $progress_table_exists = null;
+		if ( null === $progress_table_exists ) {
+			$progress_table_exists = ( $wpdb->get_var( "SHOW TABLES LIKE '$table_progress'" ) === $table_progress );
+		}
+		if ( $progress_table_exists ) {
 			$completed_from_db = $wpdb->get_col( $wpdb->prepare(
 				"SELECT topic_id FROM $table_progress WHERE user_id = %d AND is_completed = 1",
 				$user->ID

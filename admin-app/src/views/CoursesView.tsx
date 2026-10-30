@@ -286,13 +286,12 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
   };
 
   useEffect(() => {
-    Promise.all([api.getCourses(), api.getPlans(), api.getLMSSettings(), api.getInstructors(), api.getStudents()])
-      .then(([coursesData, plansData, lmsData, instructorsData, studentsData]) => {
+    Promise.all([api.getCourses(), api.getPlans(), api.getLMSSettings(), api.getInstructors()])
+      .then(([coursesData, plansData, lmsData, instructorsData]) => {
         setCourses(coursesData);
         setAvailablePlans(plansData);
         setLmsSettings(lmsData);
         setGlobalInstructors(instructorsData.instructors || []);
-        setStudents(studentsData || []);
       })
       .finally(() => {
         setIsLoading(false);
@@ -3261,14 +3260,7 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
           const courseInstructors = course.instructors || [];
           const isFree = !course.price || Number(course.price) === 0;
 
-          const enrolledStudentsCount = students.filter((s) => {
-            const ids = (s.enabledCourseIds || []).map(Number);
-            return ids.includes(Number(course.id));
-          }).length;
-
-          const realStudentCount = enrolledStudentsCount > 0 
-            ? enrolledStudentsCount 
-            : (course.studentCount && course.studentCount !== 120 && course.studentCount !== 520 && course.studentCount !== 390 && course.studentCount !== 510 ? course.studentCount : 0);
+          const realStudentCount = course.studentCount ?? 0;
 
           return (
             <div key={course.id} className={styles.courseCard}>

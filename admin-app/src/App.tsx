@@ -1008,6 +1008,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                   courses={studentCourses}
                   onSelectCourse={handleSelectCourse}
                   onResumeLesson={handleResumeLesson}
+                  loading={studentLoading}
                   onNavigateTab={(tab) => {
                     if (tab === "courses" || tab === "community" || tab === "dashboard") {
                       setActiveStudentTab(tab);
@@ -1025,6 +1026,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                       profile={studentProfile || defaultStudentProfile}
                       onSelectCourse={handleSelectCourse}
                       onOpenProfile={() => setActiveStudentTab("profile")}
+                      loading={studentLoading}
                     />
                   )}
 

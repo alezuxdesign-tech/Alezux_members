@@ -23,6 +23,7 @@ import {
 import { MetricCard } from "../../components/arc/metric-card/metric-card";
 import { Button } from "../../components/arc/button/button";
 import { Badge } from "../../components/arc/badge/badge";
+import { Skeleton } from "../../components/arc/skeleton";
 import { Course, CourseSection, CourseLesson, CourseTopic, StudentProfile, AcademyEvent, api } from "../../services/api";
 import styles from "./StudentPortal.module.css";
 
@@ -32,6 +33,7 @@ interface StudentDashboardViewProps {
   onSelectCourse: (course: Course) => void;
   onResumeLesson?: (course: Course, section?: CourseSection | null, lesson?: CourseLesson | null, topic?: CourseTopic | null) => void;
   onNavigateTab: (tabId: "courses" | "community") => void;
+  loading?: boolean;
 }
 
 interface LastLessonItem {
@@ -50,6 +52,7 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
   onSelectCourse,
   onResumeLesson,
   onNavigateTab,
+  loading = false,
 }) => {
   const enrolledCourses = courses.filter((c) => c.hasAccess);
   const otherCourses = courses.filter((c) => !c.hasAccess);
@@ -666,7 +669,25 @@ export const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
           </button>
         </div>
 
-        {enrolledCourses.length > 0 ? (
+        {loading ? (
+          <div className={styles.continueCardsGrid}>
+            {[1, 2].map((i) => (
+              <div key={i} className={styles.continueCard} style={{ pointerEvents: "none" }}>
+                <div className={styles.continueCardCover}>
+                  <Skeleton width="100%" height="100%" variant="rectangular" />
+                </div>
+                <div className={styles.continueCardBody}>
+                  <Skeleton width="75%" height={18} />
+                  <Skeleton width="90%" height={12} style={{ marginTop: 8 }} />
+                  <Skeleton width="100%" height={6} variant="rounded" style={{ marginTop: 14 }} />
+                  <div style={{ marginTop: 12 }}>
+                    <Skeleton width={130} height={32} variant="rounded" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : enrolledCourses.length > 0 ? (
           <div className={styles.continueCardsGrid}>
             {enrolledCourses.map((c) => {
               const prog = c.progress ?? 0;

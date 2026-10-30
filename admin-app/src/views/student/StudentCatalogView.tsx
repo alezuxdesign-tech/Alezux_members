@@ -8,6 +8,7 @@ import {
   GraduationCap
 } from "lucide-react";
 import { Course, StudentProfile } from "../../services/api";
+import { Skeleton } from "../../components/arc/skeleton";
 import styles from "./StudentPortal.module.css";
 
 interface StudentCatalogViewProps {
@@ -15,15 +16,40 @@ interface StudentCatalogViewProps {
   profile: StudentProfile;
   onSelectCourse: (course: Course) => void;
   onOpenProfile?: () => void;
+  loading?: boolean;
 }
 
 export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
   courses,
   profile,
   onSelectCourse,
+  loading = false,
 }) => {
   const myCourses = courses.filter((c) => c.hasAccess);
   const catalogCourses = courses.filter((c) => !c.hasAccess);
+
+  const renderSkeletonCards = (count = 3) => (
+    <div className={styles.coursesGrid}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className={styles.courseCard} style={{ pointerEvents: "none" }}>
+          <div className={styles.courseCoverWrapper}>
+            <Skeleton width="100%" height="100%" variant="rectangular" />
+          </div>
+          <div className={styles.courseBody}>
+            <Skeleton width="75%" height={20} />
+            <Skeleton width="95%" height={14} style={{ marginTop: 10 }} />
+            <Skeleton width="60%" height={14} style={{ marginTop: 6 }} />
+            <div style={{ marginTop: 18 }}>
+              <Skeleton width="100%" height={6} variant="rounded" />
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <Skeleton width="100%" height={38} variant="rounded" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className={styles.catalogContainer}>
@@ -49,11 +75,13 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
             <p className={styles.sectionSub}>Formaciones con acceso activo en tu cuenta</p>
           </div>
           <span className={styles.courseCountBadge}>
-            {myCourses.length} {myCourses.length === 1 ? "curso" : "cursos"}
+            {loading ? "Cargando..." : `${myCourses.length} ${myCourses.length === 1 ? "curso" : "cursos"}`}
           </span>
         </div>
 
-        {myCourses.length === 0 ? (
+        {loading ? (
+          renderSkeletonCards(3)
+        ) : myCourses.length === 0 ? (
           <div className={styles.emptyCard}>
             <BookOpen size={36} className={styles.emptyIcon} />
             <h3>Aún no tienes cursos activos</h3>
@@ -115,7 +143,7 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
       </section>
 
       {/* 2. SECCIÓN: CATÁLOGO & DISPONIBLES (No habilitados) */}
-      {catalogCourses.length > 0 && (
+      {(loading || catalogCourses.length > 0) && (
         <section className={styles.catalogSection}>
           <div className={styles.sectionHeader}>
             <div>
@@ -127,8 +155,11 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
             <span className={styles.catalogBadge}>Catálogo General</span>
           </div>
 
-          <div className={styles.coursesGrid}>
-            {catalogCourses.map((course) => {
+          {loading ? (
+            renderSkeletonCards(3)
+          ) : (
+            <div className={styles.coursesGrid}>
+              {catalogCourses.map((course) => {
               const moduleCount = course.sections?.length || 0;
               return (
                 <div key={course.id} className={[styles.courseCard, styles.courseCardLocked].join(" ")}>
@@ -189,6 +220,7 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
               );
             })}
           </div>
+          )}
         </section>
       )}
     </div>
