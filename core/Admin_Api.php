@@ -2889,13 +2889,14 @@ class Admin_Api {
 			'terms_url',
 			'privacy_url',
 			'custom_css',
+			'sync_academy_colors',
 			'student_default_view',
 			'admin_default_redirect',
 		];
 
 		foreach ( $allowed_keys as $key ) {
 			if ( isset( $params[ $key ] ) ) {
-				if ( in_array( $key, [ 'hero_badge_enabled', 'steps_enabled', 'allow_registration' ], true ) ) {
+				if ( in_array( $key, [ 'hero_badge_enabled', 'steps_enabled', 'allow_registration', 'sync_academy_colors' ], true ) ) {
 					$current[ $key ] = (bool) $params[ $key ];
 				} elseif ( in_array( $key, [ 'logo_width' ], true ) ) {
 					$current[ $key ] = absint( $params[ $key ] );

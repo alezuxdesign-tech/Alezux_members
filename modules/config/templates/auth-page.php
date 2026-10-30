@@ -42,6 +42,71 @@ $hero_badge      = ! empty( $auth_settings['hero_badge_text'] ) ? $auth_settings
 $badge_enabled   = isset( $auth_settings['hero_badge_enabled'] ) ? (bool) $auth_settings['hero_badge_enabled'] : true;
 $steps_enabled   = isset( $auth_settings['steps_enabled'] ) ? (bool) $auth_settings['steps_enabled'] : true;
 
+$sync_colors    = ! isset( $auth_settings['sync_academy_colors'] ) || ! empty( $auth_settings['sync_academy_colors'] );
+$academy_accent = get_option( 'alezux_accent', 'violet' );
+
+$accent_presets = [
+	'dark'    => [ 'primary' => '#3b82f6', 'gradient_start' => '#1f2937', 'gradient_end' => '#090d16' ],
+	'violet'  => [ 'primary' => '#7747ff', 'gradient_start' => '#7747ff', 'gradient_end' => '#1a1038' ],
+	'blue'    => [ 'primary' => '#0562ef', 'gradient_start' => '#0562ef', 'gradient_end' => '#041635' ],
+	'ocean'   => [ 'primary' => '#0284c7', 'gradient_start' => '#0284c7', 'gradient_end' => '#041d2f' ],
+	'sky'     => [ 'primary' => '#0ea5e9', 'gradient_start' => '#0ea5e9', 'gradient_end' => '#042435' ],
+	'teal'    => [ 'primary' => '#0d9488', 'gradient_start' => '#0d9488', 'gradient_end' => '#042421' ],
+	'emerald' => [ 'primary' => '#0db879', 'gradient_start' => '#0db879', 'gradient_end' => '#04281b' ],
+	'green'   => [ 'primary' => '#0db879', 'gradient_start' => '#0db879', 'gradient_end' => '#04281b' ],
+	'amber'   => [ 'primary' => '#f3ad20', 'gradient_start' => '#f3ad20', 'gradient_end' => '#35260c' ],
+	'coral'   => [ 'primary' => '#f15f55', 'gradient_start' => '#f15f55', 'gradient_end' => '#351513' ],
+	'neutral' => [ 'primary' => '#6366f1', 'gradient_start' => '#3f3f46', 'gradient_end' => '#141416' ],
+];
+
+// Helper para calcular un color final de degradado profundo complementario para cualquier HEX
+$calc_dark_end = function( $hex ) {
+	$clean = ltrim( $hex, '#' );
+	if ( strlen( $clean ) === 6 ) {
+		$r = hexdec( substr( $clean, 0, 2 ) );
+		$g = hexdec( substr( $clean, 2, 2 ) );
+		$b = hexdec( substr( $clean, 4, 2 ) );
+		$end_r = max( 4, (int) round( $r * 0.22 ) );
+		$end_g = max( 6, (int) round( $g * 0.22 ) );
+		$end_b = max( 14, (int) round( $b * 0.22 ) );
+		return sprintf( '#%02x%02x%02x', $end_r, $end_g, $end_b );
+	}
+	return '#090d16';
+};
+
+$hex_to_preset = [
+	'#18181b' => 'dark',
+	'#7747ff' => 'violet',
+	'#0562ef' => 'blue',
+	'#0284c7' => 'ocean',
+	'#0ea5e9' => 'sky',
+	'#0d9488' => 'teal',
+	'#0db879' => 'emerald',
+	'#f3ad20' => 'amber',
+	'#f15f55' => 'coral',
+];
+
+if ( $sync_colors ) {
+	$matched_key = isset( $accent_presets[ $academy_accent ] ) ? $academy_accent : ( isset( $hex_to_preset[ strtolower( $academy_accent ) ] ) ? $hex_to_preset[ strtolower( $academy_accent ) ] : null );
+
+	if ( $matched_key && isset( $accent_presets[ $matched_key ] ) ) {
+		$login_primary = $accent_presets[ $matched_key ]['primary'];
+		$hero_gradient = "linear-gradient(135deg, {$accent_presets[$matched_key]['gradient_start']} 0%, {$accent_presets[$matched_key]['gradient_end']} 100%)";
+	} elseif ( str_starts_with( $academy_accent, '#' ) ) {
+		$login_primary = $academy_accent;
+		$deep_end = $calc_dark_end( $academy_accent );
+		$hero_gradient = "linear-gradient(135deg, {$academy_accent} 0%, {$deep_end} 100%)";
+	} else {
+		$login_primary = '#7747ff';
+		$hero_gradient = 'linear-gradient(135deg, #7747ff 0%, #1a1038 100%)';
+	}
+} else {
+	$login_primary = ! empty( $auth_settings['accent_color'] ) ? $auth_settings['accent_color'] : '#1d68ed';
+	$start = ! empty( $auth_settings['bg_gradient_start'] ) ? $auth_settings['bg_gradient_start'] : '#1d68ed';
+	$end   = ! empty( $auth_settings['bg_gradient_end'] ) ? $auth_settings['bg_gradient_end'] : '#0b3294';
+	$hero_gradient = "linear-gradient(135deg, {$start} 0%, {$end} 100%)";
+}
+
 $is_register     = ( $action === 'register' || ( function_exists( 'is_page' ) && is_page( [ 'registro', 'register' ] ) ) );
 $is_recover      = ( in_array( $action, [ 'lostpassword', 'recover' ], true ) );
 $is_reset        = ( in_array( $action, [ 'rp', 'resetpass' ], true ) || ( ! empty( $reset_key ) && ! empty( $reset_login ) ) );
@@ -67,22 +132,22 @@ if ( $standalone ) : ?>
 
   <style id="crezca-auth-dynamic-styles">
     :root {
-      --auth-primary: <?php echo esc_attr( ! empty( $auth_settings['accent_color'] ) ? $auth_settings['accent_color'] : '#1d68ed' ); ?>;
-      --auth-input-focus: <?php echo esc_attr( ! empty( $auth_settings['accent_color'] ) ? $auth_settings['accent_color'] : '#1d68ed' ); ?>;
+      --auth-primary: <?php echo esc_attr( $login_primary ); ?>;
+      --auth-input-focus: <?php echo esc_attr( $login_primary ); ?>;
     }
-    <?php if ( ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'solid' && ! empty( $auth_settings['bg_color'] ) ) : ?>
+    <?php if ( ! $sync_colors && ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'solid' && ! empty( $auth_settings['bg_color'] ) ) : ?>
       .alezux-hero-panel {
         background: <?php echo esc_attr( $auth_settings['bg_color'] ); ?> !important;
       }
-    <?php elseif ( ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'image' && ! empty( $auth_settings['bg_image_url'] ) ) : ?>
+    <?php elseif ( ! $sync_colors && ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'image' && ! empty( $auth_settings['bg_image_url'] ) ) : ?>
       .alezux-hero-panel {
         background-image: linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.85)), url('<?php echo esc_url( $auth_settings['bg_image_url'] ); ?>') !important;
         background-size: cover !important;
         background-position: center !important;
       }
-    <?php elseif ( ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'gradient' ) : ?>
+    <?php else : ?>
       .alezux-hero-panel {
-        background: linear-gradient(135deg, <?php echo esc_attr( ! empty( $auth_settings['bg_gradient_start'] ) ? $auth_settings['bg_gradient_start'] : '#1d68ed' ); ?> 0%, <?php echo esc_attr( ! empty( $auth_settings['bg_gradient_end'] ) ? $auth_settings['bg_gradient_end'] : '#0b3294' ); ?> 100%) !important;
+        background: <?php echo $hero_gradient; ?> !important;
       }
     <?php endif; ?>
     <?php if ( ! empty( $auth_settings['custom_css'] ) ) : ?>

@@ -44,6 +44,7 @@ import { Input } from "../components/arc/input/input";
 import { MoneyInput } from "../components/arc/money-input/money-input";
 import { Switch } from "../components/arc/switch/switch";
 import { Alert } from "../components/arc/alert/alert";
+import { Select } from "../components/arc/select/select";
 import { 
   api, 
   Course, 
@@ -1363,18 +1364,18 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
                 <span className={styles.miniLabel} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <UserCheck size={14} /> Seleccionar Docente Registrado:
                 </span>
-                <select
+                <Select
+                  options={[
+                    { value: "", label: "-- Elige un docente del directorio global --" },
+                    ...globalInstructors.map((gi) => ({
+                      value: String(gi.id),
+                      label: gi.name + (gi.role ? " (" + gi.role + ")" : "") + (gi.isAdmin ? " ★ Admin" : ""),
+                    })),
+                  ]}
                   value={selectedInstructorIdToAssign}
-                  onChange={(e) => setSelectedInstructorIdToAssign(e.target.value)}
-                  className={styles.instructorSelectInput}
-                >
-                  <option value="">-- Elige un docente del directorio global --</option>
-                  {globalInstructors.map((gi) => (
-                    <option key={gi.id} value={gi.id}>
-                      {gi.name} {gi.role ? `(${gi.role})` : ""} {gi.isAdmin ? "★ Admin" : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedInstructorIdToAssign(String(val))}
+                  style={{ minWidth: "280px" }}
+                />
                 <Button
                   variant="primary"
                   size="sm"

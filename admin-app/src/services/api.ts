@@ -446,6 +446,7 @@ export interface AuthSettings {
   terms_url: string;
   privacy_url: string;
   custom_css: string;
+  sync_academy_colors: boolean;
   student_default_view: "courses" | "dashboard";
   admin_default_redirect: "academy" | "wp";
 }
@@ -2042,6 +2043,7 @@ class ApiService {
       terms_url: "/terminos-y-condiciones",
       privacy_url: "/politica-de-privacidad",
       custom_css: "",
+      sync_academy_colors: true,
       student_default_view: "courses",
       admin_default_redirect: "academy",
     };

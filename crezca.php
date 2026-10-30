@@ -247,6 +247,7 @@ function crezca_get_auth_settings() {
 		'terms_url'              => get_privacy_policy_url() ? get_privacy_policy_url() : home_url( '/terminos-y-condiciones' ),
 		'privacy_url'            => get_privacy_policy_url() ? get_privacy_policy_url() : home_url( '/politica-de-privacidad' ),
 		'custom_css'             => '',
+		'sync_academy_colors'    => true,
 		'student_default_view'   => 'courses', // 'courses' | 'dashboard'
 		'admin_default_redirect' => 'academy', // 'academy' | 'wp'
 	];
