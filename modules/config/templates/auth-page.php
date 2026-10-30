@@ -107,6 +107,35 @@ if ( $sync_colors ) {
 	$hero_gradient = "linear-gradient(135deg, {$start} 0%, {$end} 100%)";
 }
 
+// Helpers para RGB y tono hover del color de acento
+$calc_rgb = function( $hex ) {
+	$clean = ltrim( $hex, '#' );
+	if ( strlen( $clean ) === 6 ) {
+		$r = hexdec( substr( $clean, 0, 2 ) );
+		$g = hexdec( substr( $clean, 2, 2 ) );
+		$b = hexdec( substr( $clean, 4, 2 ) );
+		return "{$r}, {$g}, {$b}";
+	}
+	return '29, 99, 237';
+};
+
+$calc_hover = function( $hex ) {
+	$clean = ltrim( $hex, '#' );
+	if ( strlen( $clean ) === 6 ) {
+		$r = hexdec( substr( $clean, 0, 2 ) );
+		$g = hexdec( substr( $clean, 2, 2 ) );
+		$b = hexdec( substr( $clean, 4, 2 ) );
+		$hr = max( 0, (int) round( $r * 0.85 ) );
+		$hg = max( 0, (int) round( $g * 0.85 ) );
+		$hb = max( 0, (int) round( $b * 0.85 ) );
+		return sprintf( '#%02x%02x%02x', $hr, $hg, $hb );
+	}
+	return '#1e40af';
+};
+
+$login_rgb   = $calc_rgb( $login_primary );
+$login_hover = $calc_hover( $login_primary );
+
 $is_register     = ( $action === 'register' || ( function_exists( 'is_page' ) && is_page( [ 'registro', 'register' ] ) ) );
 $is_recover      = ( in_array( $action, [ 'lostpassword', 'recover' ], true ) );
 $is_reset        = ( in_array( $action, [ 'rp', 'resetpass' ], true ) || ( ! empty( $reset_key ) && ! empty( $reset_login ) ) );
@@ -133,7 +162,33 @@ if ( $standalone ) : ?>
   <style id="crezca-auth-dynamic-styles">
     :root {
       --auth-primary: <?php echo esc_attr( $login_primary ); ?>;
+      --auth-primary-hover: <?php echo esc_attr( $login_hover ); ?>;
+      --auth-primary-rgb: <?php echo esc_attr( $login_rgb ); ?>;
       --auth-input-focus: <?php echo esc_attr( $login_primary ); ?>;
+    }
+    .auth-submit-btn {
+      background: <?php echo esc_attr( $login_primary ); ?> !important;
+      box-shadow: 0 4px 14px rgba(<?php echo esc_attr( $login_rgb ); ?>, 0.35) !important;
+    }
+    .auth-submit-btn:hover {
+      background: <?php echo esc_attr( $login_hover ); ?> !important;
+      box-shadow: 0 6px 20px rgba(<?php echo esc_attr( $login_rgb ); ?>, 0.45) !important;
+    }
+    .auth-link {
+      color: <?php echo esc_attr( $login_primary ); ?> !important;
+    }
+    .auth-link:hover {
+      color: <?php echo esc_attr( $login_hover ); ?> !important;
+    }
+    .remember-label input[type="checkbox"] {
+      accent-color: <?php echo esc_attr( $login_primary ); ?> !important;
+    }
+    .auth-input:focus {
+      border-color: <?php echo esc_attr( $login_primary ); ?> !important;
+      box-shadow: 0 0 0 3px rgba(<?php echo esc_attr( $login_rgb ); ?>, 0.16) !important;
+    }
+    .hero-step-card.active .card-badge {
+      background: <?php echo esc_attr( $login_primary ); ?> !important;
     }
     <?php if ( ! $sync_colors && ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'solid' && ! empty( $auth_settings['bg_color'] ) ) : ?>
       .alezux-hero-panel {

@@ -14,6 +14,7 @@
   --auth-input-focus: #1d68ed;
   --auth-primary: #1d68ed;
   --auth-primary-hover: #1e40af;
+  --auth-primary-rgb: 29, 99, 237;
   --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -225,7 +226,7 @@ div.alezux-auth-body .alezux-form-panel {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #1d63ed;
+  background: var(--auth-primary, #1d63ed);
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
@@ -373,9 +374,9 @@ div.alezux-auth-body .alezux-form-panel {
 }
 
 .auth-input:focus {
-  border-color: #1d63ed;
+  border-color: var(--auth-primary, #1d63ed);
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(29, 99, 237, 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--auth-primary-rgb, 29, 99, 237), 0.16);
 }
 
 .auth-input::placeholder {
@@ -466,14 +467,14 @@ div.alezux-auth-body .alezux-form-panel {
 }
 
 .remember-label input[type="checkbox"] {
-  accent-color: #1d63ed;
+  accent-color: var(--auth-primary, #1d63ed);
   width: 16px;
   height: 16px;
   cursor: pointer;
 }
 
 .auth-link {
-  color: #1d63ed;
+  color: var(--auth-primary, #1d63ed);
   text-decoration: none;
   font-weight: 600;
   transition: color 0.15s ease;
@@ -481,7 +482,7 @@ div.alezux-auth-body .alezux-form-panel {
 }
 
 .auth-link:hover {
-  color: #1e40af;
+  color: var(--auth-primary-hover, #1e40af);
   text-decoration: underline;
 }
 
@@ -489,7 +490,7 @@ div.alezux-auth-body .alezux-form-panel {
 .auth-submit-btn {
   width: 100%;
   height: 50px;
-  background: #1d63ed;
+  background: var(--auth-primary, #1d63ed);
   color: #ffffff;
   border: none;
   border-radius: 12px;
@@ -501,13 +502,13 @@ div.alezux-auth-body .alezux-form-panel {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 14px rgba(29, 99, 237, 0.32);
+  box-shadow: 0 4px 14px rgba(var(--auth-primary-rgb, 29, 99, 237), 0.32);
   transition: all 0.2s ease;
 }
 
 .auth-submit-btn:hover {
-  background: #1e40af;
-  box-shadow: 0 6px 20px rgba(29, 99, 237, 0.42);
+  background: var(--auth-primary-hover, #1e40af);
+  box-shadow: 0 6px 20px rgba(var(--auth-primary-rgb, 29, 99, 237), 0.42);
   transform: translateY(-1px);
 }
 
