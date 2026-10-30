@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 namespace Alezux_Members\Modules\Config;
 
 use Alezux_Members\Core\Module_Base;
