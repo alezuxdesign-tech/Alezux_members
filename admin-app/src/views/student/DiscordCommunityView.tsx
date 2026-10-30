@@ -27,6 +27,7 @@ import {
 import {
   api,
   Course,
+  Student,
   CommunityChannel,
   CommunityMessage,
   CreateCommunityChannelPayload,
@@ -208,6 +209,9 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
 
   // Cursos disponibles para restricción (carga perezosa solo cuando se necesita)
   const [availableCourses, setAvailableCourses] = useState<Course[]>(courses);
+  const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [studentSearch, setStudentSearch] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -224,6 +228,37 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
       }).catch((e) => console.warn("Error cargando cursos:", e));
     }
   };
+
+  const ensureStudentsLoaded = () => {
+    if (availableStudents.length === 0) {
+      setLoadingStudents(true);
+      api.getStudents()
+        .then((res) => {
+          if (Array.isArray(res)) setAvailableStudents(res);
+        })
+        .catch((e) => console.warn("Error cargando estudiantes:", e))
+        .finally(() => setLoadingStudents(false));
+    }
+  };
+
+  const courseFilteredStudents = useMemo(() => {
+    if (!channelForm.course_id) return availableStudents;
+    const enrolled = availableStudents.filter((st) => {
+      const ids = (st.enabledCourseIds || []).map(Number);
+      return ids.includes(Number(channelForm.course_id));
+    });
+    return enrolled.length > 0 ? enrolled : availableStudents;
+  }, [availableStudents, channelForm.course_id]);
+
+  const searchedStudents = useMemo(() => {
+    if (!studentSearch.trim()) return courseFilteredStudents;
+    const term = studentSearch.toLowerCase();
+    return courseFilteredStudents.filter(
+      (st) =>
+        st.name.toLowerCase().includes(term) ||
+        st.email.toLowerCase().includes(term)
+    );
+  }, [courseFilteredStudents, studentSearch]);
 
   // 1. Cargar canales en background sin bloquear
   const loadChannels = async (keepActive = true) => {
@@ -465,11 +500,13 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
     setSelectedCategoryKey(cat);
     setIsCustomCategory(false);
     setCustomCategoryText("");
+    setStudentSearch("");
     setChannelForm({
       name: "",
       description: "",
       category: cat,
       course_id: 0,
+      allowed_students: [],
       is_announcement: false,
     });
     setIsChannelModalOpen(true);
@@ -489,13 +526,18 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
       setIsCustomCategory(true);
       setCustomCategoryText(cat);
     }
+    setStudentSearch("");
     setChannelForm({
       name: ch.name,
       description: ch.description || "",
       category: cat,
       course_id: ch.course_id || 0,
+      allowed_students: (ch as any).allowed_students || [],
       is_announcement: !!ch.is_announcement,
     });
+    if (ch.course_id > 0) {
+      ensureStudentsLoaded();
+    }
     setIsChannelModalOpen(true);
   };
 
@@ -513,20 +555,21 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
         .replace(/\s+/g, "-")
         .replace(/[^a-z0-9_-]/g, "");
 
+      const payloadToSave: CreateCommunityChannelPayload = {
+        ...channelForm,
+        category: finalCategory,
+        name: cleanSlug,
+        allowed_students: channelForm.allowed_students && channelForm.allowed_students.length > 0
+          ? channelForm.allowed_students
+          : undefined,
+      };
+
       if (editingChannel) {
-        const updated = await api.updateCommunityChannel(editingChannel.id, {
-          ...channelForm,
-          category: finalCategory,
-          name: cleanSlug,
-        });
+        const updated = await api.updateCommunityChannel(editingChannel.id, payloadToSave);
         setChannels(updated);
         localStorage.setItem("crezca_community_channels", JSON.stringify(updated));
       } else {
-        const updated = await api.createCommunityChannel({
-          ...channelForm,
-          category: finalCategory,
-          name: cleanSlug,
-        });
+        const updated = await api.createCommunityChannel(payloadToSave);
         setChannels(updated);
         localStorage.setItem("crezca_community_channels", JSON.stringify(updated));
         const created = updated.find((c) => c.name === cleanSlug);
@@ -1990,11 +2033,157 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
             <Select<number>
               options={restrictionOptions}
               value={channelForm.course_id || 0}
-              onChange={(val) => setChannelForm({ ...channelForm, course_id: val })}
+              onChange={(val) => {
+                setChannelForm({ ...channelForm, course_id: val });
+                if (val > 0) {
+                  ensureStudentsLoaded();
+                }
+              }}
               placeholder="Seleccionar restricción de curso..."
               size="md"
             />
           </div>
+
+          {/* Restricción de Estudiantes Específicos del Curso */}
+          {channelForm.course_id > 0 && (
+            <div className={styles.modalFormGroup} style={{ marginTop: "4px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <label className={styles.modalLabel} style={{ marginBottom: 0 }}>
+                  <span>Estudiantes con Acceso</span>
+                  <span className={styles.modalLabelHint}>
+                    {(channelForm.allowed_students?.length ?? 0) === 0
+                      ? "Todos los matriculados (Por defecto)"
+                      : `${channelForm.allowed_students?.length} alumno(s) seleccionado(s)`}
+                  </span>
+                </label>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <button
+                    type="button"
+                    className={styles.miniActionBtn}
+                    onClick={() => {
+                      setChannelForm((prev) => ({
+                        ...prev,
+                        allowed_students: [],
+                      }));
+                    }}
+                    title="Permitir acceso a todos los estudiantes que tengan el curso"
+                  >
+                    Todos del curso
+                  </button>
+                  {courseFilteredStudents.length > 0 && (
+                    <button
+                      type="button"
+                      className={styles.miniActionBtn}
+                      onClick={() => {
+                        setChannelForm((prev) => ({
+                          ...prev,
+                          allowed_students: courseFilteredStudents.map((s) => s.id),
+                        }));
+                      }}
+                      title="Seleccionar a todos los estudiantes de la lista"
+                    >
+                      Marcar todos
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Buscador de estudiantes */}
+              <div style={{ position: "relative", marginBottom: "8px" }}>
+                <input
+                  type="text"
+                  placeholder="Buscar estudiante por nombre o correo..."
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  className={styles.modalInput}
+                  style={{ fontSize: "12px", padding: "7px 10px", width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
+
+              {/* Lista scrolleable con checkboxes */}
+              <div
+                style={{
+                  maxHeight: "155px",
+                  overflowY: "auto",
+                  background: "var(--surface-muted, #1a1e27)",
+                  border: "1px solid var(--border-subtle, rgba(255,255,255,0.08))",
+                  borderRadius: "8px",
+                  padding: "6px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "3px",
+                }}
+              >
+                {loadingStudents ? (
+                  <div style={{ padding: "12px", textAlign: "center", fontSize: "12px", color: "var(--text-muted)" }}>
+                    Cargando estudiantes...
+                  </div>
+                ) : searchedStudents.length === 0 ? (
+                  <div style={{ padding: "12px", textAlign: "center", fontSize: "12px", color: "var(--text-muted)" }}>
+                    {availableStudents.length === 0
+                      ? "No hay estudiantes registrados en la academia."
+                      : "No se encontraron estudiantes para esa búsqueda."}
+                  </div>
+                ) : (
+                  searchedStudents.map((st) => {
+                    const isSelected = (channelForm.allowed_students || []).includes(st.id);
+                    const isEnrolledInCourse = (st.enabledCourseIds || []).map(Number).includes(Number(channelForm.course_id));
+                    return (
+                      <label
+                        key={st.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "6px 8px",
+                          borderRadius: "6px",
+                          background: isSelected ? "var(--surface-raised, rgba(255,255,255,0.06))" : "transparent",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          transition: "background 0.15s ease",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const current = channelForm.allowed_students || [];
+                              if (e.target.checked) {
+                                setChannelForm((prev) => ({
+                                  ...prev,
+                                  allowed_students: [...current, st.id],
+                                }));
+                              } else {
+                                setChannelForm((prev) => ({
+                                  ...prev,
+                                  allowed_students: current.filter((id) => id !== st.id),
+                                }));
+                              }
+                            }}
+                          />
+                          <span style={{ fontWeight: 500, color: "var(--foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {st.name}
+                          </span>
+                          <span style={{ color: "var(--text-muted)", fontSize: "11px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            ({st.email})
+                          </span>
+                        </div>
+                        {isEnrolledInCourse && (
+                          <span style={{ fontSize: "10px", color: "var(--accent, #7747ff)", background: "var(--accent-subtle, rgba(119,71,255,0.12))", padding: "1px 6px", borderRadius: "4px", flexShrink: 0 }}>
+                            Matriculado
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+              <p style={{ margin: "4px 0 0", fontSize: "11px", color: "var(--text-muted)" }}>
+                *(Si no marcas ningún estudiante específico, el canal estará visible para <strong>todos</strong> los alumnos que tengan acceso al curso).*
+              </p>
+            </div>
+          )}
 
           {/* Canal de Anuncios */}
           <label className={styles.modalCheckboxCard}>

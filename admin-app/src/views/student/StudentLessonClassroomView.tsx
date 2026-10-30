@@ -536,17 +536,32 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                 <FileText size={15} />
                 <span>Descripción & Notas</span>
               </button>
-              <button
-                type="button"
-                className={[
-                  styles.topicTabBtn,
-                  contentTab === "files" ? styles.topicTabBtnActive : "",
-                ].join(" ")}
-                onClick={() => setContentTab("files")}
-              >
-                <Download size={15} />
-                <span>Recursos & Descargas ({currentItem?.files?.length || 0})</span>
-              </button>
+              {(() => {
+                const filesCount = currentItem?.files?.length || 0;
+                const hasFiles = filesCount > 0;
+                return (
+                  <button
+                    type="button"
+                    className={[
+                      styles.topicTabBtn,
+                      contentTab === "files" ? styles.topicTabBtnActive : "",
+                      hasFiles ? styles.topicTabBtnFilesHighlight : "",
+                    ].join(" ")}
+                    onClick={() => setContentTab("files")}
+                    title={hasFiles ? `¡Esta clase tiene ${filesCount} recurso(s) descargable(s)!` : "Recursos de la clase"}
+                  >
+                    <Download size={15} style={hasFiles ? { color: "var(--accent, #7747ff)" } : undefined} />
+                    <span>Recursos & Descargas</span>
+                    {hasFiles ? (
+                      <span className={styles.filesHighlightBadge}>
+                        ¡{filesCount} {filesCount === 1 ? "recurso" : "recursos"}!
+                      </span>
+                    ) : (
+                      <span>(0)</span>
+                    )}
+                  </button>
+                );
+              })()}
               <button
                 type="button"
                 className={[

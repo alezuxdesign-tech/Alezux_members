@@ -255,6 +255,13 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
+			// Subida genérica de medios (portadas de cursos, lecciones, banners, etc.)
+			register_rest_route( $namespace, '/media/upload', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'upload_generic_media' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
 			register_rest_route( $namespace, '/marketing/upload-logo', [
 				'methods'             => 'POST',
 				'callback'            => [ $this, 'upload_marketing_logo' ],
@@ -442,7 +449,7 @@ class Admin_Api {
 		}
 
 		// 5. Flujos por rangos de tiempo (7d, 30d, 90d)
-		$base_std = max( 25, (int) ( $total_students * 0.65 ) );
+		$base_std = (int) ( $total_students * 0.65 );
 		$base_rev = max( 120, (int) ( $monthly_revenue / 4 ) );
 
 		$flow_7d = [
@@ -637,7 +644,7 @@ class Admin_Api {
 				$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
 				$token = $wpdb->get_var( $wpdb->prepare( "SELECT token FROM $plans_table WHERE id = %d", $linked_plan_id ) );
 				if ( $token ) {
-					$checkout_url = home_url( "/?alezux_action=checkout&token={$token}" );
+					$checkout_url = home_url( "/?alezux_action=checkout&token={$token}&plan_id={$linked_plan_id}" );
 				}
 			}
 
@@ -1642,7 +1649,7 @@ class Admin_Api {
 					$wpdb->update( $plans_table, [ 'token' => $token ], [ 'id' => $row->id ] );
 				}
 
-				$checkout_url = home_url( "/?alezux_action=checkout&token={$token}" );
+				$checkout_url = home_url( "/?alezux_action=checkout&token={$token}&plan_id={$row->id}" );
 				$subs_count = isset( $counts_by_plan[ $row->id ] ) ? $counts_by_plan[ $row->id ] : 0;
 
 				$total_quotas = (int) $row->total_quotas;
@@ -1736,7 +1743,7 @@ class Admin_Api {
 		] );
 
 		$plan_id = $wpdb->insert_id;
-		$checkout_url = home_url( "/?alezux_action=checkout&token={$token}" );
+		$checkout_url = home_url( "/?alezux_action=checkout&token={$token}&plan_id={$plan_id}" );
 		$course_title = 'Todos los Cursos';
 		if ( $course_id > 0 ) {
 			$course_title = get_the_title( $course_id ) ?: "Curso #{$course_id}";
@@ -3150,6 +3157,16 @@ class Admin_Api {
 		global $wpdb;
 
 		// Evitar re-verificar con SHOW TABLES en cada petición si ya fue inicializado
+		// Asegurar columna allowed_students para restricciones granulares
+		if ( ! get_option( 'crezca_community_allowed_students_v1' ) ) {
+			$table_ch = $wpdb->prefix . 'crezca_community_channels';
+			$has_col = $wpdb->get_results( "SHOW COLUMNS FROM $table_ch LIKE 'allowed_students'" );
+			if ( empty( $has_col ) ) {
+				$wpdb->query( "ALTER TABLE $table_ch ADD COLUMN allowed_students longtext NULL" );
+			}
+			update_option( 'crezca_community_allowed_students_v1', '1' );
+		}
+
 		if ( get_option( 'crezca_community_tables_v3_ready' ) ) {
 			return;
 		}
@@ -3168,6 +3185,7 @@ class Admin_Api {
 				description text NULL,
 				category varchar(100) NOT NULL DEFAULT 'General',
 				course_id bigint(20) unsigned NOT NULL DEFAULT 0,
+				allowed_students longtext NULL,
 				is_announcement tinyint(1) NOT NULL DEFAULT 0,
 				sort_order int(11) NOT NULL DEFAULT 0,
 				created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -3312,23 +3330,32 @@ class Admin_Api {
 
 			// Comprobar acceso
 			$has_access = true;
+			$allowed_students = ! empty( $ch->allowed_students ) ? json_decode( $ch->allowed_students, true ) : [];
+			if ( ! is_array( $allowed_students ) ) {
+				$allowed_students = [];
+			}
+
 			if ( ! $is_admin && $course_id > 0 ) {
 				$has_access = in_array( $course_id, $enrolled_ids, true );
+				if ( $has_access && ! empty( $allowed_students ) ) {
+					$has_access = in_array( (int) $user_id, array_map( 'intval', $allowed_students ), true );
+				}
 			}
 
 			$msg_count = $counts_map[ (int) $ch->id ] ?? 0;
 
 			$result[] = [
-				'id'              => (int) $ch->id,
-				'name'            => $ch->name,
-				'slug'            => $ch->slug,
-				'description'     => $ch->description ?: '',
-				'category'        => $ch->category ?: 'General',
-				'course_id'       => $course_id,
-				'course_name'     => $course_name,
-				'is_announcement' => (bool) $ch->is_announcement,
-				'has_access'      => $has_access,
-				'messages_count'  => $msg_count,
+				'id'               => (int) $ch->id,
+				'name'             => $ch->name,
+				'slug'             => $ch->slug,
+				'description'      => $ch->description ?: '',
+				'category'         => $ch->category ?: 'General',
+				'course_id'        => $course_id,
+				'course_name'      => $course_name,
+				'allowed_students' => $allowed_students,
+				'is_announcement'  => (bool) $ch->is_announcement,
+				'has_access'       => $has_access,
+				'messages_count'   => $msg_count,
 			];
 		}
 
@@ -3354,15 +3381,20 @@ class Admin_Api {
 		$course_id = isset( $params['course_id'] ) ? (int) $params['course_id'] : 0;
 		$is_announcement = ! empty( $params['is_announcement'] ) ? 1 : 0;
 
+		$allowed_students = isset( $params['allowed_students'] ) && is_array( $params['allowed_students'] )
+			? wp_json_encode( array_values( array_unique( array_map( 'intval', $params['allowed_students'] ) ) ) )
+			: null;
+
 		$table_channels = $wpdb->prefix . 'crezca_community_channels';
 		$wpdb->insert( $table_channels, [
-			'name'            => $name,
-			'slug'            => $name,
-			'description'     => $description,
-			'category'        => $category ?: 'General',
-			'course_id'       => $course_id,
-			'is_announcement' => $is_announcement,
-			'created_at'      => current_time( 'mysql' ),
+			'name'             => $name,
+			'slug'             => $name,
+			'description'      => $description,
+			'category'         => $category ?: 'General',
+			'course_id'        => $course_id,
+			'allowed_students' => $allowed_students,
+			'is_announcement'  => $is_announcement,
+			'created_at'       => current_time( 'mysql' ),
 		] );
 
 		return $this->get_community_channels();
@@ -3392,6 +3424,11 @@ class Admin_Api {
 		}
 		if ( isset( $params['is_announcement'] ) ) {
 			$data['is_announcement'] = ! empty( $params['is_announcement'] ) ? 1 : 0;
+		}
+		if ( array_key_exists( 'allowed_students', $params ) ) {
+			$data['allowed_students'] = is_array( $params['allowed_students'] ) && count( $params['allowed_students'] ) > 0
+				? wp_json_encode( array_values( array_unique( array_map( 'intval', $params['allowed_students'] ) ) ) )
+				: null;
 		}
 
 		if ( ! empty( $data ) ) {
@@ -3444,6 +3481,12 @@ class Admin_Api {
 			}
 			if ( ! in_array( (int) $channel->course_id, $enrolled_ids, true ) ) {
 				return new \WP_Error( 'forbidden', 'No tienes acceso a este canal exclusivo.', [ 'status' => 403 ] );
+			}
+			if ( ! empty( $channel->allowed_students ) ) {
+				$allowed_list = json_decode( $channel->allowed_students, true );
+				if ( is_array( $allowed_list ) && count( $allowed_list ) > 0 && ! in_array( (int) $user_id, array_map( 'intval', $allowed_list ), true ) ) {
+					return new \WP_Error( 'forbidden', 'No tienes acceso a este canal privado.', [ 'status' => 403 ] );
+				}
 			}
 		}
 

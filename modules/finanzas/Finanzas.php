@@ -82,15 +82,33 @@ class Finanzas extends Module_Base {
 
         if ( isset( $_GET['alezux_action'] ) && $_GET['alezux_action'] === 'checkout' ) {
             $plan_id = 0;
-            
-            // 1. Buscar Plan ID por Token o ID
+            global $wpdb;
+            $table_plans = $wpdb->prefix . 'alezux_finanzas_plans';
+
+            // Asegurar que la columna token exista en la tabla si no fue creada previamente
+            static $token_col_checked = false;
+            if ( ! $token_col_checked ) {
+                $has_token_col = $wpdb->get_results( "SHOW COLUMNS FROM $table_plans LIKE 'token'" );
+                if ( empty( $has_token_col ) ) {
+                    $wpdb->query( "ALTER TABLE $table_plans ADD COLUMN token VARCHAR(64)" );
+                }
+                $token_col_checked = true;
+            }
+
+            // 1. Buscar Plan ID por Token
             if ( ! empty( $_GET['token'] ) ) {
-                global $wpdb;
-                $table_plans = $wpdb->prefix . 'alezux_finanzas_plans';
                 $token = sanitize_text_field( $_GET['token'] );
-                $plan_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table_plans WHERE token = %s", $token ) );
-            } elseif ( ! empty( $_GET['plan_id'] ) ) {
+                $plan_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table_plans WHERE token = %s", $token ) );
+            }
+
+            // 2. Fallback por plan_id si no se encontró por token o el token era inválido
+            if ( ! $plan_id && ! empty( $_GET['plan_id'] ) ) {
                 $plan_id = intval( $_GET['plan_id'] );
+            }
+
+            // 3. Fallback adicional si el token es numérico y coincide con el ID
+            if ( ! $plan_id && ! empty( $_GET['token'] ) && is_numeric( $_GET['token'] ) ) {
+                $plan_id = intval( $_GET['token'] );
             }
 
             if ( ! $plan_id ) {

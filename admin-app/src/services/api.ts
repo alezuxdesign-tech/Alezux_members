@@ -227,6 +227,7 @@ export interface CommunityChannel {
   category: string;
   course_id: number;
   course_name?: string;
+  allowed_students?: number[];
   is_announcement: boolean;
   has_access: boolean;
   messages_count?: number;
@@ -257,6 +258,7 @@ export interface CreateCommunityChannelPayload {
   description?: string;
   category: string;
   course_id: number;
+  allowed_students?: number[];
   is_announcement?: boolean;
 }
 
@@ -1292,7 +1294,7 @@ class ApiService {
         });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             return data;
           }
         }
@@ -1556,7 +1558,7 @@ class ApiService {
         });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             return data;
           }
         }
@@ -1655,7 +1657,7 @@ class ApiService {
         });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data.rows) && data.rows.length > 0) {
+          if (Array.isArray(data?.rows)) {
             return data;
           }
         }
@@ -1730,7 +1732,7 @@ class ApiService {
         });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data.rows) && data.rows.length > 0) {
+          if (Array.isArray(data?.rows)) {
             return data;
           }
         }
@@ -2120,7 +2122,28 @@ class ApiService {
   }
 
   async uploadMedia(file: File): Promise<string | null> {
-    return this.uploadLogo(file);
+    try {
+      if (this.wpData) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch(`${this.rootUrl}media/upload`, {
+          method: "POST",
+          headers: {
+            "X-WP-Nonce": this.nonce,
+          },
+          body: formData,
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json.url) return json.url;
+        }
+      }
+    } catch (e) {
+      console.warn("API Error uploading media:", e);
+    }
+    return URL.createObjectURL(file);
   }
 
   async getAutomationLogs(typeId: string): Promise<EmailLogItem[]> {
