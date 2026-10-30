@@ -11,6 +11,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
+// Desactivar pantalla generica de WordPress y exponer error exacto
+add_filter( 'wp_fatal_error_handler_enabled', '__return_false' );
+register_shutdown_function( function() {
+	$err = error_get_last();
+	if ( $err && in_array( $err['type'], [ E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR ], true ) ) {
+		@file_put_contents( __DIR__ . '/debug_error.log', date('c') . ' - ' . print_r($err, true) . "\n", FILE_APPEND );
+		echo '<div style="background:#fee2e2;color:#991b1b;padding:24px;margin:20px;border:2px solid #ef4444;border-radius:8px;font-family:monospace;font-size:14px;z-index:999999;position:relative;">';
+		echo '<h3 style="margin-top:0;color:#b91c1c;">⚠️ Error Fatal PHP Detectado</h3>';
+		echo '<strong>Mensaje:</strong> ' . htmlspecialchars( $err['message'] ) . '<br>';
+		echo '<strong>Archivo:</strong> ' . htmlspecialchars( $err['file'] ) . '<br>';
+		echo '<strong>Línea:</strong> ' . (int) $err['line'] . '<br>';
+		echo '</div>';
+	}
+} );
+
 // Definir constantes del plugin Crezca
 define( 'CREZCA_VERSION', '2.1.0' );
 define( 'CREZCA_FILE', __FILE__ );

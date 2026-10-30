@@ -20,17 +20,7 @@ class Admin_Dashboard {
 		add_action( 'admin_post_alezux_generate_images', [ $this, 'run_image_generation' ] ); // NUEVO
 		// Configuración de modo ventana independiente / app completa y enlace del menú
 		add_action( 'admin_head', [ $this, 'setup_admin_window_mode' ] );
-		// Carga optimizada defer para el bundle de Crezca
-		add_filter( 'script_loader_tag', [ $this, 'add_defer_to_script' ], 10, 3 );
 	}
-
-	public function add_defer_to_script( $tag, $handle, $src ) {
-		if ( in_array( $handle, [ 'crezca-admin-arc-js', 'crezca-dashboard-script' ], true ) ) {
-		if ( strpos( $tag, 'defer' ) === false ) {
-			$tag = str_replace( ' src', ' defer src', $tag );
-		}
-		}
-		return $tag;
 
 	public function setup_admin_window_mode() {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
