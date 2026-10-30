@@ -1954,9 +1954,38 @@
 }
 
 @media (max-width: 768px) {
+  .topHeaderActions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .searchWrap {
+    width: 100%;
+  }
+
+  .filterTabs {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 4px;
+  }
+
+  .filterTabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filterBtn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
   .coursesGrid {
     grid-template-columns: 1fr;
   }
+
   .addFileBox {
     grid-template-columns: 1fr;
   }

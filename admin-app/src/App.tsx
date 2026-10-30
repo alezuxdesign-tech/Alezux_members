@@ -22,7 +22,10 @@ import {
   UserCheck,
   Calendar,
   Bell,
-  User
+  User,
+  Menu,
+  X,
+  Grid
 } from "lucide-react";
 import { OverviewView } from "./views/OverviewView";
 import { CoursesView } from "./views/CoursesView";
@@ -220,6 +223,32 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     return localStorage.getItem("crezca_sidebar_collapsed") === "true";
   });
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    return typeof window !== "undefined" ? window.innerWidth <= 768 : false;
+  });
+  const [isTablet, setIsTablet] = useState<boolean>(() => {
+    return typeof window !== "undefined" ? window.innerWidth > 768 && window.innerWidth <= 1024 : false;
+  });
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      const mobile = width <= 768;
+      const tablet = width > 768 && width <= 1024;
+      setIsMobile(mobile);
+      setIsTablet(tablet);
+      if (tablet) {
+        setIsCollapsed(true);
+      }
+      if (!mobile && isDrawerOpen) {
+        setIsDrawerOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isDrawerOpen]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -661,7 +690,105 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
         data-scroll-container="main" 
         className={styles.mainArea}
       >
-        {/* Cabecera superior del contenido */}
+        {/* =========================================================
+            HEADER MÓVIL NATIVO (Sticky 56px para Smartphones)
+            ========================================================= */}
+        <header className={styles.mobileHeader}>
+          <div className={styles.mobileHeaderLeft}>
+            {appMode === "student" && selectedCourse ? (
+              !selectedLesson ? (
+                <button 
+                  type="button" 
+                  className={styles.mobileBackBtn} 
+                  onClick={handleBackToCatalog}
+                  aria-label="Volver a cursos"
+                >
+                  <ArrowLeft size={18} />
+                  <span className={styles.mobileBackBtnLabel}>Cursos</span>
+                </button>
+              ) : (
+                <button 
+                  type="button" 
+                  className={styles.mobileBackBtn} 
+                  onClick={handleBackToCourse}
+                  aria-label={`Volver a ${selectedCourse.title}`}
+                >
+                  <ArrowLeft size={18} />
+                  <span className={styles.mobileBackBtnLabel}>{selectedCourse.title}</span>
+                </button>
+              )
+            ) : (
+              <div className={styles.mobileHeaderLogoWrap}>
+                {academyLogo ? (
+                  <img src={academyLogo} alt={academyName || "Logo"} className={styles.mobileHeaderLogoImg} />
+                ) : (
+                  <div className={styles.mobileHeaderLogoIcon}>
+                    {appMode === "admin" ? <Layers size={16} /> : <GraduationCap size={16} />}
+                  </div>
+                )}
+                <span className={styles.mobileHeaderName}>{academyName || "Crezca"}</span>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.mobileHeaderRight}>
+            {/* Si es Admin, botón rápido para alternar modo */}
+            {isActualAdmin && (
+              <button
+                type="button"
+                className={styles.headerIconButton}
+                onClick={() => setAppMode(appMode === "admin" ? "student" : "admin")}
+                title={appMode === "admin" ? "Previsualizar Modo Estudiante" : "Regresar a Modo Administrador"}
+                aria-label="Alternar rol"
+              >
+                {appMode === "admin" ? <GraduationCap size={16} /> : <ShieldCheck size={16} />}
+              </button>
+            )}
+
+            {/* Notificaciones Globales */}
+            <div className={styles.headerNotificationWrapper}>
+              <button
+                type="button"
+                className={styles.headerIconButton}
+                onClick={() => setIsNotificationsOpen((prev) => !prev)}
+                title="Notificaciones"
+                aria-label="Ver notificaciones"
+              >
+                <Bell size={16} />
+                {unreadNotificationsCount > 0 && (
+                  <span className={styles.headerNotificationBadge}>
+                    {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Perfil de Usuario */}
+            <button
+              type="button"
+              className={styles.headerProfileBtn}
+              onClick={() => {
+                if (appMode === "student") {
+                  setActiveStudentTab("profile");
+                } else {
+                  setActiveAdminTab("settings");
+                }
+              }}
+              title={appMode === "student" ? "Mi Perfil" : "Ajustes"}
+              aria-label="Perfil de usuario"
+            >
+              <div className={styles.headerAvatarCircle}>
+                {appMode === "student" && studentProfile?.avatar ? (
+                  <img src={studentProfile.avatar} alt="Avatar" className={styles.headerAvatarImg} />
+                ) : (
+                  <User size={14} />
+                )}
+              </div>
+            </button>
+          </div>
+        </header>
+
+        {/* Cabecera superior del contenido (Desktop & Tablet) */}
         <header className={styles.mainHeader}>
           <div className={styles.headerBreadcrumb}>
             <span>{academyName || "Crezca"}</span>
@@ -950,6 +1077,241 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
           )}
         </main>
       </div>
+
+      {/* =========================================================
+          MOBILE BOTTOM NAVIGATION BAR (Sensación de App Nativa)
+          ========================================================= */}
+      <nav className={styles.mobileBottomBar}>
+        {appMode === "student" ? (
+          <>
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeStudentTab === "dashboard" ? styles.active : ""}`}
+              onClick={() => setActiveStudentTab("dashboard")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <BarChart3 size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeStudentTab === "courses" ? styles.active : ""}`}
+              onClick={() => setActiveStudentTab("courses")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <GraduationCap size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Cursos</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeStudentTab === "community" ? styles.active : ""}`}
+              onClick={() => setActiveStudentTab("community")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <Users size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Comunidad</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeStudentTab === "profile" ? styles.active : ""}`}
+              onClick={() => setActiveStudentTab("profile")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <User size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Perfil</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeAdminTab === "overview" ? styles.active : ""}`}
+              onClick={() => setActiveAdminTab("overview")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <BarChart3 size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeAdminTab === "courses" ? styles.active : ""}`}
+              onClick={() => setActiveAdminTab("courses")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <GraduationCap size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Cursos</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeAdminTab === "students" ? styles.active : ""}`}
+              onClick={() => setActiveAdminTab("students")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <Users size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Alumnos</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeAdminTab === "finance" ? styles.active : ""}`}
+              onClick={() => setActiveAdminTab("finance")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <CreditCard size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Finanzas</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${isDrawerOpen ? styles.active : ""}`}
+              onClick={() => setIsDrawerOpen(true)}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <Menu size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Más</span>
+            </button>
+          </>
+        )}
+      </nav>
+
+      {/* =========================================================
+          DRAWER / SLIDE-OVER LATERAL PARA EL ADMINISTRADOR EN MÓVIL
+          ========================================================= */}
+      {isDrawerOpen && appMode === "admin" && (
+        <div 
+          className={styles.drawerOverlay} 
+          onClick={() => setIsDrawerOpen(false)}
+        >
+          <div 
+            className={styles.drawerSheet} 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.drawerHeader}>
+              <div className={styles.drawerBrand}>
+                {academyLogo ? (
+                  <img src={academyLogo} alt={academyName} style={{ maxHeight: 26, maxWidth: 80, objectFit: "contain" }} />
+                ) : (
+                  <Layers size={18} style={{ color: "var(--accent, #7747ff)" }} />
+                )}
+                <span>{academyName || "Crezca"}</span>
+              </div>
+              <button 
+                type="button" 
+                className={styles.drawerCloseBtn} 
+                onClick={() => setIsDrawerOpen(false)}
+                aria-label="Cerrar menú"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className={styles.drawerSectionTitle}>Módulos Adicionales</div>
+            <div className={styles.drawerNavList}>
+              <button
+                type="button"
+                className={`${styles.drawerNavItem} ${activeAdminTab === "instructors" ? styles.active : ""}`}
+                onClick={() => { setActiveAdminTab("instructors"); setIsDrawerOpen(false); }}
+              >
+                <UserCheck size={17} />
+                <span>Docentes & Mentores</span>
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.drawerNavItem} ${activeAdminTab === "events" ? styles.active : ""}`}
+                onClick={() => { setActiveAdminTab("events"); setIsDrawerOpen(false); }}
+              >
+                <Calendar size={17} />
+                <span>Eventos & Clases en Vivo</span>
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.drawerNavItem} ${activeAdminTab === "marketing" ? styles.active : ""}`}
+                onClick={() => { setActiveAdminTab("marketing"); setIsDrawerOpen(false); }}
+              >
+                <Mail size={17} />
+                <span>Marketing & Correos</span>
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.drawerNavItem} ${activeAdminTab === "community" ? styles.active : ""}`}
+                onClick={() => { setActiveAdminTab("community"); setIsDrawerOpen(false); }}
+              >
+                <MessageSquare size={17} />
+                <span>Comunidad & Foro</span>
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.drawerNavItem} ${activeAdminTab === "settings" ? styles.active : ""}`}
+                onClick={() => { setActiveAdminTab("settings"); setIsDrawerOpen(false); }}
+              >
+                <Sliders size={17} />
+                <span>Ajustes & Personalización</span>
+              </button>
+            </div>
+
+            <div className={styles.drawerSectionTitle}>Acciones Rápidas</div>
+            <div className={styles.drawerNavList}>
+              <button
+                type="button"
+                className={styles.drawerNavItem}
+                onClick={() => { setAppMode("student"); setIsDrawerOpen(false); }}
+              >
+                <GraduationCap size={17} />
+                <span>Previsualizar Modo Estudiante</span>
+              </button>
+
+              <button
+                type="button"
+                className={styles.drawerNavItem}
+                onClick={toggleTheme}
+              >
+                {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+                <span>{theme === "dark" ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}</span>
+              </button>
+
+              <button
+                type="button"
+                className={styles.drawerNavItem}
+                onClick={toggleFullscreen}
+              >
+                {isFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+                <span>{isFullscreen ? "Salir de Pantalla Completa" : "Pantalla Completa"}</span>
+              </button>
+            </div>
+
+            {isActualAdmin && (
+              <div className={styles.drawerFooter}>
+                <a
+                  href={wpAdminUrl}
+                  className={styles.backToWpBtn}
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  <ArrowLeft size={15} />
+                  <span>Volver a WordPress</span>
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

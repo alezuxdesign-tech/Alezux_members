@@ -644,16 +644,48 @@
   flex-shrink: 0;
 }
 
-/* Responsive para pantallas menores a 768px */
+/* Responsive para tablet y mvil */
+@media (max-width: 900px) {
+  .settingsRow {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 20px 18px;
+  }
+}
+
 @media (max-width: 768px) {
   .settingsRow {
     grid-template-columns: 1fr;
     gap: 14px;
-    padding: 20px 16px;
+    padding: 16px 14px;
   }
 
   .themeCardsGrid {
     justify-content: flex-start;
+  }
+
+  .grid2Col,
+  .grid3Col {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .tabBarContainer {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .tabBarContainer::-webkit-scrollbar {
+    display: none;
+  }
+
+  .colorSyncPreviewRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 }
 

@@ -4427,5 +4427,208 @@
   object-fit: cover;
 }
 
+/* ==========================================================================
+   OPTIMIZACIONES RESPONSIVE MOBILE & TABLET (EXPERIENCIA APP NATIVA)
+   ========================================================================== */
+
+/* Tablet & iPad (<= 1024px) */
+@media (max-width: 1024px) {
+  .classroomLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .classroomSidebar {
+    position: static;
+    height: auto;
+    min-height: unset;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 520px;
+  }
+
+  .coursesGrid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+/* Mobile Screens (<= 768px) */
+@media (max-width: 768px) {
+  .portalHeader {
+    padding: 0 16px;
+    height: 54px;
+  }
+
+  .catalogContainer {
+    padding: 16px 12px 32px;
+    gap: 20px;
+  }
+
+  .heroWelcomeCard {
+    padding: 20px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .heroWelcomeCard::after {
+    display: none;
+  }
+
+  .heroWelcomeBadge {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .coursesGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .courseCard {
+    border-radius: 14px;
+  }
+
+  /* Aula Virtual Mobile */
+  .classroomMainColumn {
+    padding: 12px 10px 32px 10px;
+    gap: 16px;
+  }
+
+  .playerWrapper {
+    border-radius: 10px;
+  }
+
+  .activeTopicTitle {
+    font-size: 19px;
+  }
+
+  .topicActionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 14px;
+  }
+
+  .topicActionsButtonGroup {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .classroomNavBtn,
+  .completeToggleBtn {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    min-height: 42px;
+  }
+
+  /* Netflix View Mobile */
+  .netflixHeroBanner {
+    padding: 16px 14px 22px 14px;
+    min-height: 220px;
+  }
+
+  .heroBackButtonRow {
+    margin-top: 24px;
+  }
+
+  .sectionsList {
+    margin: 20px auto 0;
+    padding: 0 10px;
+  }
+
+  .netflixCarouselRow {
+    gap: 14px;
+    padding: 8px 4px 16px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+
+  .netflixPosterCard {
+    width: 165px;
+    min-width: 165px;
+    height: 255px;
+    padding: 12px;
+    border-radius: 12px;
+    scroll-snap-align: start;
+  }
+
+  .posterCourseTitle {
+    font-size: 13.5px;
+  }
+
+  /* Dashboard Estudiante Mobile */
+  .cleanGreetingHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .cleanGreetingLeft {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .cleanGreetingTitle {
+    font-size: 20px;
+  }
+
+  .studentPlanCleanBadge {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .lastLessonCard {
+    padding: 14px;
+    gap: 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lastLessonMain {
+    min-width: 0;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .lastLessonCoverWrap {
+    width: 90px;
+  }
+
+  .lastLessonTitle {
+    font-size: 14px;
+  }
+
+  .continueActionBtn {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 16px;
+    min-height: 44px;
+  }
+}
+
+/* Compact screens (<= 480px) */
+@media (max-width: 480px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .netflixPosterCard {
+    width: 145px;
+    min-width: 145px;
+    height: 230px;
+  }
+}
+
+
 
 

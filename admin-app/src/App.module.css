@@ -639,4 +639,351 @@
   object-fit: cover;
 }
 
+/* =========================================================
+   RESPONSIVE DESIGN: MÓVIL Y TABLET (APP NATIVA FEEL)
+   ========================================================= */
+
+/* Mobile App Header (Visible solo en pantallas <= 768px) */
+.mobileHeader {
+  display: none;
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 80;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.mobileHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobileHeaderLogoWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--foreground);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  min-width: 0;
+}
+
+.mobileHeaderLogoImg {
+  height: 28px;
+  max-width: 100px;
+  object-fit: contain;
+}
+
+.mobileHeaderLogoIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent, #7747ff);
+}
+
+.mobileHeaderName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  font-family: var(--font-display, inherit);
+}
+
+.mobileBackBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 8px 6px 0;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 0;
+}
+
+.mobileBackBtnLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.mobileHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Mobile Bottom Navigation Bar (Tab Bar) */
+.mobileBottomBar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 58px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 95;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: content-box;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.16);
+}
+
+.mobileBottomItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 0;
+  position: relative;
+  transition: color 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.mobileBottomItem:active {
+  transform: scale(0.92);
+}
+
+.mobileBottomItem.active {
+  color: var(--accent, #7747ff);
+}
+
+.mobileBottomIconWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  border-radius: 999px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.mobileBottomItem.active .mobileBottomIconWrap {
+  background: var(--accent-subtle, rgba(119, 71, 255, 0.15));
+  transform: translateY(-1px);
+}
+
+.mobileBottomLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+/* Slide-over Drawer para el Administrador en Móvil */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 150;
+  display: flex;
+  justify-content: flex-end;
+  animation: drawerFadeIn 0.2s ease;
+}
+
+.drawerSheet {
+  width: 84%;
+  max-width: 340px;
+  height: 100%;
+  height: 100dvh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.4);
+  overflow-y: auto;
+  box-sizing: border-box;
+  animation: drawerSlideLeft 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drawerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drawerSlideLeft {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 14px;
+}
+
+.drawerBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--foreground);
+}
+
+.drawerCloseBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.drawerCloseBtn:hover {
+  color: var(--foreground);
+  background: var(--surface-hover);
+}
+
+.drawerSectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 12px 0 6px 4px;
+}
+
+.drawerNavList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.drawerNavItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-control, 8px);
+  background: transparent;
+  border: none;
+  color: var(--foreground);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.drawerNavItem:hover, .drawerNavItem:active {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+}
+
+.drawerNavItem.active {
+  background: var(--accent-subtle, rgba(119, 71, 255, 0.12));
+  color: var(--accent, #7747ff);
+  font-weight: 600;
+}
+
+.drawerFooter {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Media Queries Responsivas */
+@media (max-width: 1024px) {
+  .mainArea {
+    padding: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .appShell {
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    display: none !important;
+  }
+
+  .mainHeader {
+    display: none !important;
+  }
+
+  .mobileHeader {
+    display: flex !important;
+  }
+
+  .mobileBottomBar {
+    display: flex !important;
+  }
+
+  .mainArea {
+    width: 100%;
+    flex: 1;
+    height: calc(100dvh - 56px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .mainBody {
+    padding: 14px 14px 84px 14px !important;
+  }
+
+  .mainBodyNoPadding {
+    padding: 0 0 84px 0 !important;
+  }
+}
+
 

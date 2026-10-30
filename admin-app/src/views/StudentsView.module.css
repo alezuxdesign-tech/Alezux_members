@@ -461,6 +461,33 @@
   flex-wrap: wrap;
 }
 
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .searchWrap,
+  .filterWrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tableWrapper {
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-control);
+    margin: 0 -2px;
+  }
+}
+
 @media (max-width: 640px) {
   .formGrid {
     grid-template-columns: 1fr;
