@@ -16,6 +16,9 @@ import {
   PanelLeftOpen,
   ChevronRight,
   ShieldCheck,
+  ShieldAlert,
+  Lock,
+  MessageCircle,
   Award,
   LogOut,
   MessageSquare,
@@ -166,6 +169,25 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
   const [selectedLesson, setSelectedLesson] = useState<CourseLesson | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<CourseTopic | null>(null);
   const [studentLoading, setStudentLoading] = useState(false);
+
+  // Detección de Cuenta de Estudiante Bloqueada
+  const isStudentBlocked =
+    appMode === "student" &&
+    (Boolean(wpStudentData?.is_blocked) ||
+      Boolean(studentProfile?.isBlocked) ||
+      studentProfile?.status === "blocked") &&
+    !studentProfile?.isAdmin &&
+    !wpStudentData?.is_admin;
+
+  const supportWhatsapp =
+    wpStudentData?.support_whatsapp ||
+    (window as any).crezca_admin_data?.support_whatsapp ||
+    "";
+  const supportEmail =
+    wpStudentData?.support_email ||
+    (window as any).crezca_admin_data?.support_email ||
+    "administracion@alezux.com";
+  const cleanWhatsapp = supportWhatsapp ? String(supportWhatsapp).replace(/[^0-9]/g, "") : "";
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(() => {
@@ -470,7 +492,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     || (window as any).alezux_admin_data?.wp_admin_url 
     || "/wp-admin/";
 
-  const logoutUrl = (window as any).crezca_student_data?.logout_url || "/wp-login.php?action=logout";
+  const logoutUrl = (window as any).crezca_student_data?.logout_url || "/?crezca_logout=1";
 
   // Determinar inequívocamente si el usuario actual es administrador
   const isActualAdmin = Boolean(
@@ -999,7 +1021,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
           )}
 
           {/* MODO ESTUDIANTE */}
-          {appMode === "student" && (
+          {appMode === "student" && !isStudentBlocked && (
             <>
               {/* 1. Dashboard del Estudiante */}
               {activeStudentTab === "dashboard" && (
@@ -1087,6 +1109,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 <StudentProfileView
                   profile={studentProfile || defaultStudentProfile}
                   courses={studentCourses}
+                  onSelectCourse={handleSelectCourse}
                   onProfileUpdate={(updated) => setStudentProfile(updated)}
                   onBack={() => setActiveStudentTab("dashboard")}
                   onLogout={() => { window.location.href = logoutUrl; }}
@@ -1097,9 +1120,75 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
         </main>
       </div>
 
+      {/* PopUp No Descartable de Estudiante Bloqueado */}
+      {isStudentBlocked && (
+        <div className={studentStyles.blockedOverlay}>
+          <div className={studentStyles.blockedCard}>
+            <div className={studentStyles.blockedIconWrap}>
+              <ShieldAlert size={38} />
+            </div>
+
+            <div className={studentStyles.blockedBadge}>
+              <Lock size={12} />
+              <span>Acceso Suspendido</span>
+            </div>
+
+            <h2 className={studentStyles.blockedTitle}>Tu cuenta se encuentra bloqueada</h2>
+
+            <p className={studentStyles.blockedText}>
+              Hola <strong>{studentProfile?.name || "Estudiante"}</strong>, tu acceso a los cursos y contenidos formativos de la academia ha sido suspendido temporalmente por la administración.
+            </p>
+
+            <p className={studentStyles.blockedSubtext}>
+              Para consultar el estado de tu cuenta o reactivar tu acceso de inmediato, por favor comunícate con nuestro equipo de administración:
+            </p>
+
+            <div className={studentStyles.blockedContactBox}>
+              {cleanWhatsapp ? (
+                <a
+                  href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(
+                    `Hola, mi nombre es ${studentProfile?.name || ""} (${studentProfile?.email || ""}) y solicito asistencia sobre el estado de mi cuenta en ${academyName}.`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={studentStyles.blockedWhatsappBtn}
+                >
+                  <MessageCircle size={17} />
+                  <span>Contactar a Administración por WhatsApp</span>
+                </a>
+              ) : null}
+
+              <a
+                href={`mailto:${supportEmail}?subject=${encodeURIComponent(
+                  `Reactivación de Cuenta - ${studentProfile?.name || "Estudiante"}`
+                )}&body=${encodeURIComponent(
+                  `Hola administración,\n\nMi cuenta (${studentProfile?.email || ""}) se encuentra bloqueada y deseo reactivar mi acceso a la plataforma.`
+                )}`}
+                className={studentStyles.blockedEmailBtn}
+              >
+                <Mail size={16} />
+                <span>Escribir a Administración por Correo</span>
+              </a>
+
+              <button
+                type="button"
+                className={studentStyles.blockedLogoutBtn}
+                onClick={() => {
+                  window.location.href = logoutUrl;
+                }}
+              >
+                <LogOut size={15} />
+                <span>Cerrar sesión</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* =========================================================
           MOBILE BOTTOM NAVIGATION BAR (Sensación de App Nativa)
           ========================================================= */}
+      {!isStudentBlocked && (
       <nav className={styles.mobileBottomBar}>
         {appMode === "student" ? (
           <>
@@ -1206,6 +1295,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
           </>
         )}
       </nav>
+      )}
 
       {/* =========================================================
           DRAWER / SLIDE-OVER LATERAL PARA EL ADMINISTRADOR EN MÓVIL

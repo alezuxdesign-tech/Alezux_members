@@ -89,7 +89,7 @@ export function StudentsView() {
 
   // Modal de Crear Nuevo Alumno
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [createTab, setCreateTab] = useState<"info" | "sale" | "courses">("info");
+  const [createStep, setCreateStep] = useState<1 | 2 | 3>(1);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newStatus, setNewStatus] = useState<"active" | "inactive" | "blocked">("active");
@@ -136,8 +136,8 @@ export function StudentsView() {
       if (p.totalAmount || p.quotaAmount) {
         setSaleAmount(String(p.totalAmount || p.quotaAmount));
       }
-      if (p.courseId) {
-        setNewCourses([Number(p.courseId)]);
+      if (p.courseId && activeCourses.some((c) => c.id === Number(p.courseId))) {
+        setNewCourses((prev) => Array.from(new Set([...prev, Number(p.courseId)])));
       }
     }
   };
@@ -155,7 +155,10 @@ export function StudentsView() {
     setShowEditPassword(false);
     setIsResettingAuto(false);
     setAutoResetSuccess(false);
-    setEditCourses([...student.enabledCourseIds]);
+    const validCourseIds = (student.enabledCourseIds || []).filter((id) =>
+      activeCourses.some((c) => c.id === id)
+    );
+    setEditCourses(validCourseIds);
     setManageFeedback(null);
   };
 
@@ -268,15 +271,14 @@ export function StudentsView() {
     setNewPassword("");
     setNewSendWelcome(true);
     setShowNewPassword(false);
-    const pub = courses.filter((c) => c.status === "publish");
-    setNewCourses(pub.length > 0 ? [pub[0].id] : (courses.length > 0 ? [courses[0].id] : []));
+    setNewCourses(activeCourses.length > 0 ? [activeCourses[0].id] : []);
     setSelectedPlanId(0);
     setSalesChannel("transfer");
     setSaleAmount("");
     setSaleReference("");
     setRecordSale(true);
     setCreateFeedback(null);
-    setCreateTab("info");
+    setCreateStep(1);
     setIsCreateOpen(true);
   };
 
@@ -408,7 +410,9 @@ export function StudentsView() {
           </thead>
           <tbody>
             {filteredStudents.map((student) => {
-              const enabledCount = student.enabledCourseIds.length;
+              const enabledCount = (student.enabledCourseIds || []).filter((id) =>
+                activeCourses.some((c) => c.id === id)
+              ).length;
               return (
                 <tr key={student.id}>
                   <td>
@@ -514,7 +518,7 @@ export function StudentsView() {
                 { value: "info", label: "Datos & Contraseña", icon: <User size={14} /> },
                 {
                   value: "courses",
-                  label: `Cursos Habilitados (${editCourses.length})`,
+                  label: `Cursos Habilitados (${activeCourses.filter((c) => editCourses.includes(c.id)).length})`,
                   icon: <GraduationCap size={14} />,
                 },
               ]}
@@ -730,52 +734,202 @@ export function StudentsView() {
       </Modal>
 
       {/* MODAL CREAR NUEVO ALUMNO */}
+      {/* =========================================================
+          MODAL DE CREAR NUEVO ALUMNO (WIZARD POR PASOS)
+          ========================================================= */}
       <Modal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        title="Crear Nuevo Alumno"
-        description="Registra un nuevo estudiante en la plataforma, define sus credenciales y asígnale cursos."
+        title="Registrar Nuevo Estudiante"
+        description="Completa el proceso guiado en 3 pasos para registrar al alumno, asentar su venta y habilitar sus accesos."
         footer={
-          <>
-            {createFeedback && (
-              <div
-                className={[
-                  styles.feedbackBox,
-                  createFeedback.type === "success" ? styles.feedbackSuccess : styles.feedbackError,
-                ].join(" ")}
-              >
-                {createFeedback.type === "success" ? <Check size={14} /> : <AlertCircle size={14} />}
-                <span>{createFeedback.text}</span>
-              </div>
-            )}
-            <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="primary" loading={isCreating} onClick={handleCreateStudent}>
-              Crear Alumno
-            </Button>
-          </>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "12px", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: "220px" }}>
+              {createFeedback && (
+                <div
+                  className={[
+                    styles.feedbackBox,
+                    createFeedback.type === "success" ? styles.feedbackSuccess : styles.feedbackError,
+                  ].join(" ")}
+                  style={{ margin: 0 }}
+                >
+                  {createFeedback.type === "success" ? <Check size={14} /> : <AlertCircle size={14} />}
+                  <span>{createFeedback.text}</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+              {createStep === 1 && (
+                <>
+                  <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      if (!newName.trim() || !newEmail.trim()) {
+                        setCreateFeedback({
+                          type: "error",
+                          text: "Por favor ingresa el nombre y correo del estudiante para continuar.",
+                        });
+                        return;
+                      }
+                      if (newPasswordMode === "manual" && !newPassword.trim()) {
+                        setCreateFeedback({
+                          type: "error",
+                          text: "Por favor define una contraseña para el estudiante o activa generación automática.",
+                        });
+                        return;
+                      }
+                      setCreateFeedback(null);
+                      setCreateStep(2);
+                    }}
+                  >
+                    Siguiente: Registrar Venta →
+                  </Button>
+                </>
+              )}
+
+              {createStep === 2 && (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setCreateFeedback(null);
+                      setCreateStep(1);
+                    }}
+                  >
+                    ← Volver a Datos
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setCreateFeedback(null);
+                      setCreateStep(3);
+                    }}
+                  >
+                    Siguiente: Habilitar Cursos →
+                  </Button>
+                </>
+              )}
+
+              {createStep === 3 && (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setCreateFeedback(null);
+                      setCreateStep(2);
+                    }}
+                  >
+                    ← Volver a Venta
+                  </Button>
+                  <Button variant="primary" loading={isCreating} onClick={handleCreateStudent}>
+                    <CheckCircle2 size={16} />
+                    Crear y Matricular Estudiante
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
         }
       >
         <div className={styles.modalBody}>
-          <div className={styles.modalTabs}>
-            <SegmentedControl<"info" | "sale" | "courses">
-              options={[
-                { value: "info", label: "Datos & Clave", icon: <User size={14} /> },
-                { value: "sale", label: "Venta & Canal", icon: <DollarSign size={14} /> },
-                {
-                  value: "courses",
-                  label: `Cursos Habilitados (${newCourses.length})`,
-                  icon: <GraduationCap size={14} />,
-                },
-              ]}
-              value={createTab}
-              onChange={setCreateTab}
-              size="sm"
+          {/* ENCABEZADO DEL WIZARD / INDICADOR DE PASOS */}
+          <div className={styles.wizardStepsHeader}>
+            <div
+              className={[
+                styles.wizardStepItem,
+                createStep === 1 ? styles.wizardStepActive : "",
+                createStep > 1 ? styles.wizardStepDone : "",
+              ].join(" ")}
+              onClick={() => {
+                setCreateFeedback(null);
+                setCreateStep(1);
+              }}
+            >
+              <div className={styles.wizardStepBadge}>
+                {createStep > 1 ? <Check size={13} /> : "1"}
+              </div>
+              <div className={styles.wizardStepContent}>
+                <span className={styles.wizardStepLabel}>Paso 1</span>
+                <span className={styles.wizardStepName}>Datos & Clave</span>
+              </div>
+            </div>
+
+            <div
+              className={[
+                styles.wizardStepDivider,
+                createStep >= 2 ? styles.wizardStepDividerActive : "",
+              ].join(" ")}
             />
+
+            <div
+              className={[
+                styles.wizardStepItem,
+                createStep === 2 ? styles.wizardStepActive : "",
+                createStep > 2 ? styles.wizardStepDone : "",
+              ].join(" ")}
+              onClick={() => {
+                if (!newName.trim() || !newEmail.trim()) {
+                  setCreateFeedback({
+                    type: "error",
+                    text: "Completa el nombre y correo en el Paso 1 primero.",
+                  });
+                  return;
+                }
+                setCreateFeedback(null);
+                setCreateStep(2);
+              }}
+            >
+              <div className={styles.wizardStepBadge}>
+                {createStep > 2 ? <Check size={13} /> : "2"}
+              </div>
+              <div className={styles.wizardStepContent}>
+                <span className={styles.wizardStepLabel}>Paso 2</span>
+                <span className={styles.wizardStepName}>Venta & Finanzas</span>
+              </div>
+            </div>
+
+            <div
+              className={[
+                styles.wizardStepDivider,
+                createStep >= 3 ? styles.wizardStepDividerActive : "",
+              ].join(" ")}
+            />
+
+            <div
+              className={[
+                styles.wizardStepItem,
+                createStep === 3 ? styles.wizardStepActive : "",
+              ].join(" ")}
+              onClick={() => {
+                if (!newName.trim() || !newEmail.trim()) {
+                  setCreateFeedback({
+                    type: "error",
+                    text: "Completa el nombre y correo en el Paso 1 primero.",
+                  });
+                  return;
+                }
+                setCreateFeedback(null);
+                setCreateStep(3);
+              }}
+            >
+              <div className={styles.wizardStepBadge}>
+                {createStep === 3 ? <GraduationCap size={13} /> : "3"}
+              </div>
+              <div className={styles.wizardStepContent}>
+                <span className={styles.wizardStepLabel}>Paso 3</span>
+                <span className={styles.wizardStepName}>
+                  Cursos ({activeCourses.filter((c) => newCourses.includes(c.id)).length})
+                </span>
+              </div>
+            </div>
           </div>
 
-          {createTab === "info" && (
+          {/* PASO 1: DATOS & CREDENCIALES */}
+          {createStep === 1 && (
             <>
               <div className={styles.formGrid}>
                 <div className={styles.formGroup}>
@@ -905,7 +1059,8 @@ export function StudentsView() {
             </>
           )}
 
-          {createTab === "sale" && (
+          {/* PASO 2: VENTA & FINANZAS */}
+          {createStep === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
               <div className={styles.sectionCard}>
                 <div className={styles.sectionHeader}>
@@ -925,7 +1080,7 @@ export function StudentsView() {
                   <Switch checked={recordSale} onCheckedChange={setRecordSale} />
                 </div>
 
-                {recordSale && (
+                {recordSale ? (
                   <div className={styles.formGrid} style={{ marginTop: "var(--space-3)" }}>
                     <div className={styles.formGroup}>
                       <label className={styles.label}>¿Por dónde compró? (Canal de Venta) *</label>
@@ -998,43 +1153,107 @@ export function StudentsView() {
                       />
                     </div>
                   </div>
+                ) : (
+                  <div className={styles.noticeBanner} style={{ marginTop: "var(--space-3)" }}>
+                    <AlertCircle size={18} className={styles.noticeBannerIcon} />
+                    <div>
+                      <strong>Acceso de Cortesía / Sin Venta:</strong>
+                      <br />
+                      El estudiante se registrará y matriculará sin generar ninguna transacción en el módulo de Finanzas.
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           )}
 
-          {createTab === "courses" && (
-            <div className={styles.courseAccessList}>
-              <p className={styles.switchDesc}>
-                Habilita los cursos a los que este alumno tendrá acceso desde el momento de su registro:
-              </p>
-              {activeCourses.map((course) => {
-                const isEnabled = newCourses.includes(course.id);
-                return (
-                  <div
-                    key={course.id}
-                    className={[styles.courseAccessRow, isEnabled ? styles.courseRowActive : ""].join(" ")}
-                    onClick={() => handleToggleNewCourse(course.id)}
-                  >
-                    <div className={styles.courseThumbWrap}>
-                      <img src={course.thumbnail} alt={course.title} className={styles.courseThumb} />
-                    </div>
-                    <div className={styles.courseDetails}>
-                      <h4 className={styles.courseRowTitle}>{course.title}</h4>
-                      <span className={styles.courseModulesCount}>
-                        {course.sections?.length || 0} Módulos estructurados
-                      </span>
-                    </div>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <Switch
-                        checked={isEnabled}
-                        onCheckedChange={() => handleToggleNewCourse(course.id)}
-                        aria-label={`Acceso a ${course.title}`}
-                      />
-                    </div>
+          {/* PASO 3: CURSOS HABILITADOS & CONFIRMACIÓN */}
+          {createStep === 3 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+              <div className={styles.courseAccessList}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <p className={styles.switchDesc} style={{ margin: 0 }}>
+                    Habilita las formaciones a las que este alumno tendrá acceso inmediato:
+                  </p>
+                  <Badge variant={activeCourses.filter((c) => newCourses.includes(c.id)).length > 0 ? "accent" : "neutral"} size="sm">
+                    <GraduationCap size={13} />
+                    {activeCourses.filter((c) => newCourses.includes(c.id)).length} de {activeCourses.length} seleccionados
+                  </Badge>
+                </div>
+
+                {activeCourses.length === 0 ? (
+                  <div className={styles.emptyState} style={{ padding: "20px" }}>
+                    <GraduationCap size={30} className={styles.emptyIcon} />
+                    <p>No hay cursos publicados actualmente en la academia.</p>
                   </div>
-                );
-              })}
+                ) : (
+                  activeCourses.map((course) => {
+                    const isEnabled = newCourses.includes(course.id);
+                    return (
+                      <div
+                        key={course.id}
+                        className={[styles.courseAccessRow, isEnabled ? styles.courseRowActive : ""].join(" ")}
+                        onClick={() => handleToggleNewCourse(course.id)}
+                      >
+                        <div className={styles.courseThumbWrap}>
+                          <img src={course.thumbnail} alt={course.title} className={styles.courseThumb} />
+                        </div>
+                        <div className={styles.courseDetails}>
+                          <h4 className={styles.courseRowTitle}>{course.title}</h4>
+                          <span className={styles.courseModulesCount}>
+                            {course.sections?.length || 0} Módulos estructurados
+                          </span>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={() => handleToggleNewCourse(course.id)}
+                            aria-label={`Acceso a ${course.title}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* TARJETA DE RESUMEN FINAL ANTES DE CONFIRMAR */}
+              <div className={styles.wizardSummaryCard}>
+                <h4 className={styles.wizardSummaryTitle}>
+                  <CheckCircle2 size={15} style={{ color: "var(--accent)" }} />
+                  Resumen de la Nueva Matrícula
+                </h4>
+                <div className={styles.wizardSummaryGrid}>
+                  <div className={styles.wizardSummaryItem}>
+                    <span className={styles.wizardSummaryLabel}>Estudiante</span>
+                    <span className={styles.wizardSummaryVal}>
+                      {newName || "Sin nombre"} ({newEmail || "Sin correo"})
+                    </span>
+                  </div>
+                  <div className={styles.wizardSummaryItem}>
+                    <span className={styles.wizardSummaryLabel}>Estado de la Cuenta</span>
+                    <span className={styles.wizardSummaryVal}>
+                      {newStatus === "active" ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
+                  <div className={styles.wizardSummaryItem}>
+                    <span className={styles.wizardSummaryLabel}>Registro en Finanzas</span>
+                    <span className={styles.wizardSummaryVal}>
+                      {recordSale
+                        ? `${SALES_CHANNEL_OPTIONS.find((o) => o.value === salesChannel)?.label || salesChannel} · $${saleAmount || "0"} USD`
+                        : "Acceso de cortesía (Sin cobro)"}
+                    </span>
+                  </div>
+                  <div className={styles.wizardSummaryItem}>
+                    <span className={styles.wizardSummaryLabel}>Cursos Asignados</span>
+                    <span className={styles.wizardSummaryVal} style={{ color: "var(--accent)" }}>
+                      {activeCourses.filter((c) => newCourses.includes(c.id)).length === 0
+                        ? "Ningún curso seleccionado"
+                        : `${activeCourses.filter((c) => newCourses.includes(c.id)).length} curso(s) activo(s)`}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

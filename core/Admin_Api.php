@@ -948,7 +948,17 @@ class Admin_Api {
 				$course_ids = learndash_user_get_enrolled_courses( $user->ID );
 			} else {
 				$meta_courses = get_user_meta( $user->ID, '_alezux_enabled_courses', true );
-				$course_ids = is_array( $meta_courses ) ? $meta_courses : [ 1 ];
+				$course_ids = is_array( $meta_courses ) ? $meta_courses : [];
+			}
+
+			$valid_course_ids = [];
+			if ( ! empty( $course_ids ) && is_array( $course_ids ) ) {
+				foreach ( $course_ids as $cid ) {
+					$cid = intval( $cid );
+					if ( $cid > 0 && get_post_status( $cid ) ) {
+						$valid_course_ids[] = $cid;
+					}
+				}
 			}
 
 			$avatar_url = get_avatar_url( $user->ID, [ 'size' => 80 ] );
@@ -962,7 +972,7 @@ class Admin_Api {
 				'joinedDate'       => date( 'd/m/Y', strtotime( $user->user_registered ) ),
 				'status'           => $is_blocked ? 'blocked' : 'active',
 				'planName'         => get_user_meta( $user->ID, '_alezux_plan_name', true ) ?: 'Acceso Completo',
-				'enabledCourseIds' => array_values( array_map( 'intval', (array) $course_ids ) ),
+				'enabledCourseIds' => array_values( array_unique( $valid_course_ids ) ),
 			];
 		}
 
@@ -1339,7 +1349,7 @@ class Admin_Api {
 				'joinedDate'       => date( 'd/m/Y', strtotime( $fresh_user->user_registered ) ),
 				'status'           => $is_blocked ? 'blocked' : 'active',
 				'planName'         => get_user_meta( $fresh_user->ID, '_alezux_plan_name', true ) ?: 'Acceso Completo',
-				'enabledCourseIds' => array_values( array_map( 'intval', (array) $course_ids ) ),
+				'enabledCourseIds' => array_values( array_unique( array_filter( array_map( 'intval', (array) $course_ids ), function( $cid ) { return $cid > 0 && get_post_status( $cid ); } ) ) ),
 			],
 		] );
 	}
@@ -3202,11 +3212,11 @@ class Admin_Api {
 		$user_id = get_current_user_id();
 		$is_blocked = (bool) get_user_meta( $user_id, 'alezux_is_blocked', true );
 
+		if ( $is_blocked && ! current_user_can( 'administrator' ) ) {
+			return rest_ensure_response( [] );
+		}
+
 		foreach ( $courses as &$c ) {
-			if ( $is_blocked && ! current_user_can( 'administrator' ) ) {
-				$c['hasAccess'] = false;
-				continue;
-			}
 			// Comprobar acceso mediante LMS_Engine
 			$has_acc = in_array( (int) $c['id'], $enrolled_ids, true );
 			if ( ! $has_acc && class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {

@@ -62,7 +62,7 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
     return hasDirectAccess || isEnrolled;
   });
 
-  const enrolledCount = enabledCourses.length > 0 ? enabledCourses.length : profile.enrolledCourseIds.length;
+  const enrolledCount = enabledCourses.length;
   const completedCount = profile.completedTopicIds ? profile.completedTopicIds.length : 0;
 
   // Manejo de subida de archivo de avatar desde PC (Click o Dropzone)
