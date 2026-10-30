@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
+  User,
   Users,
   Search,
   Plus,
@@ -81,6 +82,8 @@ export function InstructorsView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
+  const [editTab, setEditTab] = useState<"info" | "courses" | "community">("info");
+  const [editChangePassword, setEditChangePassword] = useState(false);
 
   // Campos de formulario
   const [formName, setFormName] = useState("");
@@ -96,6 +99,12 @@ export function InstructorsView() {
   const [isPasswordCopied, setIsPasswordCopied] = useState(false);
   const [formAllowedChannels, setFormAllowedChannels] = useState<number[]>([]);
   const [formAssignedCourses, setFormAssignedCourses] = useState<number[]>([]);
+
+  // Filtrar exclusivamente los cursos activos/publicados para que no salgan borradores
+  const activeCourses = useMemo(() => {
+    const published = courses.filter((c) => c.status === "publish");
+    return published.length > 0 ? published : courses;
+  }, [courses]);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
@@ -163,6 +172,7 @@ export function InstructorsView() {
   // Abrir Modal para Editar Docente
   const openEditModal = (inst: Instructor) => {
     setEditingInstructor(inst);
+    setEditTab("info");
     setWizardStep(1);
     setFormName(inst.name || "");
     setFormEmail(inst.email || "");
@@ -170,6 +180,7 @@ export function InstructorsView() {
     setFormAvatar(inst.avatar || "");
     setFormBio(inst.bio || "");
     setFormCreateWpUser(Boolean(inst.userId));
+    setEditChangePassword(false);
     setFormPasswordMode("manual");
     setFormPassword("");
     setFormSendWelcomeEmail(false);
@@ -198,6 +209,10 @@ export function InstructorsView() {
     if (!formEmail.trim()) {
       showToast("warning", "Campo requerido", "Por favor ingresa el correo del docente.");
       return false;
+    }
+    // Si estamos editando y no se activó cambio de contraseña, no requerir clave
+    if (editingInstructor && !editChangePassword) {
+      return true;
     }
     if (formCreateWpUser && formPasswordMode === "manual" && !formPassword.trim()) {
       showToast("warning", "Contraseña requerida", "Define una contraseña manual o selecciona generarla automáticamente.");
@@ -247,6 +262,10 @@ export function InstructorsView() {
 
     setIsSaving(true);
     try {
+      const shouldUpdatePassword = editingInstructor
+        ? editChangePassword && Boolean(formPassword.trim())
+        : formCreateWpUser && Boolean(formPassword.trim());
+
       const payload: Partial<Instructor> & { createWpUser?: boolean; password?: string; sendWelcomeEmail?: boolean } = {
         id: editingInstructor ? editingInstructor.id : undefined,
         name: formName.trim(),
@@ -257,8 +276,8 @@ export function InstructorsView() {
         allowedChannelIds: formAllowedChannels,
         assignedCourseIds: formAssignedCourses,
         createWpUser: formCreateWpUser,
-        password: (formCreateWpUser && formPassword.trim()) ? formPassword.trim() : undefined,
-        sendWelcomeEmail: formSendWelcomeEmail,
+        password: shouldUpdatePassword ? formPassword.trim() : undefined,
+        sendWelcomeEmail: editingInstructor ? (editChangePassword && formSendWelcomeEmail) : formSendWelcomeEmail,
       };
 
       const res = await api.saveInstructor(payload);
@@ -535,22 +554,11 @@ export function InstructorsView() {
         title={editingInstructor ? `Gestionar Docente: ${editingInstructor.name}` : "Registrar Nuevo Docente"}
         maxWidth="720px"
         footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
-              Cancelar
-            </Button>
-            {wizardStep > 1 && (
-              <Button variant="secondary" onClick={() => setWizardStep((prev) => (prev - 1) as any)}>
-                <ArrowLeft size={14} />
-                <span>Atrás</span>
+          editingInstructor ? (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
+                Cancelar
               </Button>
-            )}
-            {wizardStep < 3 ? (
-              <Button variant="primary" onClick={handleNextStep}>
-                <span>Siguiente Paso</span>
-                <ArrowRight size={14} />
-              </Button>
-            ) : (
               <Button
                 variant="primary"
                 onClick={handleSaveInstructor}
@@ -558,61 +566,117 @@ export function InstructorsView() {
                 disabled={isSaving || isUploadingAvatar}
               >
                 <UserCheck size={15} />
-                <span>{editingInstructor ? "Guardar Cambios" : "Completar Registro de Docente"}</span>
+                <span>Guardar Cambios</span>
               </Button>
-            )}
-          </>
+            </div>
+          ) : (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <div>
+                <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
+                  Cancelar
+                </Button>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {wizardStep > 1 && (
+                  <Button variant="secondary" onClick={() => setWizardStep((prev) => (prev - 1) as any)}>
+                    <ArrowLeft size={14} />
+                    <span>Atrás</span>
+                  </Button>
+                )}
+                {wizardStep < 3 ? (
+                  <Button variant="primary" onClick={handleNextStep}>
+                    <span>Siguiente Paso</span>
+                    <ArrowRight size={14} />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveInstructor}
+                    loading={isSaving || isUploadingAvatar}
+                    disabled={isSaving || isUploadingAvatar}
+                  >
+                    <UserCheck size={15} />
+                    <span>Completar Registro de Docente</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )
         }
       >
         <div className={styles.modalForm}>
-          {/* Header de Pasos Wizard */}
-          <div className={styles.wizardStepsHeader}>
-            <div
-              className={`${styles.wizardStepItem} ${wizardStep === 1 ? styles.wizardStepActive : wizardStep > 1 ? styles.wizardStepDone : ""}`}
-              onClick={() => setWizardStep(1)}
-            >
-              <div className={styles.wizardStepBadge}>{wizardStep > 1 ? <Check size={13} /> : "1"}</div>
-              <div className={styles.wizardStepContent}>
-                <span className={styles.wizardStepLabel}>Paso 1</span>
-                <span className={styles.wizardStepName}>Datos & Cuenta</span>
+          {editingInstructor ? (
+            /* Modo Edición: Tabs Directos para navegación sin bloqueos */
+            <div style={{ marginBottom: "16px" }}>
+              <SegmentedControl<"info" | "courses" | "community">
+                options={[
+                  { value: "info", label: "Datos & Cuenta", icon: <User size={14} /> },
+                  {
+                    value: "courses",
+                    label: `Cursos Asignados (${activeCourses.filter((c) => formAssignedCourses.includes(c.id)).length})`,
+                    icon: <GraduationCap size={14} />,
+                  },
+                  {
+                    value: "community",
+                    label: `Comunidad & Canales (${formAllowedChannels.length})`,
+                    icon: <MessageSquare size={14} />,
+                  },
+                ]}
+                value={editTab}
+                onChange={setEditTab}
+                size="sm"
+              />
+            </div>
+          ) : (
+            /* Modo Creación: Wizard Guiado por Pasos */
+            <div className={styles.wizardStepsHeader}>
+              <div
+                className={`${styles.wizardStepItem} ${wizardStep === 1 ? styles.wizardStepActive : wizardStep > 1 ? styles.wizardStepDone : ""}`}
+                onClick={() => setWizardStep(1)}
+              >
+                <div className={styles.wizardStepBadge}>{wizardStep > 1 ? <Check size={13} /> : "1"}</div>
+                <div className={styles.wizardStepContent}>
+                  <span className={styles.wizardStepLabel}>Paso 1</span>
+                  <span className={styles.wizardStepName}>Datos & Cuenta</span>
+                </div>
+              </div>
+
+              <div className={`${styles.wizardStepDivider} ${wizardStep >= 2 ? styles.wizardStepDividerActive : ""}`} />
+
+              <div
+                className={`${styles.wizardStepItem} ${wizardStep === 2 ? styles.wizardStepActive : wizardStep > 2 ? styles.wizardStepDone : ""}`}
+                onClick={() => {
+                  if (validateStep1()) setWizardStep(2);
+                }}
+              >
+                <div className={styles.wizardStepBadge}>{wizardStep > 2 ? <Check size={13} /> : "2"}</div>
+                <div className={styles.wizardStepContent}>
+                  <span className={styles.wizardStepLabel}>Paso 2</span>
+                  <span className={styles.wizardStepName}>Cursos Asignados</span>
+                </div>
+              </div>
+
+              <div className={`${styles.wizardStepDivider} ${wizardStep >= 3 ? styles.wizardStepDividerActive : ""}`} />
+
+              <div
+                className={`${styles.wizardStepItem} ${wizardStep === 3 ? styles.wizardStepActive : ""}`}
+                onClick={() => {
+                  if (validateStep1()) setWizardStep(3);
+                }}
+              >
+                <div className={styles.wizardStepBadge}>3</div>
+                <div className={styles.wizardStepContent}>
+                  <span className={styles.wizardStepLabel}>Paso 3</span>
+                  <span className={styles.wizardStepName}>Comunidad & Resumen</span>
+                </div>
               </div>
             </div>
-
-            <div className={`${styles.wizardStepDivider} ${wizardStep >= 2 ? styles.wizardStepDividerActive : ""}`} />
-
-            <div
-              className={`${styles.wizardStepItem} ${wizardStep === 2 ? styles.wizardStepActive : wizardStep > 2 ? styles.wizardStepDone : ""}`}
-              onClick={() => {
-                if (validateStep1()) setWizardStep(2);
-              }}
-            >
-              <div className={styles.wizardStepBadge}>{wizardStep > 2 ? <Check size={13} /> : "2"}</div>
-              <div className={styles.wizardStepContent}>
-                <span className={styles.wizardStepLabel}>Paso 2</span>
-                <span className={styles.wizardStepName}>Cursos Asignados</span>
-              </div>
-            </div>
-
-            <div className={`${styles.wizardStepDivider} ${wizardStep >= 3 ? styles.wizardStepDividerActive : ""}`} />
-
-            <div
-              className={`${styles.wizardStepItem} ${wizardStep === 3 ? styles.wizardStepActive : ""}`}
-              onClick={() => {
-                if (validateStep1()) setWizardStep(3);
-              }}
-            >
-              <div className={styles.wizardStepBadge}>3</div>
-              <div className={styles.wizardStepContent}>
-                <span className={styles.wizardStepLabel}>Paso 3</span>
-                <span className={styles.wizardStepName}>Comunidad & Resumen</span>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* =========================================================================
-              PASO 1: DATOS PERSONALES, ESPECIALIDAD Y CREDENCIALES DE ACCESO
+              PASO 1 / TAB 1: DATOS PERSONALES, ESPECIALIDAD Y CREDENCIALES DE ACCESO
               ========================================================================= */}
-          {wizardStep === 1 && (
+          {(editingInstructor ? editTab === "info" : wizardStep === 1) && (
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
               <div className={styles.formGrid}>
                 <Input
@@ -757,9 +821,9 @@ export function InstructorsView() {
           )}
 
           {/* =========================================================================
-              PASO 2: ASIGNACIÓN DE CURSOS
+              PASO 2 / TAB 2: ASIGNACIÓN DE CURSOS
               ========================================================================= */}
-          {wizardStep === 2 && (
+          {(editingInstructor ? editTab === "courses" : wizardStep === 2) && (
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
               <div>
                 <h4 style={{ margin: "0 0 4px", fontSize: "14px", color: "var(--foreground)", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -771,13 +835,13 @@ export function InstructorsView() {
                 </p>
               </div>
 
-              {courses.length === 0 ? (
+              {activeCourses.length === 0 ? (
                 <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)", background: "var(--surface)", borderRadius: "8px" }}>
                   No hay cursos creados en la academia todavía.
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "320px", overflowY: "auto", paddingRight: "4px" }}>
-                  {courses.map((course) => {
+                  {activeCourses.map((course) => {
                     const isSelected = formAssignedCourses.includes(course.id);
                     return (
                       <div
@@ -828,9 +892,9 @@ export function InstructorsView() {
           )}
 
           {/* =========================================================================
-              PASO 3: COMUNIDAD Y RESUMEN GENERAL
+              PASO 3 / TAB 3: COMUNIDAD Y RESUMEN GENERAL
               ========================================================================= */}
-          {wizardStep === 3 && (
+          {(editingInstructor ? editTab === "community" : wizardStep === 3) && (
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
               {/* Canales de Moderación */}
               <div>
