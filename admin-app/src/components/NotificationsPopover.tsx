@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import { 
   Bell, 
   Calendar, 
@@ -7,7 +8,8 @@ import {
   CheckCheck, 
   Info, 
   Clock, 
-  ExternalLink 
+  ExternalLink,
+  X
 } from "lucide-react";
 import styles from "./NotificationsPopover.module.css";
 
@@ -91,7 +93,7 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
     localStorage.setItem("crezca_notifications", JSON.stringify(notifications));
   }, [notifications]);
 
-  // Cerrar al presionar Escape o hacer click afuera
+  // Cerrar al presionar Escape
   useEffect(() => {
     if (!isOpen) return;
 
@@ -99,22 +101,9 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
       if (e.key === "Escape") onClose();
     };
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-
     document.addEventListener("keydown", handleKeyDown);
-    // Timeout para evitar que el click que abre el popover lo cierre inmediatamente
-    const timer = setTimeout(() => {
-      document.addEventListener("click", handleClickOutside);
-    }, 10);
-
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("click", handleClickOutside);
-      clearTimeout(timer);
     };
   }, [isOpen, onClose]);
 
@@ -155,10 +144,20 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
     }
   };
 
-  return (
+  const popoverContent = (
     <>
-      <div className={styles.popoverOverlay} onClick={onClose} />
-      <div ref={popoverRef} className={styles.popoverContainer} onClick={(e) => e.stopPropagation()}>
+      <div 
+        className={styles.popoverOverlay} 
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }} 
+      />
+      <div 
+        ref={popoverRef} 
+        className={styles.popoverContainer} 
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.header}>
           <div className={styles.headerTitleRow}>
             <h4 className={styles.headerTitle}>Notificaciones</h4>
@@ -166,17 +165,28 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
               <span className={styles.unreadChip}>{unreadCount} nuevas</span>
             )}
           </div>
-          {unreadCount > 0 && (
+          <div className={styles.headerActions}>
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                className={styles.markAllBtn}
+                onClick={handleMarkAllAsRead}
+                title="Marcar todas como leídas"
+              >
+                <CheckCheck size={14} />
+                <span>Leer todas</span>
+              </button>
+            )}
             <button
               type="button"
-              className={styles.markAllBtn}
-              onClick={handleMarkAllAsRead}
-              title="Marcar todas como leídas"
+              className={styles.closePopoverBtn}
+              onClick={onClose}
+              title="Cerrar notificaciones"
+              aria-label="Cerrar"
             >
-              <CheckCheck size={14} />
-              <span>Leer todas</span>
+              <X size={16} />
             </button>
-          )}
+          </div>
         </div>
 
         <div className={styles.tabsRow}>
@@ -213,22 +223,30 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
                   {getIcon(item.type)}
                 </div>
                 <div className={styles.itemContent}>
-                <div className={styles.itemTitle}>{item.title}</div>
-                <div className={styles.itemDesc}>{item.message}</div>
-                <div className={styles.itemTime}>{item.time}</div>
+                  <div className={styles.itemTitle}>{item.title}</div>
+                  <div className={styles.itemDesc}>{item.message}</div>
+                  <div className={styles.itemTime}>{item.time}</div>
+                </div>
+                {!item.read && <span className={styles.unreadDot} />}
               </div>
-              {!item.read && <span className={styles.unreadDot} />}
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
 
-      <div className={styles.footer}>
-        <span className={styles.footerText}>
-          {appMode === "admin" ? "Notificaciones de la Academia" : "Campus Virtual del Estudiante"}
-        </span>
+        <div className={styles.footer}>
+          <span className={styles.footerText}>
+            {appMode === "admin" ? "Notificaciones de la Academia" : "Campus Virtual del Estudiante"}
+          </span>
+        </div>
       </div>
-    </div>
     </>
   );
+
+  // En móvil montamos directo en body para evitar problemas de stacking context / backdrop-filter
+  const isMobileView = typeof window !== "undefined" && window.innerWidth <= 768;
+  if (isMobileView && typeof document !== "undefined") {
+    return ReactDOM.createPortal(popoverContent, document.body);
+  }
+
+  return popoverContent;
 };

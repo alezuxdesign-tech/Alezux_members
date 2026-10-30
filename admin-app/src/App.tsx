@@ -745,12 +745,21 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               </button>
             )}
 
-            {/* Notificaciones Globales */}
+            {/* Notificaciones Globales Mobile */}
             <div className={styles.headerNotificationWrapper}>
               <button
                 type="button"
                 className={styles.headerIconButton}
-                onClick={() => setIsNotificationsOpen((prev) => !prev)}
+                onClick={() => {
+                  setIsNotificationsOpen((prev) => !prev);
+                  try {
+                    const stored = localStorage.getItem("crezca_notifications");
+                    if (stored) {
+                      const parsed = JSON.parse(stored);
+                      setUnreadNotificationsCount(parsed.filter((n: any) => !n.read).length);
+                    }
+                  } catch (e) {}
+                }}
                 title="Notificaciones"
                 aria-label="Ver notificaciones"
               >
@@ -887,31 +896,34 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 )}
               </button>
 
-              <NotificationsPopover
-                isOpen={isNotificationsOpen}
-                onClose={() => {
-                  setIsNotificationsOpen(false);
-                  try {
-                    const stored = localStorage.getItem("crezca_notifications");
-                    if (stored) {
-                      const parsed = JSON.parse(stored);
-                      setUnreadNotificationsCount(parsed.filter((n: any) => !n.read).length);
+              {!isMobile && (
+                <NotificationsPopover
+                  isOpen={isNotificationsOpen}
+                  onClose={() => {
+                    setIsNotificationsOpen(false);
+                    try {
+                      const stored = localStorage.getItem("crezca_notifications");
+                      if (stored) {
+                        const parsed = JSON.parse(stored);
+                        setUnreadNotificationsCount(parsed.filter((n: any) => !n.read).length);
+                      }
+                    } catch (e) {}
+                  }}
+                  onNavigate={(tab) => {
+                    setIsNotificationsOpen(false);
+                    if (appMode === "admin") {
+                      if (tab === "events" || tab === "courses" || tab === "students" || tab === "instructors" || tab === "community" || tab === "settings") {
+                        setActiveAdminTab(tab as AdminTabId);
+                      }
+                    } else {
+                      if (tab === "dashboard" || tab === "courses" || tab === "community" || tab === "profile") {
+                        setActiveStudentTab(tab as StudentTabId);
+                      }
                     }
-                  } catch (e) {}
-                }}
-                onNavigate={(tab) => {
-                  if (appMode === "admin") {
-                    if (tab === "events" || tab === "courses" || tab === "students" || tab === "instructors" || tab === "community" || tab === "settings") {
-                      setActiveAdminTab(tab as AdminTabId);
-                    }
-                  } else {
-                    if (tab === "dashboard" || tab === "courses" || tab === "community" || tab === "profile") {
-                      setActiveStudentTab(tab as StudentTabId);
-                    }
-                  }
-                }}
-                appMode={appMode}
-              />
+                  }}
+                  appMode={appMode}
+                />
+              )}
             </div>
 
             {/* Foto de Perfil de Usuario */}
@@ -1311,6 +1323,27 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             )}
           </div>
         </div>
+      )}
+
+      {/* Popover Global de Notificaciones para Móvil */}
+      {isMobile && (
+        <NotificationsPopover
+          isOpen={isNotificationsOpen}
+          onClose={() => setIsNotificationsOpen(false)}
+          onNavigate={(tab) => {
+            setIsNotificationsOpen(false);
+            if (appMode === "admin") {
+              if (tab === "events" || tab === "courses" || tab === "students" || tab === "instructors" || tab === "community" || tab === "settings") {
+                setActiveAdminTab(tab as AdminTabId);
+              }
+            } else {
+              if (tab === "dashboard" || tab === "courses" || tab === "community" || tab === "profile") {
+                setActiveStudentTab(tab as StudentTabId);
+              }
+            }
+          }}
+          appMode={appMode}
+        />
       )}
     </div>
   );

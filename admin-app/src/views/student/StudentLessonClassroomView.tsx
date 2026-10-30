@@ -253,8 +253,8 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
 
   const isCurrentCompleted = currentItem ? completedTopicIds.includes(currentItem.id) : false;
 
-  // Tabs de contenido: descripción, archivos, preguntas/quiz o docentes
-  const [contentTab, setContentTab] = useState<"description" | "files" | "quiz" | "instructors">("description");
+  // Tabs de contenido: temario, descripción, archivos, preguntas/quiz o docentes
+  const [contentTab, setContentTab] = useState<"syllabus" | "description" | "files" | "quiz" | "instructors">("description");
 
   // Estado del Quiz interactivo
   const currentQuestions = currentItem?.questions || [];
@@ -447,6 +447,11 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
           {/* Fila de Título y Acciones de la Lección */}
           <div className={styles.topicActionHeader}>
             <div className={styles.topicMetaInfo}>
+              <div className={styles.topicMetaModuleHint}>
+                <span className={styles.metaModuleName}>{currentLesson.title}</span>
+                <span className={styles.metaDot}>•</span>
+                <span className={styles.metaProgressText}>{completedInModule}/{allPlayableItems.length} completadas ({modulePercentage}%)</span>
+              </div>
               <h1 className={styles.activeTopicTitle}>
                 {currentItem?.title || "Lección del módulo"}
               </h1>
@@ -459,7 +464,10 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                 <button
                   type="button"
                   className={styles.classroomNavBtn}
-                  onClick={() => setActiveItemId(prevItem.id)}
+                  onClick={() => {
+                    setActiveItemId(prevItem.id);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   title={`Clase anterior: ${prevItem.title}`}
                 >
                   <ChevronLeft size={16} />
@@ -478,7 +486,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                   onClick={() => onToggleCompleteTopic(currentItem.id)}
                 >
                   <CheckCircle2 size={16} />
-                  <span>{isCurrentCompleted ? "✓ Clase Completada" : "Completar clase"}</span>
+                  <span>{isCurrentCompleted ? "✓ Completada" : "Completar clase"}</span>
                 </button>
               )}
 
@@ -487,7 +495,10 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                 <button
                   type="button"
                   className={[styles.classroomNavBtn, styles.classroomNavBtnNext].join(" ")}
-                  onClick={() => setActiveItemId(nextItem.id)}
+                  onClick={() => {
+                    setActiveItemId(nextItem.id);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   title={`Siguiente clase: ${nextItem.title}`}
                 >
                   <span>Siguiente clase</span>
@@ -497,9 +508,23 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
             </div>
           </div>
 
-          {/* Pestañas de Descripción, Archivos, Quiz y Docentes */}
+          {/* Pestañas de Temario (Móvil), Descripción, Archivos, Quiz y Docentes */}
           <div className={styles.topicTabsContainer}>
             <div className={styles.topicTabsList}>
+              {/* Pestaña Temario (visible en móvil y tablet) */}
+              <button
+                type="button"
+                className={[
+                  styles.topicTabBtn,
+                  styles.syllabusTabBtn,
+                  contentTab === "syllabus" ? styles.topicTabBtnActive : "",
+                ].join(" ")}
+                onClick={() => setContentTab("syllabus")}
+              >
+                <Layers size={15} />
+                <span>Temario ({allPlayableItems.length})</span>
+              </button>
+
               <button
                 type="button"
                 className={[
@@ -547,6 +572,141 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
             </div>
 
             <div className={styles.topicTabBody}>
+              {/* TAB 0: TEMARIO (Visible en móvil y tablet) */}
+              {contentTab === "syllabus" && (
+                <div className={styles.mobileSyllabusTabContent}>
+                  {/* Selector rápido de otros módulos si hay más de 1 */}
+                  {course.sections && course.sections.length > 1 && (
+                    <div className={styles.mobileModuleSelectorWrap}>
+                      <span className={styles.mobileModuleSelectorLabel}>Módulo:</span>
+                      <select
+                        className={styles.mobileModuleSelect}
+                        value={currentLesson.id}
+                        onChange={(e) => {
+                          const targetLesId = e.target.value;
+                          for (const sec of course.sections || []) {
+                            const foundLes = sec.lessons?.find((l) => l.id === targetLesId);
+                            if (foundLes) {
+                              const first = foundLes.topics && foundLes.topics.length > 0 ? foundLes.topics[0] : (foundLes as unknown as CourseTopic);
+                              onSwitchModule(sec, foundLes, first);
+                              break;
+                            }
+                          }
+                        }}
+                      >
+                        {course.sections.map((sec) => (
+                          <optgroup key={sec.id} label={sec.title}>
+                            {sec.lessons?.map((les) => (
+                              <option key={les.id} value={les.id}>
+                                {les.title}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className={styles.topicsScrollList}>
+                    {topics.map((top) => {
+                      const hasSubtopics = top.subtopics && top.subtopics.length > 0;
+                      const isExpanded = !!expandedTopicIds[top.id];
+
+                      if (hasSubtopics) {
+                        const subtopics = top.subtopics!;
+                        const completedSubs = subtopics.filter((s) => completedTopicIds.includes(s.id)).length;
+                        const isParentActive = currentItem?.id === top.id || subtopics.some((s) => s.id === currentItem?.id);
+
+                        return (
+                          <div key={top.id} className={styles.topicAccordionWrapper}>
+                            <div
+                              className={[
+                                styles.topicAccordionHeader,
+                                isParentActive ? styles.topicAccordionHeaderActive : "",
+                              ].join(" ")}
+                              onClick={() => toggleTopicExpanded(top.id)}
+                            >
+                              <div className={styles.topicAccordionMeta}>
+                                <h4 className={styles.topicAccordionTitle}>{top.title}</h4>
+                                <span className={styles.topicAccordionCounter}>
+                                  {completedSubs}/{subtopics.length} terminado
+                                </span>
+                              </div>
+                              <div className={styles.topicAccordionChevron}>
+                                {isExpanded ? <ChevronDown size={16} /> : <ChevronRightIcon size={16} />}
+                              </div>
+                            </div>
+
+                            {isExpanded && (
+                              <div className={styles.topicAccordionBody}>
+                                {top.video_url && top.video_url.trim() !== "" && (
+                                  <ClassCardItem
+                                    id={top.id}
+                                    title={top.title}
+                                    cover={top.cover}
+                                    author={authorName}
+                                    isActive={currentItem?.id === top.id}
+                                    isCompleted={completedTopicIds.includes(top.id)}
+                                    effectiveLogo={effectiveLogo}
+                                    courseTitle={course.title}
+                                    onClick={() => {
+                                      setActiveItemId(top.id);
+                                      window.scrollTo({ top: 0, behavior: "smooth" });
+                                    }}
+                                    onToggleComplete={() => onToggleCompleteTopic(top.id)}
+                                  />
+                                )}
+
+                                {subtopics.map((sub) => (
+                                  <ClassCardItem
+                                    key={sub.id}
+                                    id={sub.id}
+                                    title={sub.title}
+                                    cover={sub.cover}
+                                    author={authorName}
+                                    isActive={currentItem?.id === sub.id}
+                                    isCompleted={completedTopicIds.includes(sub.id)}
+                                    effectiveLogo={effectiveLogo}
+                                    courseTitle={course.title}
+                                    onClick={() => {
+                                      setActiveItemId(sub.id);
+                                      window.scrollTo({ top: 0, behavior: "smooth" });
+                                    }}
+                                    onToggleComplete={() => onToggleCompleteTopic(sub.id)}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      const isActive = currentItem?.id === top.id;
+                      const isCompleted = completedTopicIds.includes(top.id);
+
+                      return (
+                        <ClassCardItem
+                          key={top.id}
+                          id={top.id}
+                          title={top.title}
+                          cover={top.cover}
+                          author={authorName}
+                          isActive={isActive}
+                          isCompleted={isCompleted}
+                          effectiveLogo={effectiveLogo}
+                          courseTitle={course.title}
+                          onClick={() => {
+                            setActiveItemId(top.id);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          onToggleComplete={() => onToggleCompleteTopic(top.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* TAB 1: DESCRIPCIÓN */}
               {contentTab === "description" && (
                 <div className={styles.topicDescriptionBox}>
