@@ -5235,35 +5235,47 @@
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .inputPrefixIcon {
   position: absolute;
   left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-muted);
   pointer-events: none;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .passwordInput {
-  width: 100%;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 9px 40px 9px 38px;
-  color: var(--foreground);
-  font-size: 13.5px;
-  outline: none;
+  width: 100% !important;
+  background: var(--surface-muted) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 10px 42px 10px 40px !important;
+  padding-left: 40px !important;
+  padding-right: 42px !important;
+  color: var(--foreground) !important;
+  font-size: 13.5px !important;
+  outline: none !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box !important;
 }
 
 .passwordInput:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-subtle, rgba(119, 71, 255, 0.2));
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-subtle, rgba(119, 71, 255, 0.2)) !important;
 }
 
 .passwordEyeBtn {
   position: absolute;
-  right: 6px;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -5273,6 +5285,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
+  z-index: 2;
   transition: color 0.15s ease;
 }
 
