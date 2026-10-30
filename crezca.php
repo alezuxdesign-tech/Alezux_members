@@ -100,6 +100,49 @@ function crezca_init() {
 add_action( 'plugins_loaded', 'crezca_init' );
 
 /**
+ * Registrar el rol nativo de Docente / Profesor en WordPress
+ */
+function crezca_register_instructor_role() {
+	if ( ! get_role( 'crezca_instructor' ) ) {
+		add_role( 'crezca_instructor', 'Docente Crezca', [
+			'read'         => true,
+			'upload_files' => true,
+			'edit_posts'   => true,
+		] );
+	}
+}
+add_action( 'init', 'crezca_register_instructor_role' );
+
+/**
+ * Determinar si un usuario es Docente / Instructor en la plataforma
+ */
+function crezca_is_user_instructor( $user_id = 0 ) {
+	if ( ! $user_id ) {
+		$user_id = get_current_user_id();
+	}
+	if ( ! $user_id ) {
+		return false;
+	}
+	$user = get_userdata( $user_id );
+	if ( ! $user ) {
+		return false;
+	}
+	$roles = (array) $user->roles;
+	if ( in_array( 'crezca_instructor', $roles, true ) || in_array( 'instructor', $roles, true ) ) {
+		return true;
+	}
+	$global_instructors = get_option( '_alezux_global_instructors', [] );
+	if ( is_array( $global_instructors ) ) {
+		foreach ( $global_instructors as $gi ) {
+			if ( ! empty( $gi['userId'] ) && (int) $gi['userId'] === (int) $user_id ) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+/**
  * Encolar estilos globales del plugin
  */
 function crezca_enqueue_global_assets() {
@@ -404,6 +447,7 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 	$theme         = get_option( 'alezux_theme', 'dark' );
 	$auth_settings = crezca_get_auth_settings();
 	$is_admin      = current_user_can( 'manage_options' );
+	$is_instructor = ! $is_admin && crezca_is_user_instructor( $current_user ? $current_user->ID : 0 );
 	$student_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
 
 	$accent_colors = [
@@ -428,6 +472,8 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 		'is_logged_in'         => is_user_logged_in(),
 		'user_id'              => $current_user ? $current_user->ID : 0,
 		'is_admin'             => $is_admin,
+		'is_instructor'        => $is_instructor,
+		'user_role'            => $is_admin ? 'admin' : ( $is_instructor ? 'instructor' : 'student' ),
 		'is_blocked'           => $is_blocked,
 		'support_whatsapp'     => $support_wa,
 		'support_email'        => $support_email,

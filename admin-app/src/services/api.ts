@@ -1378,7 +1378,7 @@ class ApiService {
     };
   }
 
-  async saveInstructor(data: Partial<Instructor> & { createWpUser?: boolean; password?: string }): Promise<{ success: boolean; instructor?: Instructor; message?: string }> {
+  async saveInstructor(data: Partial<Instructor> & { createWpUser?: boolean; password?: string; sendWelcomeEmail?: boolean }): Promise<{ success: boolean; instructor?: Instructor; message?: string; temporaryPassword?: string }> {
     try {
       if (this.wpData) {
         const url = data.id ? `${this.rootUrl}instructors/${data.id}` : `${this.rootUrl}instructors`;

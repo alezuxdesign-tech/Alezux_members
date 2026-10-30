@@ -102,9 +102,10 @@ interface DeleteConfirmState {
 
 interface CoursesViewProps {
   onNavigateToInstructors?: () => void;
+  isInstructor?: boolean;
 }
 
-export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) {
+export function CoursesView({ onNavigateToInstructors, isInstructor = false }: CoursesViewProps = {}) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [availablePlans, setAvailablePlans] = useState<FinancePlan[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -3182,9 +3183,11 @@ export function CoursesView({ onNavigateToInstructors }: CoursesViewProps = {}) 
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="primary" onClick={() => setIsNewCourseModalOpen(true)}>
-            <Plus size={16} /> Crear Nuevo Curso
-          </Button>
+          {!isInstructor && (
+            <Button variant="primary" onClick={() => setIsNewCourseModalOpen(true)}>
+              <Plus size={16} /> Crear Nuevo Curso
+            </Button>
+          )}
         </div>
       </div>
 

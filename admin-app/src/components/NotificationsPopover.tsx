@@ -30,7 +30,7 @@ interface NotificationsPopoverProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigate?: (tab: string, targetId?: string) => void;
-  appMode: "admin" | "student";
+  appMode: "admin" | "student" | "instructor";
   onUpdateCount?: (count: number) => void;
 }
 
@@ -299,7 +299,7 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
 
         <div className={styles.footer}>
           <span className={styles.footerText}>
-            {appMode === "admin" ? "Notificaciones de la Academia" : "Campus Virtual del Estudiante"}
+            {appMode === "admin" ? "Notificaciones de la Academia" : (appMode === "instructor" ? "Panel del Docente" : "Campus Virtual del Estudiante")}
           </span>
           {notifications.some((n) => n.read) && (
             <button

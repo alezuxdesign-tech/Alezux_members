@@ -50,6 +50,8 @@ import { hexToRgb, getContrastForeground } from "./components/arc/color-picker/c
 import styles from "./App.module.css";
 import studentStyles from "./views/student/StudentPortal.module.css";
 
+export type AppMode = "admin" | "student" | "instructor";
+export type InstructorTabId = "courses" | "students" | "community";
 type AdminTabId = "overview" | "courses" | "students" | "instructors" | "events" | "finance" | "marketing" | "community" | "settings";
 type StudentTabId = "dashboard" | "courses" | "community" | "profile";
 
@@ -157,7 +159,28 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     return "courses";
   })();
 
-  const [appMode, setAppMode] = useState<"admin" | "student">(initialMode);
+  const isActualInstructor = Boolean(
+    wpData?.is_instructor ||
+    wpStudentData?.is_instructor ||
+    wpStudentData?.user_role === "instructor" ||
+    (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mode") === "instructor")
+  );
+
+  const calculatedInitialMode: AppMode = (() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const modeParam = urlParams.get("mode");
+      if (modeParam === "instructor") return "instructor";
+      if (modeParam === "student") return "student";
+      if (modeParam === "admin") return "admin";
+    }
+    if (isActualInstructor && !wpData?.is_admin && !wpStudentData?.is_admin) {
+      return "instructor";
+    }
+    return initialMode;
+  })();
+
+  const [appMode, setAppMode] = useState<AppMode>(calculatedInitialMode);
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTabId>("overview");
   const [activeStudentTab, setActiveStudentTab] = useState<StudentTabId>(defaultStudentTab);
 
@@ -223,8 +246,18 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     { id: "community", label: "Comunidad", icon: <Users size={18} /> },
   ];
 
+  // Navegación para el Docente / Profesor
+  const instructorNavItems: NavItemConfig<InstructorTabId>[] = [
+    { id: "courses", label: "Mis Cursos", icon: <GraduationCap size={18} /> },
+    { id: "students", label: "Mis Alumnos", icon: <Users size={18} /> },
+    { id: "community", label: "Comunidad", icon: <MessageSquare size={18} /> },
+  ];
+
+  const [activeInstructorTab, setActiveInstructorTab] = useState<InstructorTabId>("courses");
+
   const currentAdminNav = adminNavItems.find((item) => item.id === activeAdminTab) || adminNavItems[0];
   const currentStudentNav = studentNavItems.find((item) => item.id === activeStudentTab) || studentNavItems[0];
+  const currentInstructorNav = instructorNavItems.find((item) => item.id === activeInstructorTab) || instructorNavItems[0];
 
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     const saved = localStorage.getItem("crezca_theme");
@@ -298,9 +331,11 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
   // Actualizar título y favicon de la pestaña del navegador
   useEffect(() => {
     const titleName = academyName || "Crezca";
-    const currentLabel = appMode === "admin" ? currentAdminNav.label : currentStudentNav.label;
+    const currentLabel = appMode === "admin"
+      ? currentAdminNav.label
+      : (appMode === "instructor" ? currentInstructorNav.label : currentStudentNav.label);
     document.title = `${titleName} | ${currentLabel}`;
-  }, [academyName, appMode, currentAdminNav, currentStudentNav]);
+  }, [academyName, appMode, currentAdminNav, currentStudentNav, currentInstructorNav]);
 
   useEffect(() => {
     if (academyLogo) {
@@ -504,7 +539,9 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
 
   // Determinar si la vista actual requiere pantalla completa sin padding
   const isCourseFluid = appMode === "student" && activeStudentTab === "courses" && Boolean(selectedCourse);
-  const isCommunityFluid = (appMode === "student" && activeStudentTab === "community") || (appMode === "admin" && activeAdminTab === "community");
+  const isCommunityFluid = (appMode === "student" && activeStudentTab === "community") || 
+    (appMode === "admin" && activeAdminTab === "community") ||
+    (appMode === "instructor" && activeInstructorTab === "community");
   const isFluidMain = isCourseFluid || isCommunityFluid;
 
   return (
@@ -519,7 +556,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             <>
               <div 
                 className={styles.brandGroup} 
-                title={`${academyName || "Crezca"} - ${appMode === "admin" ? "Academia & Membresías" : "Campus del Estudiante"}`}
+                title={`${academyName || "Crezca"} - ${appMode === "admin" ? "Academia & Membresías" : (appMode === "instructor" ? "Panel del Docente" : "Campus del Estudiante")}`}
               >
                 <div className={`${styles.logoMark} ${academyLogo ? styles.hasCustomLogo : ""}`}>
                   {academyLogo ? (
@@ -575,9 +612,27 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
         <nav className={styles.navSection}>
           {!isCollapsed && (
             <div className={styles.navSectionLabel}>
-              {appMode === "admin" ? "Plataforma" : "Campus"}
+              {appMode === "admin" ? "Plataforma" : (appMode === "instructor" ? "Panel Docente" : "Campus")}
             </div>
           )}
+
+          {/* Menú para Docente / Instructor */}
+          {appMode === "instructor" && instructorNavItems.map((item) => {
+            const isActive = activeInstructorTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`${styles.navItem} ${isActive ? styles.active : ""}`}
+                onClick={() => setActiveInstructorTab(item.id)}
+                title={isCollapsed ? item.label : undefined}
+              >
+                {isActive && <span className={styles.activeIndicator} />}
+                <span className={styles.navIconWrap}>{item.icon}</span>
+                {!isCollapsed && <span className={styles.navLabel}>{item.label}</span>}
+              </button>
+            );
+          })}
 
           {/* Menú para Administrador */}
           {appMode === "admin" && adminNavItems.map((item) => {
@@ -634,6 +689,8 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               <div className={styles.userAvatar}>
                 {appMode === "admin" ? (
                   <ShieldCheck size={15} />
+                ) : appMode === "instructor" ? (
+                  <UserCheck size={15} />
                 ) : studentProfile?.avatar ? (
                   <img src={studentProfile.avatar} alt="Avatar" className={styles.userAvatarImg} />
                 ) : (
@@ -642,11 +699,11 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               </div>
               <div className={styles.userInfo}>
                 <span className={styles.userName}>
-                  {appMode === "admin" ? "Administrador" : (studentProfile?.name || "Estudiante")}
+                  {appMode === "admin" ? "Administrador" : (appMode === "instructor" ? (studentProfile?.name || "Docente Titular") : (studentProfile?.name || "Estudiante"))}
                 </span>
                 <span className={styles.userStatus}>
                   <span className={styles.statusDot} />
-                  {appMode === "admin" ? "Sesión activa" : "Estudiante activo"}
+                  {appMode === "admin" ? "Sesión activa" : (appMode === "instructor" ? "Docente activo" : "Estudiante activo")}
                 </span>
               </div>
             </div>
@@ -882,33 +939,46 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
           </div>
 
           <div className={styles.headerActions}>
-            {appMode === "admin" ? (
-              <button
-                type="button"
-                className={styles.studentModeBtn}
-                onClick={() => setAppMode("student")}
-                title="Previsualizar el campus virtual como un estudiante"
-              >
-                <GraduationCap size={15} />
-                <span>Modo Estudiante</span>
-              </button>
-            ) : (
-              isActualAdmin && !isStandaloneStudent ? (
+            {isActualAdmin ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <button
                   type="button"
-                  className={styles.studentModeBtn}
+                  className={`${styles.studentModeBtn} ${appMode === "admin" ? styles.active : ""}`}
                   onClick={() => setAppMode("admin")}
-                  title="Regresar a la administración"
+                  title="Panel de Administrador"
                 >
-                  <ShieldCheck size={15} />
-                  <span>Modo Administrador</span>
-                </button>
-              ) : (
-                <div className={styles.studentHeaderBadge}>
                   <ShieldCheck size={14} />
-                  <span>{studentProfile?.planName || "Membresía Activa"}</span>
-                </div>
-              )
+                  <span>Admin</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.studentModeBtn} ${appMode === "instructor" ? styles.active : ""}`}
+                  onClick={() => setAppMode("instructor")}
+                  title="Previsualizar Modo Docente"
+                >
+                  <UserCheck size={14} />
+                  <span>Docente</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.studentModeBtn} ${appMode === "student" ? styles.active : ""}`}
+                  onClick={() => setAppMode("student")}
+                  title="Previsualizar Modo Estudiante"
+                >
+                  <GraduationCap size={14} />
+                  <span>Estudiante</span>
+                </button>
+              </div>
+            ) : appMode === "instructor" ? (
+              <div className={styles.studentHeaderBadge}>
+                <UserCheck size={14} />
+                <span>Docente Titular</span>
+              </div>
+            ) : (
+              <div className={styles.studentHeaderBadge}>
+                <ShieldCheck size={14} />
+                <span>{studentProfile?.planName || "Membresía Activa"}</span>
+              </div>
             )}
 
             {/* Notificaciones Globales */}
@@ -995,6 +1065,34 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
 
         {/* Cuerpo del módulo activo */}
         <main className={`${styles.mainBody} ${isFluidMain ? styles.mainBodyNoPadding : ""}`}>
+          {/* MODO DOCENTE / PROFESOR */}
+          {appMode === "instructor" && (
+            <>
+              {activeInstructorTab === "courses" && (
+                <CoursesView onNavigateToInstructors={() => {}} isInstructor={true} />
+              )}
+              {activeInstructorTab === "students" && (
+                <StudentsView isInstructor={true} />
+              )}
+              {activeInstructorTab === "community" && (
+                <StudentCommunityView
+                  courses={studentCourses}
+                  academyName={academyName}
+                  isAdmin={false}
+                  isInstructor={true}
+                  currentUser={{
+                    id: wpStudentData?.user_id || 0,
+                    name: studentProfile?.name || "Docente",
+                    role: "instructor",
+                  }}
+                  onNavigateToCourse={() => {
+                    setActiveInstructorTab("courses");
+                  }}
+                />
+              )}
+            </>
+          )}
+
           {/* MODO ADMINISTRADOR */}
           {appMode === "admin" && (
             <>

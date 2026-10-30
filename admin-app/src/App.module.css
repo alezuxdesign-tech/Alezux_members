@@ -543,7 +543,8 @@
   transition: all var(--duration-fast);
 }
 
-.studentModeBtn:hover {
+.studentModeBtn:hover,
+.studentModeBtn.active {
   background: var(--accent);
   color: var(--accent-foreground, #ffffff);
   border-color: var(--accent);

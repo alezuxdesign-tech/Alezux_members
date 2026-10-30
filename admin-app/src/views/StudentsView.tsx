@@ -65,7 +65,11 @@ const CREATE_PWD_MODE_OPTIONS: SegmentOption<"auto" | "manual">[] = [
   { value: "manual", label: "Definir manualmente" },
 ];
 
-export function StudentsView() {
+interface StudentsViewProps {
+  isInstructor?: boolean;
+}
+
+export function StudentsView({ isInstructor = false }: StudentsViewProps = {}) {
   const [students, setStudents] = useState<Student[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [search, setSearch] = useState("");
@@ -388,10 +392,12 @@ export function StudentsView() {
             />
           </div>
 
-          <Button variant="primary" size="sm" onClick={openCreateModal}>
-            <Plus size={15} />
-            Nuevo Alumno
-          </Button>
+          {!isInstructor && (
+            <Button variant="primary" size="sm" onClick={openCreateModal}>
+              <Plus size={15} />
+              Nuevo Alumno
+            </Button>
+          )}
         </div>
       </div>
 

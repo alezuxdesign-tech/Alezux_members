@@ -6,6 +6,7 @@ export interface StudentCommunityViewProps {
   courses: Course[];
   academyName: string;
   isAdmin?: boolean;
+  isInstructor?: boolean;
   currentUser?: {
     id: number;
     name: string;

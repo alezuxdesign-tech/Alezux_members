@@ -31,7 +31,7 @@ class Admin_Api {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_courses' ],
-					'permission_callback' => [ $this, 'admin_permissions_check' ],
+					'permission_callback' => [ $this, 'admin_or_instructor_permissions_check' ],
 				],
 				[
 					'methods'             => 'POST',
@@ -43,7 +43,7 @@ class Admin_Api {
 			register_rest_route( $namespace, '/courses/(?P<id>\d+)/curriculum', [
 				'methods'             => 'POST',
 				'callback'            => [ $this, 'save_course_curriculum' ],
-				'permission_callback' => [ $this, 'admin_permissions_check' ],
+				'permission_callback' => [ $this, 'admin_or_instructor_permissions_check' ],
 			] );
 
 			register_rest_route( $namespace, '/courses/(?P<id>\d+)/modules', [
@@ -77,7 +77,7 @@ class Admin_Api {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_students' ],
-					'permission_callback' => [ $this, 'admin_permissions_check' ],
+					'permission_callback' => [ $this, 'admin_or_instructor_permissions_check' ],
 				],
 				[
 					'methods'             => 'POST',
@@ -394,6 +394,16 @@ class Admin_Api {
 		return current_user_can( 'manage_options' );
 	}
 
+	public function admin_or_instructor_permissions_check() {
+		if ( current_user_can( 'manage_options' ) ) {
+			return true;
+		}
+		if ( is_user_logged_in() && function_exists( 'crezca_is_user_instructor' ) && crezca_is_user_instructor() ) {
+			return true;
+		}
+		return false;
+	}
+
 	public function student_permissions_check() {
 		return is_user_logged_in() || current_user_can( 'read' );
 	}
@@ -527,6 +537,33 @@ class Admin_Api {
 			'post_status'    => $status,
 			'posts_per_page' => 50,
 		] );
+
+		$current_uid = get_current_user_id();
+		$is_admin_user = current_user_can( 'manage_options' );
+		$is_inst_user = ! $is_admin_user && function_exists( 'crezca_is_user_instructor' ) && crezca_is_user_instructor( $current_uid );
+		if ( $is_inst_user ) {
+			$filtered_inst_posts = [];
+			$curr_user_email = wp_get_current_user()->user_email;
+			foreach ( $courses_posts as $cp ) {
+				$mentors = get_post_meta( $cp->ID, '_alezux_course_mentors', true );
+				$assigned_here = false;
+				if ( is_array( $mentors ) ) {
+					foreach ( $mentors as $m ) {
+						if ( ( ! empty( $m['userId'] ) && (int) $m['userId'] === (int) $current_uid ) || ( ! empty( $m['email'] ) && $curr_user_email === $m['email'] ) ) {
+							$assigned_here = true;
+							break;
+						}
+					}
+				}
+				if ( (int) $cp->post_author === (int) $current_uid ) {
+					$assigned_here = true;
+				}
+				if ( $assigned_here ) {
+					$filtered_inst_posts[] = $cp;
+				}
+			}
+			$courses_posts = $filtered_inst_posts;
+		}
 
 		$courses = [];
 
@@ -974,6 +1011,34 @@ class Admin_Api {
 				'planName'         => get_user_meta( $user->ID, '_alezux_plan_name', true ) ?: 'Acceso Completo',
 				'enabledCourseIds' => array_values( array_unique( $valid_course_ids ) ),
 			];
+		}
+
+		$current_uid = get_current_user_id();
+		$is_admin_user = current_user_can( 'manage_options' );
+		$is_inst_user = ! $is_admin_user && function_exists( 'crezca_is_user_instructor' ) && crezca_is_user_instructor( $current_uid );
+		if ( $is_inst_user ) {
+			$instructor_course_ids = [];
+			$curr_user_email = wp_get_current_user()->user_email;
+			$all_c = get_posts( [ 'post_type' => [ 'crezca_course', 'sfwd-courses' ], 'post_status' => [ 'publish', 'draft' ], 'posts_per_page' => -1 ] );
+			foreach ( $all_c as $c ) {
+				$mentors = get_post_meta( $c->ID, '_alezux_course_mentors', true );
+				if ( is_array( $mentors ) ) {
+					foreach ( $mentors as $m ) {
+						if ( ( ! empty( $m['userId'] ) && (int) $m['userId'] === (int) $current_uid ) || ( ! empty( $m['email'] ) && $curr_user_email === $m['email'] ) ) {
+							$instructor_course_ids[] = (int) $c->ID;
+							break;
+						}
+					}
+				}
+				if ( (int) $c->post_author === (int) $current_uid ) {
+					$instructor_course_ids[] = (int) $c->ID;
+				}
+			}
+			$instructor_course_ids = array_unique( $instructor_course_ids );
+			$students = array_values( array_filter( $students, function( $st ) use ( $instructor_course_ids ) {
+				$enrolled = isset( $st['enabledCourseIds'] ) ? (array) $st['enabledCourseIds'] : [];
+				return count( array_intersect( $enrolled, $instructor_course_ids ) ) > 0;
+			} ) );
 		}
 
 		return rest_ensure_response( $students );
@@ -1466,14 +1531,21 @@ class Admin_Api {
 			? array_values( array_map( 'intval', $params['allowedChannelIds'] ) )
 			: [];
 
-		// Crear usuario WordPress si se solicita
-		if ( ! empty( $params['createWpUser'] ) && ! empty( $email ) && ! $user_id ) {
+		// Crear usuario WordPress con rol Docente si se solicita
+		$user_plain_password = '';
+		if ( ! empty( $params['createWpUser'] ) && ! empty( $email ) ) {
 			$existing_user = get_user_by( 'email', $email );
 			if ( $existing_user ) {
 				$user_id = $existing_user->ID;
+				$existing_user->set_role( 'crezca_instructor' );
+				if ( ! empty( $params['password'] ) ) {
+					wp_set_password( $params['password'], $user_id );
+					$user_plain_password = $params['password'];
+				}
 			} else {
 				$username = sanitize_user( current( explode( '@', $email ) ) . rand( 10, 99 ) );
-				$password = ! empty( $params['password'] ) ? $params['password'] : wp_generate_password( 12 );
+				$password = ! empty( $params['password'] ) ? $params['password'] : wp_generate_password( 12, true, false );
+				$user_plain_password = $password;
 				$new_uid = wp_create_user( $username, $password, $email );
 				if ( ! is_wp_error( $new_uid ) ) {
 					$user_id = $new_uid;
@@ -1483,8 +1555,16 @@ class Admin_Api {
 						'first_name'   => $name,
 					] );
 					$u = new \WP_User( $user_id );
-					$u->set_role( 'author' );
+					$u->set_role( 'crezca_instructor' );
 				}
+			}
+
+			if ( ! empty( $params['sendWelcomeEmail'] ) && ! empty( $user_plain_password ) ) {
+				$login_url = function_exists( 'crezca_get_login_page_url' ) ? crezca_get_login_page_url() : wp_login_url();
+				$academy_name = get_option( 'alezux_academy_name', get_bloginfo( 'name' ) );
+				$subject = '¡Bienvenido(a) al equipo docente de ' . $academy_name . '!';
+				$body = "Hola {$name},\n\nSe ha creado tu cuenta con rol de Docente en {$academy_name}.\n\nTus credenciales de acceso:\n- URL: {$login_url}\n- Usuario / Correo: {$email}\n- Contraseña: {$user_plain_password}\n\nInicia sesión para gestionar tus cursos asignados y dar seguimiento a tus estudiantes.\n\nSaludos,\nEquipo {$academy_name}";
+				wp_mail( $email, $subject, $body, [ 'Content-Type: text/plain; charset=UTF-8' ] );
 			}
 		}
 

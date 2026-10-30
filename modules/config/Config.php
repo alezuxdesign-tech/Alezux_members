@@ -155,6 +155,11 @@ class Config extends Module_Base {
 		$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
 		$default_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
 
+		$is_instructor = function_exists( 'crezca_is_user_instructor' ) && crezca_is_user_instructor( $user->ID );
+		if ( $is_instructor ) {
+			return add_query_arg( [ 'tab' => 'courses', 'mode' => 'instructor' ], $portal_url );
+		}
+
 		return add_query_arg( 'tab', $default_view, $portal_url );
 	}
 
@@ -171,7 +176,13 @@ class Config extends Module_Base {
 			$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
 			$default_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
 
-		wp_safe_redirect( add_query_arg( 'tab', $default_view, $portal_url ) );
+			$is_instructor = function_exists( 'crezca_is_user_instructor' ) && crezca_is_user_instructor( get_current_user_id() );
+			if ( $is_instructor ) {
+				wp_safe_redirect( add_query_arg( [ 'tab' => 'courses', 'mode' => 'instructor' ], $portal_url ) );
+				exit;
+			}
+
+			wp_safe_redirect( add_query_arg( 'tab', $default_view, $portal_url ) );
 			exit;
 		}
 	}
