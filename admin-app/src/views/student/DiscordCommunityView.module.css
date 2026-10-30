@@ -2109,6 +2109,14 @@
 /* ---------------------------------------------------------
    6. RESPONSIVE / DISPOSITIVOS PEQUEÑOS
    --------------------------------------------------------- */
+.mobileChannelsBtn {
+  display: none;
+}
+
+.mobileGoToChatBtn {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .channelsSidebar {
     width: 220px;
@@ -2116,6 +2124,156 @@
   }
   .chatHeaderDesc {
     display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .discordContainer {
+    height: 100% !important;
+    min-height: calc(100dvh - 140px) !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow: hidden !important;
+    border-radius: 0 !important;
+  }
+
+  /* Modo Canales en móvil */
+  .mobileViewChannels .channelsSidebar {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    flex: 1 1 100% !important;
+    border-right: none !important;
+    height: 100% !important;
+  }
+
+  .mobileViewChannels .chatMainArea {
+    display: none !important;
+  }
+
+  /* Modo Chat en móvil */
+  .mobileViewChat .channelsSidebar {
+    display: none !important;
+  }
+
+  .mobileViewChat .chatMainArea {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    flex: 1 1 100% !important;
+    height: 100% !important;
+  }
+
+  /* Botones móviles de navegación */
+  .mobileChannelsBtn {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface-muted, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+    border-radius: 8px;
+    color: var(--foreground, #ffffff);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+  }
+
+  .mobileChannelsBtn:active {
+    background: var(--surface-hover, rgba(255, 255, 255, 0.14));
+  }
+
+  .mobileGoToChatBtn {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+    background: var(--accent-subtle, rgba(119, 71, 255, 0.15));
+    border: 1px solid var(--accent, #7747ff);
+    border-radius: 8px;
+    color: var(--accent, #7747ff);
+    padding: 5px 9px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+
+  .mobileGoToChatBtn:active {
+    background: var(--accent, #7747ff);
+    color: #fff;
+  }
+
+  /* Cabecera del chat en móvil */
+  .chatHeader {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+    min-height: 52px !important;
+  }
+
+  .chatHeaderLeft {
+    gap: 8px !important;
+    overflow: hidden;
+  }
+
+  .chatHeaderTitle {
+    font-size: 14px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chatHeaderDivider,
+  .chatHeaderDesc,
+  .chatHeaderBadge {
+    display: none !important;
+  }
+
+  /* Hilo de conversación en móvil en pantalla completa flotante */
+  .threadPanel {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    z-index: 50 !important;
+    border-left: none !important;
+    background: var(--surface) !important;
+  }
+
+  /* Mensajes en móvil */
+  .messageItem {
+    padding: 8px 12px !important;
+    gap: 10px !important;
+  }
+
+  .messageAvatarWrap {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .messageContent {
+    font-size: 13.5px !important;
+    line-height: 1.45 !important;
+  }
+
+  /* Área de entrada en móvil */
+  .chatInputArea {
+    padding: 8px 10px !important;
+  }
+
+  .chatInputBox {
+    padding: 6px 10px !important;
+  }
+
+  /* En móvil asegurar que el canal activo se destaque con touch claro */
+  .channelItem {
+    padding: 10px 14px !important;
   }
 }
 

@@ -550,21 +550,28 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              className={styles.collapsedHeaderBtn}
-              onClick={toggleSidebar}
-              title="Expandir barra lateral"
-              aria-label="Expandir barra lateral"
-            >
-              <div className={`${styles.logoMark} ${academyLogo ? styles.hasCustomLogo : ""}`}>
+            <div className={styles.collapsedHeaderWrap}>
+              <div 
+                className={`${styles.logoMark} ${academyLogo ? styles.hasCustomLogo : ""}`}
+                title={academyName || "Crezca"}
+              >
                 {academyLogo ? (
                   <img src={academyLogo} alt={academyName || "Logo"} className={styles.logoImg} />
                 ) : (
-                  appMode === "admin" ? <Layers size={19} className={styles.logoIcon} /> : <GraduationCap size={19} className={styles.logoIcon} />
+                  appMode === "admin" ? <Layers size={18} className={styles.logoIcon} /> : <GraduationCap size={18} className={styles.logoIcon} />
                 )}
               </div>
-            </button>
+
+              <button
+                type="button"
+                className={styles.collapsedExpandBtn}
+                onClick={toggleSidebar}
+                title="Expandir barra lateral"
+                aria-label="Expandir barra lateral"
+              >
+                <PanelLeftOpen size={16} />
+              </button>
+            </div>
           )}
         </div>
 
@@ -827,6 +834,17 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
         {/* Cabecera superior del contenido (Desktop & Tablet) */}
         <header className={styles.mainHeader}>
           <div className={styles.headerBreadcrumb}>
+            {isCollapsed && (
+              <button
+                type="button"
+                className={styles.topbarToggleBtn}
+                onClick={toggleSidebar}
+                title="Expandir barra lateral"
+                aria-label="Expandir barra lateral"
+              >
+                <PanelLeftOpen size={16} />
+              </button>
+            )}
             <span>{academyName || "Crezca"}</span>
             <ChevronRight size={14} />
 
@@ -949,6 +967,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                     }
                   }}
                   appMode={appMode}
+                  onUpdateCount={setUnreadNotificationsCount}
                 />
               )}
             </div>
@@ -1440,6 +1459,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             }
           }}
           appMode={appMode}
+          onUpdateCount={setUnreadNotificationsCount}
         />
       )}
     </div>

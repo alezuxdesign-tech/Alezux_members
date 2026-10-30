@@ -12,6 +12,8 @@ import {
   Crown,
   ShieldCheck,
   ChevronDown,
+  ChevronRight,
+  ArrowLeft,
   Globe,
   Folder,
   FolderPlus,
@@ -188,6 +190,9 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   const [activeThreadMessage, setActiveThreadMessage] = useState<CommunityMessage | null>(null);
   const [threadNewMessage, setThreadNewMessage] = useState("");
   const [isThreadSending, setIsThreadSending] = useState(false);
+
+  // Navegación móvil entre lista de canales y sala de chat activa
+  const [mobileTab, setMobileTab] = useState<"channels" | "chat">("chat");
 
   // Modales de administración de canales
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
@@ -870,7 +875,12 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
             key={index}
             type="button"
             className={styles.channelMentionPill}
-            onClick={() => targetChan && setActiveChannelId(targetChan.id)}
+            onClick={() => {
+              if (targetChan) {
+                setActiveChannelId(targetChan.id);
+                setMobileTab("chat");
+              }
+            }}
             title={targetChan ? `Ir al canal #${targetChan.name}` : undefined}
           >
             <Hash size={12} />
@@ -912,7 +922,12 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
   }, [activeEmojiCategory, emojiSearchQuery]);
 
   return (
-    <div className={styles.discordContainer}>
+    <div
+      className={[
+        styles.discordContainer,
+        mobileTab === "channels" ? styles.mobileViewChannels : styles.mobileViewChat,
+      ].join(" ")}
+    >
       {/* =========================================================
           1. BARRA LATERAL ESTILO DISCORD (CANALES & CATEGORÍAS)
           ========================================================= */}
@@ -929,17 +944,32 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
             </div>
           </div>
 
-          {effectiveIsAdmin && (
-            <button
-              type="button"
-              className={styles.addChannelBtn}
-              onClick={() => handleOpenCreateModal()}
-              title="Crear nuevo canal"
-              aria-label="Crear nuevo canal"
-            >
-              <Plus size={16} />
-            </button>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            {activeChannel && (
+              <button
+                type="button"
+                className={styles.mobileGoToChatBtn}
+                onClick={() => setMobileTab("chat")}
+                title="Ir al chat actual"
+                aria-label="Ir al chat"
+              >
+                <span>Chat</span>
+                <ChevronRight size={14} />
+              </button>
+            )}
+
+            {effectiveIsAdmin && (
+              <button
+                type="button"
+                className={styles.addChannelBtn}
+                onClick={() => handleOpenCreateModal()}
+                title="Crear nuevo canal"
+                aria-label="Crear nuevo canal"
+              >
+                <Plus size={16} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Lista con scroll de canales agrupados */}
@@ -987,7 +1017,10 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                           <div
                             key={ch.id}
                             className={`${styles.channelItem} ${isActive ? styles.active : ""}`}
-                            onClick={() => setActiveChannelId(ch.id)}
+                            onClick={() => {
+                              setActiveChannelId(ch.id);
+                              setMobileTab("chat");
+                            }}
                             title={ch.description || `#${ch.name}`}
                           >
                             {isActive && <div className={styles.activeIndicatorPill} />}
@@ -1091,6 +1124,18 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
             {/* Cabecera del canal activo */}
             <div className={styles.chatHeader}>
               <div className={styles.chatHeaderLeft}>
+                {/* Botón Móvil para volver a la lista de canales */}
+                <button
+                  type="button"
+                  className={styles.mobileChannelsBtn}
+                  onClick={() => setMobileTab("channels")}
+                  title="Ver todos los canales"
+                  aria-label="Ver canales"
+                >
+                  <ArrowLeft size={16} />
+                  <span>Canales</span>
+                </button>
+
                 {activeChannel.is_announcement ? (
                   <Volume2 size={20} className={styles.chatHeaderIcon} />
                 ) : (

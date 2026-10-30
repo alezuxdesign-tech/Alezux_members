@@ -5,7 +5,9 @@ import {
   Calendar, 
   BookOpen, 
   MessageSquare, 
+  Check,
   CheckCheck, 
+  Trash2,
   Info, 
   Clock, 
   ExternalLink,
@@ -29,6 +31,7 @@ interface NotificationsPopoverProps {
   onClose: () => void;
   onNavigate?: (tab: string, targetId?: string) => void;
   appMode: "admin" | "student";
+  onUpdateCount?: (count: number) => void;
 }
 
 const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
@@ -74,6 +77,7 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
   onClose,
   onNavigate,
   appMode,
+  onUpdateCount,
 }) => {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
@@ -88,10 +92,14 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
 
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
-  // Guardar cambios en localStorage
+  // Guardar cambios en localStorage y notificar al padre
   useEffect(() => {
     localStorage.setItem("crezca_notifications", JSON.stringify(notifications));
-  }, [notifications]);
+    const unread = notifications.filter((n) => !n.read).length;
+    if (onUpdateCount) {
+      onUpdateCount(unread);
+    }
+  }, [notifications, onUpdateCount]);
 
   // Cerrar al presionar Escape
   useEffect(() => {
@@ -117,6 +125,28 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
   const handleMarkAllAsRead = (e: React.MouseEvent) => {
     e.stopPropagation();
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleToggleRead = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
+    );
+  };
+
+  const handleDeleteItem = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const handleClearAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNotifications([]);
+  };
+
+  const handleClearRead = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => !n.read));
   };
 
   const handleClickItem = (item: NotificationItem) => {
@@ -177,6 +207,17 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
                 <span>Leer todas</span>
               </button>
             )}
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                className={styles.clearAllBtn}
+                onClick={handleClearAll}
+                title="Eliminar todas las notificaciones"
+              >
+                <Trash2 size={13} />
+                <span>Limpiar</span>
+              </button>
+            )}
             <button
               type="button"
               className={styles.closePopoverBtn}
@@ -227,7 +268,30 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
                   <div className={styles.itemDesc}>{item.message}</div>
                   <div className={styles.itemTime}>{item.time}</div>
                 </div>
-                {!item.read && <span className={styles.unreadDot} />}
+
+                <div className={styles.itemRightSide}>
+                  {!item.read && <span className={styles.unreadDot} />}
+                  <div className={styles.itemActions}>
+                    <button
+                      type="button"
+                      className={`${styles.itemActionBtn} ${item.read ? styles.actionRead : styles.actionUnread}`}
+                      onClick={(e) => handleToggleRead(e, item.id)}
+                      title={item.read ? "Marcar como no leída" : "Marcar como leída"}
+                      aria-label={item.read ? "Marcar como no leída" : "Marcar como leída"}
+                    >
+                      {item.read ? <CheckCheck size={13} /> : <Check size={13} />}
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.itemActionBtn} ${styles.actionDelete}`}
+                      onClick={(e) => handleDeleteItem(e, item.id)}
+                      title="Eliminar notificación"
+                      aria-label="Eliminar"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
               </div>
             ))
           )}
@@ -237,6 +301,17 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
           <span className={styles.footerText}>
             {appMode === "admin" ? "Notificaciones de la Academia" : "Campus Virtual del Estudiante"}
           </span>
+          {notifications.some((n) => n.read) && (
+            <button
+              type="button"
+              className={styles.clearReadFooterBtn}
+              onClick={handleClearRead}
+              title="Eliminar notificaciones leídas"
+            >
+              <Trash2 size={11} />
+              <span>Borrar leídas</span>
+            </button>
+          )}
         </div>
       </div>
     </>

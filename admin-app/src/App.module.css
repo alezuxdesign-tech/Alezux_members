@@ -65,6 +65,59 @@
   transform: scale(1.06);
 }
 
+.collapsedHeaderWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.collapsedExpandBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  background: var(--surface-muted, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-control, 8px);
+  color: var(--text-secondary, #cbd5e1);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.collapsedExpandBtn:hover {
+  color: var(--accent, #7747ff);
+  border-color: var(--accent, #7747ff);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  transform: scale(1.05);
+}
+
+.topbarToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  background: var(--surface-muted, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-control, 8px);
+  color: var(--text-secondary, #cbd5e1);
+  cursor: pointer;
+  margin-right: 8px;
+  transition: all var(--duration-fast);
+}
+
+.topbarToggleBtn:hover {
+  color: var(--accent, #7747ff);
+  border-color: var(--accent, #7747ff);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+}
+
 .sidebar.collapsed .sidebarHeader {
   padding: var(--space-4) 0;
   justify-content: center;
