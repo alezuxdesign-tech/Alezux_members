@@ -282,8 +282,7 @@ class Config extends Module_Base {
 		// Cierre de sesion directo sin pasar por pantallas de confirmacion de WordPress
 		if ( $action === 'logout' ) {
 		wp_logout();
-		$login_page_id = (int) get_option( 'alezux_login_page_id' );
-		$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+		$login_url = function_exists( 'crezca_get_login_page_url' ) ? crezca_get_login_page_url() : home_url( '/login/' );
 		wp_safe_redirect( add_query_arg( 'loggedout', 'true', $login_url ) );
 		exit;
 		}

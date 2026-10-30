@@ -550,7 +550,13 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               </button>
             </>
           ) : (
-            <div className={styles.collapsedHeaderWrap}>
+            <button
+              type="button"
+              className={styles.collapsedHeaderBtn}
+              onClick={toggleSidebar}
+              title="Expandir barra lateral"
+              aria-label="Expandir barra lateral"
+            >
               <div 
                 className={`${styles.logoMark} ${academyLogo ? styles.hasCustomLogo : ""}`}
                 title={academyName || "Crezca"}
@@ -561,17 +567,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                   appMode === "admin" ? <Layers size={18} className={styles.logoIcon} /> : <GraduationCap size={18} className={styles.logoIcon} />
                 )}
               </div>
-
-              <button
-                type="button"
-                className={styles.collapsedExpandBtn}
-                onClick={toggleSidebar}
-                title="Expandir barra lateral"
-                aria-label="Expandir barra lateral"
-              >
-                <PanelLeftOpen size={16} />
-              </button>
-            </div>
+            </button>
           )}
         </div>
 

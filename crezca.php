@@ -276,6 +276,46 @@ function crezca_get_auth_settings() {
 }
 
 /**
+ * Obtener la URL de la página de Login personalizada de Crezca
+ */
+function crezca_get_login_page_url() {
+	$login_page_id = (int) get_option( 'alezux_login_page_id' );
+	if ( $login_page_id && get_post_status( $login_page_id ) === 'publish' ) {
+		return get_permalink( $login_page_id );
+	}
+
+	$slugs = [ 'login', 'iniciar-sesion', 'acceso', 'auth', 'ingreso' ];
+	foreach ( $slugs as $slug ) {
+		$page = get_page_by_path( $slug );
+		if ( $page && $page->post_status === 'publish' ) {
+			update_option( 'alezux_login_page_id', (int) $page->ID );
+			return get_permalink( $page->ID );
+		}
+	}
+
+	// Auto-provisionar la página de Login si aún no existe
+	if ( function_exists( 'wp_insert_post' ) ) {
+		$new_page_id = wp_insert_post( [
+			'post_title'     => 'Iniciar Sesión',
+			'post_name'      => 'login',
+			'post_content'   => '',
+			'post_status'    => 'publish',
+			'post_type'      => 'page',
+			'comment_status' => 'closed',
+			'ping_status'    => 'closed',
+		] );
+
+		if ( $new_page_id && ! is_wp_error( $new_page_id ) ) {
+			update_post_meta( $new_page_id, '_wp_page_template', 'elementor_canvas' );
+			update_option( 'alezux_login_page_id', (int) $new_page_id );
+			return get_permalink( $new_page_id );
+		}
+	}
+
+	return home_url( '/login/' );
+}
+
+/**
  * Obtener la URL del Campus Virtual / Portal del Estudiante
  */
 function crezca_get_student_portal_url() {
@@ -423,8 +463,7 @@ add_action( 'init', 'crezca_clean_logout_handler' );
 function crezca_clean_logout_handler() {
 	if ( isset( $_GET['crezca_logout'] ) || ( isset( $_GET['action'] ) && $_GET['action'] === 'crezca_logout' ) ) {
 		wp_logout();
-		$login_page_id = (int) get_option( 'alezux_login_page_id' );
-		$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+		$login_url = crezca_get_login_page_url();
 		wp_safe_redirect( add_query_arg( 'loggedout', 'true', $login_url ) );
 		exit;
 	}
@@ -438,8 +477,7 @@ add_action( 'login_init', 'crezca_intercept_wp_logout_prompt', 1 );
 function crezca_intercept_wp_logout_prompt() {
 	if ( isset( $_GET['action'] ) && $_GET['action'] === 'logout' ) {
 		wp_logout();
-		$login_page_id = (int) get_option( 'alezux_login_page_id' );
-		$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+		$login_url = crezca_get_login_page_url();
 		wp_safe_redirect( add_query_arg( 'loggedout', 'true', $login_url ) );
 		exit;
 	}
@@ -457,8 +495,7 @@ function crezca_redirect_student_tabs_to_campus() {
 	if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
 		// Si no está autenticado, redirigir a login directamente
 		if ( ! is_user_logged_in() ) {
-			$login_page_id = (int) get_option( 'alezux_login_page_id' );
-			$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+			$login_url     = crezca_get_login_page_url();
 			$portal_url    = crezca_get_student_portal_url();
 			$redirect_dest = add_query_arg( 'tab', sanitize_text_field( $_GET['tab'] ), $portal_url );
 			wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $redirect_dest ), $login_url ) );
@@ -504,8 +541,7 @@ function crezca_student_portal_canvas_template( $template ) {
 	if ( $is_portal ) {
 		// Si es acceso no autenticado al aula, redirigir al login personalizado
 		if ( ! is_user_logged_in() ) {
-			$login_page_id = (int) get_option( 'alezux_login_page_id' );
-			$login_url     = $login_page_id ? get_permalink( $login_page_id ) : home_url( '/login/' );
+			$login_url     = crezca_get_login_page_url();
 			$current_url   = ( is_ssl() ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
 			wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
 			exit;

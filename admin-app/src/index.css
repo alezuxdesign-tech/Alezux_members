@@ -127,6 +127,69 @@ body {
   outline: none !important;
 }
 
+/* Excepción absoluta para el input/textarea de chat de la comunidad (totalmente integrado y sin borde interno) */
+#crezca-admin-root .discordInputBoxWrapper textarea,
+#crezca-student-root .discordInputBoxWrapper textarea,
+#alezux-admin-root .discordInputBoxWrapper textarea,
+#crezca-admin-root textarea.discordTextarea,
+#crezca-student-root textarea.discordTextarea,
+#alezux-admin-root textarea.discordTextarea,
+#crezca-admin-root textarea[class*="discordTextarea"],
+#crezca-student-root textarea[class*="discordTextarea"],
+#alezux-admin-root textarea[class*="discordTextarea"],
+#crezca-admin-root div[class*="discordInputBoxWrapper"] textarea,
+#crezca-student-root div[class*="discordInputBoxWrapper"] textarea,
+#alezux-admin-root div[class*="discordInputBoxWrapper"] textarea {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  outline: none !important;
+  padding: 4px 0 !important;
+}
+
+#crezca-admin-root .discordInputBoxWrapper textarea:hover,
+#crezca-student-root .discordInputBoxWrapper textarea:hover,
+#alezux-admin-root .discordInputBoxWrapper textarea:hover,
+#crezca-admin-root textarea[class*="discordTextarea"]:hover,
+#crezca-student-root textarea[class*="discordTextarea"]:hover,
+#alezux-admin-root textarea[class*="discordTextarea"]:hover,
+#crezca-admin-root div[class*="discordInputBoxWrapper"] textarea:hover,
+#crezca-student-root div[class*="discordInputBoxWrapper"] textarea:hover,
+#alezux-admin-root div[class*="discordInputBoxWrapper"] textarea:hover,
+#crezca-admin-root .discordInputBoxWrapper textarea:focus,
+#crezca-student-root .discordInputBoxWrapper textarea:focus,
+#alezux-admin-root .discordInputBoxWrapper textarea:focus,
+#crezca-admin-root textarea[class*="discordTextarea"]:focus,
+#crezca-student-root textarea[class*="discordTextarea"]:focus,
+#alezux-admin-root textarea[class*="discordTextarea"]:focus,
+#crezca-admin-root div[class*="discordInputBoxWrapper"] textarea:focus,
+#crezca-student-root div[class*="discordInputBoxWrapper"] textarea:focus,
+#alezux-admin-root div[class*="discordInputBoxWrapper"] textarea:focus,
+#crezca-admin-root .discordInputBoxWrapper textarea:active,
+#crezca-student-root .discordInputBoxWrapper textarea:active,
+#alezux-admin-root .discordInputBoxWrapper textarea:active,
+#crezca-admin-root textarea[class*="discordTextarea"]:active,
+#crezca-student-root textarea[class*="discordTextarea"]:active,
+#alezux-admin-root textarea[class*="discordTextarea"]:active,
+#crezca-admin-root div[class*="discordInputBoxWrapper"] textarea:active,
+#crezca-student-root div[class*="discordInputBoxWrapper"] textarea:active,
+#alezux-admin-root div[class*="discordInputBoxWrapper"] textarea:active {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  outline: none !important;
+}
+
 /* Reset buttons from WP Admin styling */
 #crezca-admin-root button,
 #crezca-student-root button,

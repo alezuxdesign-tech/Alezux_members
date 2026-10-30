@@ -1039,7 +1039,8 @@
   background: rgba(239, 68, 68, 0.15);
 }
 
-/* Textarea de redacción TOTALMENTE SIN BORDES ni contornos */
+/* Textarea de redacción TOTALMENTE SIN BORDES ni contornos - integrado en discordInputBoxWrapper */
+.discordInputBoxWrapper textarea,
 .discordTextarea,
 .discordTextarea:focus,
 .discordTextarea:hover,
@@ -1062,9 +1063,10 @@
   color: var(--foreground);
   resize: none;
   max-height: 140px;
-  min-height: 26px;
+  min-height: 24px;
   line-height: 1.45;
-  padding: 4px 0;
+  padding: 4px 0 !important;
+  margin: 0 !important;
   box-sizing: border-box;
 }
 
@@ -2263,11 +2265,11 @@
   }
 
   /* Área de entrada en móvil */
-  .chatInputArea {
-    padding: 8px 10px !important;
+  .chatInputContainer {
+    padding: 8px 10px 14px !important;
   }
 
-  .chatInputBox {
+  .discordInputBoxWrapper {
     padding: 6px 10px !important;
   }
 
