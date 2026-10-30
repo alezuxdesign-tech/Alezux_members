@@ -51,7 +51,7 @@ import styles from "./App.module.css";
 import studentStyles from "./views/student/StudentPortal.module.css";
 
 export type AppMode = "admin" | "student" | "instructor";
-export type InstructorTabId = "courses" | "students" | "community";
+export type InstructorTabId = "courses" | "students" | "community" | "events";
 type AdminTabId = "overview" | "courses" | "students" | "instructors" | "events" | "finance" | "marketing" | "community" | "settings";
 type StudentTabId = "dashboard" | "courses" | "community" | "profile";
 
@@ -251,6 +251,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     { id: "courses", label: "Mis Cursos", icon: <GraduationCap size={18} /> },
     { id: "students", label: "Mis Alumnos", icon: <Users size={18} /> },
     { id: "community", label: "Comunidad", icon: <MessageSquare size={18} /> },
+    { id: "events", label: "Eventos", icon: <Calendar size={18} /> },
   ];
 
   const [activeInstructorTab, setActiveInstructorTab] = useState<InstructorTabId>("courses");
@@ -866,15 +867,17 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               onClick={() => {
                 if (appMode === "student") {
                   setActiveStudentTab("profile");
+                } else if (appMode === "instructor") {
+                  setIsDrawerOpen(true);
                 } else {
                   setActiveAdminTab("settings");
                 }
               }}
-              title={appMode === "student" ? "Mi Perfil" : "Ajustes"}
+              title={appMode === "student" ? "Mi Perfil" : (appMode === "instructor" ? "Menú Docente" : "Ajustes")}
               aria-label="Perfil de usuario"
             >
               <div className={styles.headerAvatarCircle}>
-                {appMode === "student" && studentProfile?.avatar ? (
+                {studentProfile?.avatar ? (
                   <img src={studentProfile.avatar} alt="Avatar" className={styles.headerAvatarImg} />
                 ) : (
                   <User size={14} />
@@ -903,6 +906,8 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
 
             {appMode === "admin" ? (
               <span className={styles.headerTitle}>{currentAdminNav.label}</span>
+            ) : appMode === "instructor" ? (
+              <span className={styles.headerTitle}>{currentInstructorNav.label}</span>
             ) : (
               <>
                 {activeStudentTab === "dashboard" && <span className={styles.headerTitle}>Dashboard</span>}
@@ -1026,6 +1031,10 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                       if (tab === "events" || tab === "courses" || tab === "students" || tab === "instructors" || tab === "community" || tab === "settings") {
                         setActiveAdminTab(tab as AdminTabId);
                       }
+                    } else if (appMode === "instructor") {
+                      if (tab === "courses" || tab === "students" || tab === "community" || tab === "events") {
+                        setActiveInstructorTab(tab as InstructorTabId);
+                      }
                     } else {
                       if (tab === "dashboard" || tab === "courses" || tab === "community" || tab === "profile") {
                         setActiveStudentTab(tab as StudentTabId);
@@ -1089,6 +1098,9 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                     setActiveInstructorTab("courses");
                   }}
                 />
+              )}
+              {activeInstructorTab === "events" && (
+                <EventsView />
               )}
             </>
           )}
@@ -1349,6 +1361,63 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               <span className={styles.mobileBottomLabel}>Perfil</span>
             </button>
           </>
+        ) : appMode === "instructor" ? (
+          <>
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeInstructorTab === "courses" ? styles.active : ""}`}
+              onClick={() => setActiveInstructorTab("courses")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <GraduationCap size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Cursos</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeInstructorTab === "students" ? styles.active : ""}`}
+              onClick={() => setActiveInstructorTab("students")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <Users size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Alumnos</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeInstructorTab === "community" ? styles.active : ""}`}
+              onClick={() => setActiveInstructorTab("community")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <MessageSquare size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Comunidad</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeInstructorTab === "events" ? styles.active : ""}`}
+              onClick={() => setActiveInstructorTab("events")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <Calendar size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Eventos</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${isDrawerOpen ? styles.active : ""}`}
+              onClick={() => setIsDrawerOpen(true)}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <Menu size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Más</span>
+            </button>
+          </>
         ) : (
           <>
             <button
@@ -1411,9 +1480,9 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
       )}
 
       {/* =========================================================
-          DRAWER / SLIDE-OVER LATERAL PARA EL ADMINISTRADOR EN MÓVIL
+          DRAWER / SLIDE-OVER LATERAL EN MÓVIL (ADMIN & INSTRUCTOR)
           ========================================================= */}
-      {isDrawerOpen && appMode === "admin" && (
+      {isDrawerOpen && (appMode === "admin" || appMode === "instructor") && (
         <div 
           className={styles.drawerOverlay} 
           onClick={() => setIsDrawerOpen(false)}
@@ -1441,95 +1510,188 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
               </button>
             </div>
 
-            <div className={styles.drawerSectionTitle}>Módulos Adicionales</div>
-            <div className={styles.drawerNavList}>
-              <button
-                type="button"
-                className={`${styles.drawerNavItem} ${activeAdminTab === "instructors" ? styles.active : ""}`}
-                onClick={() => { setActiveAdminTab("instructors"); setIsDrawerOpen(false); }}
-              >
-                <UserCheck size={17} />
-                <span>Docentes & Mentores</span>
-              </button>
+            {appMode === "instructor" ? (
+              <>
+                <div className={styles.drawerSectionTitle}>Módulos Docente</div>
+                <div className={styles.drawerNavList}>
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${activeInstructorTab === "courses" ? styles.active : ""}`}
+                    onClick={() => { setActiveInstructorTab("courses"); setIsDrawerOpen(false); }}
+                  >
+                    <GraduationCap size={17} />
+                    <span>Mis Cursos Asignados</span>
+                  </button>
 
-              <button
-                type="button"
-                className={`${styles.drawerNavItem} ${activeAdminTab === "events" ? styles.active : ""}`}
-                onClick={() => { setActiveAdminTab("events"); setIsDrawerOpen(false); }}
-              >
-                <Calendar size={17} />
-                <span>Eventos & Clases en Vivo</span>
-              </button>
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${activeInstructorTab === "students" ? styles.active : ""}`}
+                    onClick={() => { setActiveInstructorTab("students"); setIsDrawerOpen(false); }}
+                  >
+                    <Users size={17} />
+                    <span>Mis Alumnos</span>
+                  </button>
 
-              <button
-                type="button"
-                className={`${styles.drawerNavItem} ${activeAdminTab === "marketing" ? styles.active : ""}`}
-                onClick={() => { setActiveAdminTab("marketing"); setIsDrawerOpen(false); }}
-              >
-                <Mail size={17} />
-                <span>Marketing & Correos</span>
-              </button>
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${activeInstructorTab === "community" ? styles.active : ""}`}
+                    onClick={() => { setActiveInstructorTab("community"); setIsDrawerOpen(false); }}
+                  >
+                    <MessageSquare size={17} />
+                    <span>Comunidad & Canales</span>
+                  </button>
 
-              <button
-                type="button"
-                className={`${styles.drawerNavItem} ${activeAdminTab === "community" ? styles.active : ""}`}
-                onClick={() => { setActiveAdminTab("community"); setIsDrawerOpen(false); }}
-              >
-                <MessageSquare size={17} />
-                <span>Comunidad & Foro</span>
-              </button>
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${activeInstructorTab === "events" ? styles.active : ""}`}
+                    onClick={() => { setActiveInstructorTab("events"); setIsDrawerOpen(false); }}
+                  >
+                    <Calendar size={17} />
+                    <span>Eventos & Clases en Vivo</span>
+                  </button>
+                </div>
 
-              <button
-                type="button"
-                className={`${styles.drawerNavItem} ${activeAdminTab === "settings" ? styles.active : ""}`}
-                onClick={() => { setActiveAdminTab("settings"); setIsDrawerOpen(false); }}
-              >
-                <Sliders size={17} />
-                <span>Ajustes & Personalización</span>
-              </button>
-            </div>
+                <div className={styles.drawerSectionTitle}>Opciones</div>
+                <div className={styles.drawerNavList}>
+                  <button
+                    type="button"
+                    className={styles.drawerNavItem}
+                    onClick={toggleTheme}
+                  >
+                    {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+                    <span>{theme === "dark" ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}</span>
+                  </button>
 
-            <div className={styles.drawerSectionTitle}>Acciones Rápidas</div>
-            <div className={styles.drawerNavList}>
-              <button
-                type="button"
-                className={styles.drawerNavItem}
-                onClick={() => { setAppMode("student"); setIsDrawerOpen(false); }}
-              >
-                <GraduationCap size={17} />
-                <span>Previsualizar Modo Estudiante</span>
-              </button>
+                  <button
+                    type="button"
+                    className={styles.drawerNavItem}
+                    onClick={toggleFullscreen}
+                  >
+                    {isFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+                    <span>{isFullscreen ? "Salir de Pantalla Completa" : "Pantalla Completa"}</span>
+                  </button>
 
-              <button
-                type="button"
-                className={styles.drawerNavItem}
-                onClick={toggleTheme}
-              >
-                {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-                <span>{theme === "dark" ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}</span>
-              </button>
+                  <a
+                    href={logoutUrl}
+                    className={styles.drawerNavItem}
+                    style={{ color: "#ef4444" }}
+                  >
+                    <LogOut size={17} />
+                    <span>Cerrar Sesión</span>
+                  </a>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.drawerSectionTitle}>Módulos Adicionales</div>
+                <div className={styles.drawerNavList}>
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${activeAdminTab === "instructors" ? styles.active : ""}`}
+                    onClick={() => { setActiveAdminTab("instructors"); setIsDrawerOpen(false); }}
+                  >
+                    <UserCheck size={17} />
+                    <span>Docentes & Mentores</span>
+                  </button>
 
-              <button
-                type="button"
-                className={styles.drawerNavItem}
-                onClick={toggleFullscreen}
-              >
-                {isFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
-                <span>{isFullscreen ? "Salir de Pantalla Completa" : "Pantalla Completa"}</span>
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${activeAdminTab === "events" ? styles.active : ""}`}
+                    onClick={() => { setActiveAdminTab("events"); setIsDrawerOpen(false); }}
+                  >
+                    <Calendar size={17} />
+                    <span>Eventos & Clases en Vivo</span>
+                  </button>
 
-            {isActualAdmin && (
-              <div className={styles.drawerFooter}>
-                <a
-                  href={wpAdminUrl}
-                  className={styles.backToWpBtn}
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  <ArrowLeft size={15} />
-                  <span>Volver a WordPress</span>
-                </a>
-              </div>
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${activeAdminTab === "marketing" ? styles.active : ""}`}
+                    onClick={() => { setActiveAdminTab("marketing"); setIsDrawerOpen(false); }}
+                  >
+                    <Mail size={17} />
+                    <span>Marketing & Correos</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${activeAdminTab === "community" ? styles.active : ""}`}
+                    onClick={() => { setActiveAdminTab("community"); setIsDrawerOpen(false); }}
+                  >
+                    <MessageSquare size={17} />
+                    <span>Comunidad & Foro</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${activeAdminTab === "settings" ? styles.active : ""}`}
+                    onClick={() => { setActiveAdminTab("settings"); setIsDrawerOpen(false); }}
+                  >
+                    <Sliders size={17} />
+                    <span>Ajustes & Personalización</span>
+                  </button>
+                </div>
+
+                <div className={styles.drawerSectionTitle}>Acciones Rápidas</div>
+                <div className={styles.drawerNavList}>
+                  <button
+                    type="button"
+                    className={styles.drawerNavItem}
+                    onClick={() => { setAppMode("student"); setIsDrawerOpen(false); }}
+                  >
+                    <GraduationCap size={17} />
+                    <span>Previsualizar Modo Estudiante</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.drawerNavItem}
+                    onClick={() => { setAppMode("instructor"); setIsDrawerOpen(false); }}
+                  >
+                    <UserCheck size={17} />
+                    <span>Previsualizar Modo Docente</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.drawerNavItem}
+                    onClick={toggleTheme}
+                  >
+                    {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+                    <span>{theme === "dark" ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.drawerNavItem}
+                    onClick={toggleFullscreen}
+                  >
+                    {isFullscreen ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+                    <span>{isFullscreen ? "Salir de Pantalla Completa" : "Pantalla Completa"}</span>
+                  </button>
+
+                  <a
+                    href={logoutUrl}
+                    className={styles.drawerNavItem}
+                    style={{ color: "#ef4444" }}
+                  >
+                    <LogOut size={17} />
+                    <span>Cerrar Sesión</span>
+                  </a>
+                </div>
+
+                {isActualAdmin && (
+                  <div className={styles.drawerFooter}>
+                    <a
+                      href={wpAdminUrl}
+                      className={styles.backToWpBtn}
+                      style={{ width: "100%", justifyContent: "center" }}
+                    >
+                      <ArrowLeft size={15} />
+                      <span>Volver a WordPress</span>
+                    </a>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -1545,6 +1707,10 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             if (appMode === "admin") {
               if (tab === "events" || tab === "courses" || tab === "students" || tab === "instructors" || tab === "community" || tab === "settings") {
                 setActiveAdminTab(tab as AdminTabId);
+              }
+            } else if (appMode === "instructor") {
+              if (tab === "courses" || tab === "students" || tab === "community" || tab === "events") {
+                setActiveInstructorTab(tab as InstructorTabId);
               }
             } else {
               if (tab === "dashboard" || tab === "courses" || tab === "community" || tab === "profile") {
