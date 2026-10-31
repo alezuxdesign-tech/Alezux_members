@@ -863,7 +863,7 @@ class LMS_Engine {
 						'duration'    => get_post_meta( $t_id, '_topic_duration', true ) ?: '15m',
 						'cover'       => $t_cover,
 						'video_url'   => $t_video ?: '',
-						'description' => wp_strip_all_tags( $t_post->post_content ),
+						'description' => trim( wp_strip_all_tags( preg_replace( '/\[(?:vdo|vdocipher)[^\]]*\]/i', '', $t_post->post_content ) ) ),
 						'files'       => get_post_meta( $t_id, '_topic_files', true ) ?: [],
 						'questions'   => [],
 					];
@@ -919,7 +919,7 @@ class LMS_Engine {
 						'id'          => 'sec_' . $l_id,
 						'title'       => $l_post->post_title,
 						'cover'       => $l_cover,
-						'description' => wp_strip_all_tags( $l_post->post_content ),
+						'description' => trim( wp_strip_all_tags( preg_replace( '/\[(?:vdo|vdocipher)[^\]]*\]/i', '', $l_post->post_content ) ) ),
 						'lessons'     => $lesson_classes,
 					];
 					$section_index++;
@@ -934,7 +934,7 @@ class LMS_Engine {
 				'duration'    => get_post_meta( $l_id, '_lesson_duration', true ) ?: '15m',
 				'cover'       => $l_cover,
 				'video_url'   => $l_video ?: '',
-				'description' => wp_strip_all_tags( $l_post->post_content ),
+				'description' => trim( wp_strip_all_tags( preg_replace( '/\[(?:vdo|vdocipher)[^\]]*\]/i', '', $l_post->post_content ) ) ),
 				'files'       => get_post_meta( $l_id, '_lesson_files', true ) ?: [],
 				'questions'   => [],
 			];

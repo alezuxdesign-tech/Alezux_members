@@ -20,7 +20,10 @@ import {
   Check,
   X,
   RotateCcw,
-  Award
+  Award,
+  Maximize2,
+  Minimize2,
+  SkipForward
 } from "lucide-react";
 import { 
   Course, 
@@ -83,6 +86,77 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
     "";
   const authorName = course.instructors?.[0]?.name || "Docente Titular";
   const [isOtherModulesOpen, setIsOtherModulesOpen] = useState(false);
+
+  // Estado Modo Cine (pantalla ancha / experiencia cinematográfica)
+  const [isCinemaMode, setIsCinemaMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("crezca_student_cinema_mode") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleCinemaMode = () => {
+    setIsCinemaMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("crezca_student_cinema_mode", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Lista ordenada de todos los módulos del curso para navegación secuencial entre módulos
+  interface FlatModuleItem {
+    section: CourseSection;
+    lesson: CourseLesson;
+    firstTopic?: CourseTopic;
+    moduleNumber: number;
+  }
+
+  const allModulesInCourse: FlatModuleItem[] = useMemo(() => {
+    const list: FlatModuleItem[] = [];
+    if (!course.sections) return list;
+
+    let counter = 0;
+    course.sections.forEach((sec) => {
+      if (sec.is_separator) return;
+      const secLessons = sec.lessons || [];
+      secLessons.forEach((les) => {
+        counter++;
+        const firstTopic = les.topics && les.topics.length > 0 
+          ? les.topics[0] 
+          : (les as unknown as CourseTopic);
+        list.push({
+          section: sec,
+          lesson: les,
+          firstTopic,
+          moduleNumber: counter,
+        });
+      });
+    });
+
+    return list;
+  }, [course.sections]);
+
+  const currentModuleIndex = allModulesInCourse.findIndex(
+    (m) => m.lesson.id === currentLesson.id
+  );
+
+  const nextModule = currentModuleIndex >= 0 && currentModuleIndex < allModulesInCourse.length - 1
+    ? allModulesInCourse[currentModuleIndex + 1]
+    : null;
+
+  const prevModule = currentModuleIndex > 0
+    ? allModulesInCourse[currentModuleIndex - 1]
+    : null;
+
+  const handleGoToNextModule = () => {
+    if (nextModule) {
+      onSwitchModule(nextModule.section, nextModule.lesson, nextModule.firstTopic);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
   // Obtener lista completa de topics de la lección/módulo actual
   const topics: CourseTopic[] = useMemo(() => {
     if (currentLesson.topics && currentLesson.topics.length > 0) {
@@ -716,17 +790,42 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
               {completedInModule} de {allPlayableItems.length} completadas ({modulePercentage}%)
             </span>
           </div>
+
+          <button
+            type="button"
+            className={[styles.headerCinemaBtn, isCinemaMode ? styles.headerCinemaBtnActive : ""].join(" ")}
+            onClick={toggleCinemaMode}
+            title={isCinemaMode ? "Desactivar modo cine (volver a vista normal)" : "Activar modo cine (pantalla ancha)"}
+          >
+            {isCinemaMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            <span>{isCinemaMode ? "Normal" : "Cine"}</span>
+          </button>
         </div>
       </header>
 
       {/* 2. REJILLA PRINCIPAL DEL AULA: REPRODUCTOR (IZQ) Y LISTA DE TOPICS (DER) */}
-      <div className={styles.classroomLayout}>
-        {/* COLUMNA IZQUIERDA: REPRODUCTOR Y CONTENIDO */}
-        <main className={styles.classroomMainColumn}>
-          {/* Contenedor del Video */}
-          <div className={styles.playerWrapper}>
-            {renderVideoPlayer()}
+      <div className={[styles.classroomLayout, isCinemaMode ? styles.classroomLayoutCinema : ""].join(" ")}>
+        {/* EN MODO CINE: REPRODUCTOR EXPANDIDO A PANTALLA ANCHA AL INICIO */}
+        {isCinemaMode && (
+          <div className={styles.cinemaPlayerFullWrap}>
+            <div className={styles.cinemaPlayerInner}>
+              <div className={styles.playerWrapper}>
+                {renderVideoPlayer()}
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* CONTENEDOR DE CONTENIDO (NORMAL O CINE) */}
+        <div className={isCinemaMode ? styles.cinemaContentSection : styles.classroomStandardLayout}>
+          {/* COLUMNA PRINCIPAL DE CONTENIDO */}
+          <main className={isCinemaMode ? styles.cinemaMainContent : styles.classroomMainColumn}>
+            {/* Contenedor del Video en Modo Normal */}
+            {!isCinemaMode && (
+              <div className={styles.playerWrapper}>
+                {renderVideoPlayer()}
+              </div>
+            )}
 
           {/* Fila de Título y Acciones de la Lección */}
           <div className={styles.topicActionHeader}>
@@ -784,6 +883,38 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                   <ChevronRight size={16} />
                 </button>
               )}
+
+              {/* Botón Siguiente Módulo */}
+              {nextModule && (
+                <button
+                  type="button"
+                  className={[
+                    styles.classroomNavBtn,
+                    styles.nextModuleBtn,
+                    !nextItem ? styles.nextModuleBtnPrimary : "",
+                  ].join(" ")}
+                  onClick={handleGoToNextModule}
+                  title={`Avanzar al siguiente módulo: ${nextModule.lesson.title}`}
+                >
+                  <span>Siguiente módulo</span>
+                  <SkipForward size={15} />
+                </button>
+              )}
+
+              {/* Botón Modo Cine */}
+              <button
+                type="button"
+                className={[
+                  styles.classroomNavBtn,
+                  styles.cinemaToggleBtn,
+                  isCinemaMode ? styles.cinemaToggleBtnActive : "",
+                ].join(" ")}
+                onClick={toggleCinemaMode}
+                title={isCinemaMode ? "Desactivar modo cine (volver a vista normal)" : "Activar modo cine (pantalla ancha)"}
+              >
+                {isCinemaMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                <span>{isCinemaMode ? "Modo normal" : "Modo cine"}</span>
+              </button>
             </div>
           </div>
 
@@ -1013,13 +1144,18 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
               {/* TAB 1: DESCRIPCIÓN */}
               {contentTab === "description" && (
                 <div className={styles.topicDescriptionBox}>
-                  {currentItem?.description ? (
-                    <p>{currentItem.description}</p>
-                  ) : (
-                    <p className={styles.noContentText}>
-                      No hay notas o descripciones adicionales registradas para esta lección.
-                    </p>
-                  )}
+                  {(() => {
+                    const cleanDesc = (currentItem?.description || "")
+                      .replace(/\[(?:vdo|vdocipher)[^\]]*\]/gi, "")
+                      .trim();
+                    return cleanDesc ? (
+                      <p>{cleanDesc}</p>
+                    ) : (
+                      <p className={styles.noContentText}>
+                        No hay notas o descripciones adicionales registradas para esta lección.
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -1226,7 +1362,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
         </main>
 
         {/* COLUMNA DERECHA: SIDEBAR DE TOPICS DEL MÓDULO */}
-        <aside className={styles.classroomSidebar}>
+        <aside className={[styles.classroomSidebar, isCinemaMode ? styles.cinemaSidebar : ""].join(" ")}>
           {/* Cabecera del Temario / Módulo Activo */}
           <div className={styles.sidebarHeaderCard}>
             <div className={styles.sidebarHeaderTop}>
@@ -1259,6 +1395,17 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                 style={{ width: `${modulePercentage}%` }} 
               />
             </div>
+            {nextModule && (
+              <button
+                type="button"
+                className={styles.sidebarNextModuleBtn}
+                onClick={handleGoToNextModule}
+                title={`Saltar a: ${nextModule.lesson.title}`}
+              >
+                <span>Siguiente módulo: {nextModule.lesson.title}</span>
+                <ChevronRight size={14} />
+              </button>
+            )}
           </div>
 
           {/* Menú desplegable para saltar a otros módulos del curso */}
@@ -1400,6 +1547,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
             })}
           </div>
         </aside>
+        </div>
       </div>
     </div>
   );
