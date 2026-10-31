@@ -320,6 +320,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               setSelectedLesson(les);
               setSelectedTopic(top || null);
             }}
+            academyLogo={academyLogo}
+            academyName={academyName}
           />
         )}
 

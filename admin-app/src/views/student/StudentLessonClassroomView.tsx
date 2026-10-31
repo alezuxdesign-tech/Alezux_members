@@ -46,6 +46,7 @@ interface StudentLessonClassroomViewProps {
   onBackToCourse: () => void;
   onSwitchModule: (sec: CourseSection, les: CourseLesson, top?: CourseTopic) => void;
   academyLogo?: string;
+  academyName?: string;
 }
 
 interface PlayableItem {
@@ -74,7 +75,12 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
   onSwitchModule,
   academyLogo,
 }) => {
-  const effectiveLogo = academyLogo || localStorage.getItem("crezca_academy_logo") || "";
+  const effectiveLogo = 
+    academyLogo || 
+    (window as any).crezca_student_data?.academy_logo || 
+    (window as any).crezca_app_data?.academy_logo || 
+    localStorage.getItem("crezca_academy_logo") || 
+    "";
   const authorName = course.instructors?.[0]?.name || "Docente Titular";
   const [isOtherModulesOpen, setIsOtherModulesOpen] = useState(false);
   // Obtener lista completa de topics de la lección/módulo actual
@@ -937,6 +943,9 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                                     isCompleted={completedTopicIds.includes(top.id)}
                                     effectiveLogo={effectiveLogo}
                                     courseTitle={course.title}
+                                    courseThumbnail={course.thumbnail}
+                                    courseBanner={course.banner}
+                                    sectionCover={currentSection.cover}
                                     onClick={() => {
                                       setActiveItemId(top.id);
                                       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -956,6 +965,9 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                                     isCompleted={completedTopicIds.includes(sub.id)}
                                     effectiveLogo={effectiveLogo}
                                     courseTitle={course.title}
+                                    courseThumbnail={course.thumbnail}
+                                    courseBanner={course.banner}
+                                    sectionCover={currentSection.cover}
                                     onClick={() => {
                                       setActiveItemId(sub.id);
                                       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -983,6 +995,9 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                           isCompleted={isCompleted}
                           effectiveLogo={effectiveLogo}
                           courseTitle={course.title}
+                          courseThumbnail={course.thumbnail}
+                          courseBanner={course.banner}
+                          sectionCover={currentSection.cover}
                           onClick={() => {
                             setActiveItemId(top.id);
                             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1327,6 +1342,9 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                             isCompleted={completedTopicIds.includes(top.id)}
                             effectiveLogo={effectiveLogo}
                             courseTitle={course.title}
+                            courseThumbnail={course.thumbnail}
+                            courseBanner={course.banner}
+                            sectionCover={currentSection.cover}
                             onClick={() => setActiveItemId(top.id)}
                             onToggleComplete={() => onToggleCompleteTopic(top.id)}
                           />
@@ -1344,6 +1362,9 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                             isCompleted={completedTopicIds.includes(sub.id)}
                             effectiveLogo={effectiveLogo}
                             courseTitle={course.title}
+                            courseThumbnail={course.thumbnail}
+                            courseBanner={course.banner}
+                            sectionCover={currentSection.cover}
                             onClick={() => setActiveItemId(sub.id)}
                             onToggleComplete={() => onToggleCompleteTopic(sub.id)}
                           />
@@ -1369,6 +1390,9 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                   isCompleted={isCompleted}
                   effectiveLogo={effectiveLogo}
                   courseTitle={course.title}
+                  courseThumbnail={course.thumbnail}
+                  courseBanner={course.banner}
+                  sectionCover={currentSection.cover}
                   onClick={() => setActiveItemId(top.id)}
                   onToggleComplete={() => onToggleCompleteTopic(top.id)}
                 />
@@ -1390,6 +1414,9 @@ interface ClassCardItemProps {
   isCompleted: boolean;
   effectiveLogo: string;
   courseTitle: string;
+  courseThumbnail?: string;
+  courseBanner?: string;
+  sectionCover?: string;
   onClick: () => void;
   onToggleComplete: () => void;
 }
@@ -1402,9 +1429,20 @@ function ClassCardItem({
   isCompleted,
   effectiveLogo,
   courseTitle,
+  courseThumbnail,
+  courseBanner,
+  sectionCover,
   onClick,
   onToggleComplete,
 }: ClassCardItemProps) {
+  // Los topics por defecto llevan el logo de la academia en blanco y negro,
+  // a menos que tengan una portada propia y específica (no heredada del curso o módulo)
+  const isInheritedCover = !cover || 
+    cover === courseThumbnail || 
+    cover === courseBanner || 
+    cover === sectionCover;
+  const hasCustomTopicCover = Boolean(cover && cover.trim() !== "" && !isInheritedCover);
+
   return (
     <div
       className={[
@@ -1434,7 +1472,7 @@ function ClassCardItem({
           <Check size={11} strokeWidth={2.5} />
         </button>
 
-        {cover && cover.trim() !== "" ? (
+        {hasCustomTopicCover ? (
           <img src={cover} alt={title} className={styles.classThumbImg} />
         ) : (
           <div className={styles.classThumbLogoFallback}>
@@ -1446,7 +1484,7 @@ function ClassCardItem({
               />
             ) : (
               <span className={styles.classThumbInitial}>
-                {courseTitle ? courseTitle.charAt(0).toUpperCase() : "C"}
+                {courseTitle ? courseTitle.charAt(0).toUpperCase() : "🎓"}
               </span>
             )}
           </div>

@@ -697,7 +697,8 @@ class Admin_Api {
 							$les_post_id = ! empty( $les_item['id'] ) ? intval( preg_replace( '/[^0-9]/', '', (string) $les_item['id'] ) ) : 0;
 							if ( class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) && $les_post_id > 0 ) {
 								if ( empty( $les_item['cover'] ) ) {
-									$les_item['cover'] = \Alezux_Members\Core\LMS_Engine::extract_cover_from_post( $les_post_id ) ?: ( ! empty( $sec['cover'] ) ? $sec['cover'] : '' );
+									// Los topics y clases por defecto no heredan la portada del módulo para usar el logo B&N
+									$les_item['cover'] = \Alezux_Members\Core\LMS_Engine::extract_cover_from_post( $les_post_id );
 								}
 								if ( empty( $les_item['video_url'] ) ) {
 									$les_item['video_url'] = \Alezux_Members\Core\LMS_Engine::extract_video_from_post( $les_post_id );

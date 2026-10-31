@@ -854,7 +854,8 @@ class LMS_Engine {
 					if ( ! $t_post ) continue;
 
 					$t_video = self::extract_video_from_post( $t_id, 'sfwd-topic' );
-					$t_cover = self::extract_cover_from_post( $t_id ) ?: $l_cover;
+					// Los topics por defecto no heredan la portada del módulo/curso para mostrar el logo en B&N
+					$t_cover = self::extract_cover_from_post( $t_id );
 
 					$lesson_classes[] = [
 						'id'          => 'top_' . $t_id,

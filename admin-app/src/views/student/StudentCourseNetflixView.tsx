@@ -235,13 +235,23 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                       onClick={() => handleCardClick(moduleSection, moduleNumber)}
                       title={moduleSection.title || `Módulo ${moduleNumber}`}
                     >
-                      {/* Fondo de Portada con Imagen o Gradiente */}
-                      <div 
-                        className={styles.posterBgImage}
-                        style={{
-                          backgroundImage: cover ? `url(${cover})` : undefined,
-                        }}
-                      />
+                      {/* Fondo de Portada con Imagen o Fallback */}
+                      {cover ? (
+                        <img 
+                          src={cover} 
+                          alt={moduleSection.title || `Módulo ${moduleNumber}`} 
+                          className={styles.posterBgImage}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className={styles.posterBgFallback}>
+                          {academyLogo ? (
+                            <img src={academyLogo} alt={academyName} className={styles.posterFallbackLogo} />
+                          ) : (
+                            <div className={styles.posterFallbackIcon}>🎓</div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Degradado vertical de lectura (limpio si las etiquetas están ocultas) */}
                       <div className={showLabels ? styles.posterGradientOverlay : styles.posterGradientOverlayClean} />
