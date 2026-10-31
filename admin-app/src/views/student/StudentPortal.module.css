@@ -1758,6 +1758,236 @@
   word-break: break-word;
 }
 
+/* ==========================================================================
+   BARRA DE ACCIONES SIMPLIFICADA ESTILO YOUTUBE & TOOLTIPS
+   ========================================================================== */
+
+.ytActionsRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ytActionItem {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Botón Circular Estilo YouTube */
+.ytCircleBtn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-muted, rgba(255, 255, 255, 0.08));
+  color: var(--foreground, #f1f1f1);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  cursor: pointer;
+  transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  user-select: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.ytCircleBtn:hover {
+  background: var(--surface-raised, rgba(255, 255, 255, 0.18));
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: scale(1.05);
+}
+
+.ytCircleBtn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Estado activo para Modo Cine */
+.ytCircleBtnActive {
+  background: var(--accent, #7747ff) !important;
+  color: #ffffff !important;
+  border-color: var(--accent, #7747ff) !important;
+  box-shadow: 0 0 14px var(--accent-subtle, rgba(119, 71, 255, 0.4));
+}
+
+/* Estado copiado para Compartir enlace */
+.ytCircleBtnCopied {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+}
+
+/* Botón Píldora Estilo YouTube (Completar clase) */
+.ytPillBtn {
+  height: 38px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: var(--surface-muted, rgba(255, 255, 255, 0.08));
+  color: var(--foreground, #f1f1f1);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  white-space: nowrap;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.ytPillBtn:hover {
+  background: var(--surface-raised, rgba(255, 255, 255, 0.18));
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+.ytPillBtn:active {
+  transform: scale(0.97);
+}
+
+/* Estado completado */
+.ytPillBtnCompleted {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.38) !important;
+}
+
+.ytPillBtnCompleted:hover {
+  background: rgba(16, 185, 129, 0.25) !important;
+  border-color: rgba(16, 185, 129, 0.55) !important;
+}
+
+/* Sugerencia de avanzar al siguiente módulo */
+.ytNextModuleHighlight {
+  background: var(--accent, #7747ff) !important;
+  color: #ffffff !important;
+  border-color: var(--accent, #7747ff) !important;
+  box-shadow: 0 0 14px var(--accent-subtle, rgba(119, 71, 255, 0.4));
+  animation: ytModulePulse 2.4s infinite;
+}
+
+@keyframes ytModulePulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--accent-subtle, rgba(119, 71, 255, 0.6));
+  }
+  70% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Tooltip Flotante Estilo YouTube */
+.ytTooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #18181b;
+  color: #ffffff;
+  padding: 6px 11px;
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.16s ease, transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 250px;
+  min-width: 60px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Flecha inferior del tooltip */
+.ytTooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #18181b;
+}
+
+.ytTooltipLeft {
+  left: 0;
+  transform: translateY(4px);
+  align-items: flex-start;
+  text-align: left;
+}
+
+.ytTooltipLeft::after {
+  left: 18px;
+  transform: none;
+}
+
+.ytTooltipRight {
+  left: auto;
+  right: 0;
+  transform: translateY(4px);
+  align-items: flex-end;
+  text-align: right;
+}
+
+.ytTooltipRight::after {
+  left: auto;
+  right: 18px;
+  transform: none;
+}
+
+.ytTooltipTitle {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  letter-spacing: 0.1px;
+}
+
+.ytTooltipDesc {
+  font-size: 10px;
+  font-weight: 400;
+  color: #a1a1aa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  line-height: 1.25;
+}
+
+/* Hover suave sólo con mouse */
+@media (hover: hover) and (pointer: fine) {
+  .ytActionItem:hover .ytTooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .ytActionItem:hover .ytTooltipLeft {
+    transform: translateY(0);
+  }
+
+  .ytActionItem:hover .ytTooltipRight {
+    transform: translateY(0);
+  }
+}
+
 /* Grupo unificado de botones de acción en la cabecera */
 .topicActionsButtonGroup {
   display: flex;
@@ -5060,14 +5290,30 @@
     box-sizing: border-box !important;
   }
 
-  .topicActionsButtonGroup {
+  .topicActionsButtonGroup,
+  .ytActionsRow {
     display: flex !important;
     flex-wrap: wrap !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
     gap: 8px !important;
+    align-items: center !important;
     box-sizing: border-box !important;
+  }
+
+  .ytActionItem {
+    display: inline-flex !important;
+  }
+
+  .ytPillBtn {
+    height: 40px !important;
+  }
+
+  .ytCircleBtn {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
   }
 
   .completeToggleBtn {

@@ -23,7 +23,8 @@ import {
   Award,
   Maximize2,
   Minimize2,
-  SkipForward
+  SkipForward,
+  Share2
 } from "lucide-react";
 import { 
   Course, 
@@ -104,6 +105,21 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
       } catch {}
       return next;
     });
+  };
+
+  // Estado para feedback de enlace copiado (Estilo YouTube)
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyLink = () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(window.location.href);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2200);
+      }
+    } catch (e) {
+      console.error("No se pudo copiar el enlace", e);
+    }
   };
 
   // Lista ordenada de todos los módulos del curso para navegación secuencial entre módulos
@@ -835,86 +851,142 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
               </h1>
             </div>
 
-            {/* Grupo unificado de botones de acción */}
-            <div className={styles.topicActionsButtonGroup}>
-              {/* Botón Anterior */}
+            {/* Grupo unificado de botones de acción simplificados estilo YouTube */}
+            <div className={styles.ytActionsRow}>
+              {/* 1. Botón Clase Anterior (Icono circular simplificado) */}
               {prevItem && (
-                <button
-                  type="button"
-                  className={styles.classroomNavBtn}
-                  onClick={() => {
-                    setActiveItemId(prevItem.id);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  title={`Clase anterior: ${prevItem.title}`}
-                >
-                  <ChevronLeft size={16} />
-                  <span>Anterior</span>
-                </button>
+                <div className={styles.ytActionItem}>
+                  <button
+                    type="button"
+                    className={styles.ytCircleBtn}
+                    onClick={() => {
+                      setActiveItemId(prevItem.id);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    aria-label={`Clase anterior: ${prevItem.title}`}
+                  >
+                    <ChevronLeft size={20} strokeWidth={2.2} />
+                  </button>
+                  <div className={[styles.ytTooltip, styles.ytTooltipLeft].join(" ")} role="tooltip">
+                    <span className={styles.ytTooltipTitle}>Clase anterior</span>
+                    <span className={styles.ytTooltipDesc}>{prevItem.title}</span>
+                  </div>
+                </div>
               )}
 
-              {/* Botón de Marcar como Completado */}
+              {/* 2. Botón Completar Clase (Píldora YouTube con icono y estado) */}
               {currentItem && (
-                <button
-                  type="button"
-                  className={[
-                    styles.completeToggleBtn,
-                    isCurrentCompleted ? styles.completeToggleBtnDone : "",
-                  ].join(" ")}
-                  onClick={() => onToggleCompleteTopic(currentItem.id)}
-                >
-                  <CheckCircle2 size={16} />
-                  <span>{isCurrentCompleted ? "✓ Completada" : "Completar clase"}</span>
-                </button>
+                <div className={styles.ytActionItem}>
+                  <button
+                    type="button"
+                    className={[
+                      styles.ytPillBtn,
+                      isCurrentCompleted ? styles.ytPillBtnCompleted : "",
+                    ].join(" ")}
+                    onClick={() => onToggleCompleteTopic(currentItem.id)}
+                    aria-label={isCurrentCompleted ? "Clase completada" : "Completar clase"}
+                  >
+                    <CheckCircle2 size={18} strokeWidth={isCurrentCompleted ? 2.4 : 2} />
+                    <span>{isCurrentCompleted ? "Completada" : "Completar"}</span>
+                  </button>
+                  <div className={styles.ytTooltip} role="tooltip">
+                    <span className={styles.ytTooltipTitle}>
+                      {isCurrentCompleted ? "✓ Clase completada" : "Marcar como completada"}
+                    </span>
+                    <span className={styles.ytTooltipDesc}>
+                      {isCurrentCompleted ? "Haz clic para marcar como pendiente" : "Guarda tu progreso en esta clase"}
+                    </span>
+                  </div>
+                </div>
               )}
 
-              {/* Botón Siguiente */}
+              {/* 3. Botón Siguiente Clase (Icono circular simplificado) */}
               {nextItem && (
-                <button
-                  type="button"
-                  className={[styles.classroomNavBtn, styles.classroomNavBtnNext].join(" ")}
-                  onClick={() => {
-                    setActiveItemId(nextItem.id);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  title={`Siguiente clase: ${nextItem.title}`}
-                >
-                  <span>Siguiente clase</span>
-                  <ChevronRight size={16} />
-                </button>
+                <div className={styles.ytActionItem}>
+                  <button
+                    type="button"
+                    className={styles.ytCircleBtn}
+                    onClick={() => {
+                      setActiveItemId(nextItem.id);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    aria-label={`Siguiente clase: ${nextItem.title}`}
+                  >
+                    <ChevronRight size={20} strokeWidth={2.2} />
+                  </button>
+                  <div className={styles.ytTooltip} role="tooltip">
+                    <span className={styles.ytTooltipTitle}>Siguiente clase</span>
+                    <span className={styles.ytTooltipDesc}>{nextItem.title}</span>
+                  </div>
+                </div>
               )}
 
-              {/* Botón Siguiente Módulo */}
+              {/* 4. Botón Siguiente Módulo (Icono circular simplificado con sugerencia) */}
               {nextModule && (
+                <div className={styles.ytActionItem}>
+                  <button
+                    type="button"
+                    className={[
+                      styles.ytCircleBtn,
+                      !nextItem ? styles.ytNextModuleHighlight : "",
+                    ].join(" ")}
+                    onClick={handleGoToNextModule}
+                    aria-label={`Avanzar al siguiente módulo: ${nextModule.lesson.title}`}
+                  >
+                    <SkipForward size={18} strokeWidth={2} />
+                  </button>
+                  <div className={styles.ytTooltip} role="tooltip">
+                    <span className={styles.ytTooltipTitle}>Siguiente módulo</span>
+                    <span className={styles.ytTooltipDesc}>{nextModule.lesson.title}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. Botón Modo Cine (Icono circular YouTube) */}
+              <div className={styles.ytActionItem}>
                 <button
                   type="button"
                   className={[
-                    styles.classroomNavBtn,
-                    styles.nextModuleBtn,
-                    !nextItem ? styles.nextModuleBtnPrimary : "",
+                    styles.ytCircleBtn,
+                    isCinemaMode ? styles.ytCircleBtnActive : "",
                   ].join(" ")}
-                  onClick={handleGoToNextModule}
-                  title={`Avanzar al siguiente módulo: ${nextModule.lesson.title}`}
+                  onClick={toggleCinemaMode}
+                  aria-label={isCinemaMode ? "Desactivar modo cine" : "Activar modo cine"}
                 >
-                  <span>Siguiente módulo</span>
-                  <SkipForward size={15} />
+                  {isCinemaMode ? <Minimize2 size={18} strokeWidth={2} /> : <Maximize2 size={18} strokeWidth={2} />}
                 </button>
-              )}
+                <div className={styles.ytTooltip} role="tooltip">
+                  <span className={styles.ytTooltipTitle}>
+                    {isCinemaMode ? "Modo normal" : "Modo cine"}
+                  </span>
+                  <span className={styles.ytTooltipDesc}>
+                    {isCinemaMode ? "Volver a vista estándar" : "Expandir video a pantalla ancha"}
+                  </span>
+                </div>
+              </div>
 
-              {/* Botón Modo Cine */}
-              <button
-                type="button"
-                className={[
-                  styles.classroomNavBtn,
-                  styles.cinemaToggleBtn,
-                  isCinemaMode ? styles.cinemaToggleBtnActive : "",
-                ].join(" ")}
-                onClick={toggleCinemaMode}
-                title={isCinemaMode ? "Desactivar modo cine (volver a vista normal)" : "Activar modo cine (pantalla ancha)"}
-              >
-                {isCinemaMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-                <span>{isCinemaMode ? "Modo normal" : "Modo cine"}</span>
-              </button>
+              {/* 6. Botón Compartir / Copiar enlace de la clase (Icono circular YouTube) */}
+              <div className={styles.ytActionItem}>
+                <button
+                  type="button"
+                  className={[
+                    styles.ytCircleBtn,
+                    copiedLink ? styles.ytCircleBtnCopied : "",
+                  ].join(" ")}
+                  onClick={handleCopyLink}
+                  aria-label="Compartir enlace de la clase"
+                >
+                  {copiedLink ? <Check size={18} strokeWidth={2.4} /> : <Share2 size={17} strokeWidth={2} />}
+                </button>
+                <div className={[styles.ytTooltip, styles.ytTooltipRight].join(" ")} role="tooltip">
+                  <span className={styles.ytTooltipTitle}>
+                    {copiedLink ? "¡Enlace copiado!" : "Compartir clase"}
+                  </span>
+                  <span className={styles.ytTooltipDesc}>
+                    {copiedLink ? "Enlace copiado al portapapeles" : "Copiar enlace directo de esta clase"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
