@@ -107,11 +107,13 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
   };
 
   // Lista ordenada de todos los módulos del curso para navegación secuencial entre módulos
+  // Lista ordenada de todos los módulos del curso para navegación secuencial entre módulos
   interface FlatModuleItem {
     section: CourseSection;
-    lesson: CourseLesson;
+    firstLesson?: CourseLesson;
     firstTopic?: CourseTopic;
     moduleNumber: number;
+    title: string;
   }
 
   const allModulesInCourse: FlatModuleItem[] = useMemo(() => {
@@ -121,18 +123,21 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
     let counter = 0;
     course.sections.forEach((sec) => {
       if (sec.is_separator) return;
-      const secLessons = sec.lessons || [];
-      secLessons.forEach((les) => {
-        counter++;
-        const firstTopic = les.topics && les.topics.length > 0 
-          ? les.topics[0] 
-          : (les as unknown as CourseTopic);
-        list.push({
-          section: sec,
-          lesson: les,
-          firstTopic,
-          moduleNumber: counter,
-        });
+      counter++;
+      const secLessons = sec.lessons || (sec as any).topics || [];
+      const firstLesson = secLessons[0];
+      const firstTopic = firstLesson
+        ? (firstLesson.topics && firstLesson.topics.length > 0 
+            ? firstLesson.topics[0] 
+            : (firstLesson as unknown as CourseTopic))
+        : undefined;
+
+      list.push({
+        section: sec,
+        firstLesson,
+        firstTopic,
+        moduleNumber: counter,
+        title: sec.title || `Módulo ${counter}`,
       });
     });
 
@@ -140,7 +145,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
   }, [course.sections]);
 
   const currentModuleIndex = allModulesInCourse.findIndex(
-    (m) => m.lesson.id === currentLesson.id
+    (m) => m.section.id === currentSection.id
   );
 
   const nextModule = currentModuleIndex >= 0 && currentModuleIndex < allModulesInCourse.length - 1
@@ -152,17 +157,53 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
     : null;
 
   const handleGoToNextModule = () => {
-    if (nextModule) {
-      onSwitchModule(nextModule.section, nextModule.lesson, nextModule.firstTopic);
+    if (nextModule && nextModule.firstLesson) {
+      onSwitchModule(nextModule.section, nextModule.firstLesson, nextModule.firstTopic);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-  // Obtener lista completa de topics de la lección/módulo actual
+
+  // Obtener lista completa de topics de la lección/módulo actual (soporta LearnDash y Crezca LMS)
   const topics: CourseTopic[] = useMemo(() => {
-    if (currentLesson.topics && currentLesson.topics.length > 0) {
+    // 1. Extraer todas las lecciones/topics del módulo actual (currentSection)
+    const sectionLessons: CourseLesson[] = (currentSection?.lessons && currentSection.lessons.length > 0)
+      ? currentSection.lessons
+      : ((currentSection as any)?.topics && (currentSection as any).topics.length > 0)
+        ? (currentSection as any).topics
+        : [];
+
+    if (sectionLessons.length > 0) {
+      const list: CourseTopic[] = [];
+      sectionLessons.forEach((les: CourseLesson) => {
+        // Si la lección contiene topics anidados (LearnDash 3 niveles: Módulo -> Lección -> Topics)
+        if (les.topics && les.topics.length > 0) {
+          les.topics.forEach((t) => {
+            list.push(t);
+          });
+        } else {
+          // La lección de la sección es un topic directo del módulo (2 niveles: Módulo -> Topics)
+          list.push({
+            id: les.id,
+            title: les.title,
+            description: les.description,
+            video_url: les.video_url,
+            duration: les.duration || "15m",
+            cover: les.cover,
+            files: les.files || [],
+            questions: les.questions || [],
+            subtopics: les.subtopics || [],
+          });
+        }
+      });
+      return list;
+    }
+
+    // 2. Si la lección actual tiene topics explícitos
+    if (currentLesson?.topics && currentLesson.topics.length > 0) {
       return currentLesson.topics;
     }
-    // Si la lección es el propio topic
+
+    // 3. Fallback: Si la lección es el propio topic individual
     return [
       {
         id: currentLesson.id,
@@ -176,7 +217,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
         subtopics: currentLesson.subtopics || [],
       },
     ];
-  }, [currentLesson]);
+  }, [currentSection, currentLesson]);
 
   // Lista plana de todos los elementos reproducibles (topics principales y subtopics)
   const allPlayableItems = useMemo<PlayableItem[]>(() => {
@@ -272,7 +313,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
     if (allPlayableItems.length > 0 && !allPlayableItems.some((it) => it.id === activeItemId)) {
       setActiveItemId(allPlayableItems[0].id);
     }
-  }, [currentLesson.id, initialTopic?.id, allPlayableItems]);
+  }, [currentSection.id, currentLesson.id, initialTopic?.id, allPlayableItems]);
 
   // Item seleccionado actualmente
   const currentItem = useMemo<PlayableItem | null>(() => {
@@ -894,13 +935,13 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                       !nextItem ? styles.ytNextModuleHighlight : "",
                     ].join(" ")}
                     onClick={handleGoToNextModule}
-                    aria-label={`Avanzar al siguiente módulo: ${nextModule.lesson.title}`}
+                    aria-label={`Avanzar al siguiente módulo: ${nextModule.title}`}
                   >
                     <SkipForward size={18} strokeWidth={2} />
                   </button>
                   <div className={styles.ytTooltip} role="tooltip">
                     <span className={styles.ytTooltipTitle}>Siguiente módulo</span>
-                    <span className={styles.ytTooltipDesc}>{nextModule.lesson.title}</span>
+                    <span className={styles.ytTooltipDesc}>{nextModule.title}</span>
                   </div>
                 </div>
               )}
@@ -1375,42 +1416,44 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
 
         {/* COLUMNA DERECHA: SIDEBAR DE TOPICS DEL MÓDULO */}
         <aside className={[styles.classroomSidebar, isCinemaMode ? styles.cinemaSidebar : ""].join(" ")}>
-          {/* Cabecera del Temario / Módulo Activo */}
-          <div className={styles.sidebarHeaderCard}>
-            <div className={styles.sidebarHeaderTop}>
-              <div className={styles.sidebarHeaderTitleWrap}>
-                <h3 className={styles.sidebarModuleTitle}>{currentLesson.title}</h3>
-                <span className={styles.sidebarModuleCounter}>
-                  {completedInModule}/{allPlayableItems.length} terminado
-                </span>
+          {/* Cabecera del Temario / Módulo Activo (Ocultado por requerimiento del usuario - Imagen 2) */}
+          {false && (
+            <div className={styles.sidebarHeaderCard}>
+              <div className={styles.sidebarHeaderTop}>
+                <div className={styles.sidebarHeaderTitleWrap}>
+                  <h3 className={styles.sidebarModuleTitle}>{currentLesson.title}</h3>
+                  <span className={styles.sidebarModuleCounter}>
+                    {completedInModule}/{allPlayableItems.length} terminado
+                  </span>
+                </div>
+                {course.sections && course.sections.length > 1 && (
+                  <button
+                    type="button"
+                    className={styles.sidebarModuleToggleBtn}
+                    onClick={() => setIsOtherModulesOpen(!isOtherModulesOpen)}
+                    title="Cambiar de módulo"
+                  >
+                    <ChevronDown
+                      size={18}
+                      style={{
+                        transform: isOtherModulesOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s ease",
+                      }}
+                    />
+                  </button>
+                )}
               </div>
-              {course.sections && course.sections.length > 1 && (
-                <button
-                  type="button"
-                  className={styles.sidebarModuleToggleBtn}
-                  onClick={() => setIsOtherModulesOpen(!isOtherModulesOpen)}
-                  title="Cambiar de módulo"
-                >
-                  <ChevronDown
-                    size={18}
-                    style={{
-                      transform: isOtherModulesOpen ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                    }}
-                  />
-                </button>
-              )}
+              <div className={styles.sidebarProgressBarTrack}>
+                <div 
+                  className={styles.sidebarProgressBarFill} 
+                  style={{ width: `${modulePercentage}%` }} 
+                />
+              </div>
             </div>
-            <div className={styles.sidebarProgressBarTrack}>
-              <div 
-                className={styles.sidebarProgressBarFill} 
-                style={{ width: `${modulePercentage}%` }} 
-              />
-            </div>
-          </div>
+          )}
 
           {/* Menú desplegable para saltar a otros módulos del curso */}
-          {isOtherModulesOpen && course.sections && course.sections.length > 1 && (
+          {false && isOtherModulesOpen && course.sections && course.sections.length > 1 && (
             <div className={styles.otherModulesSection}>
               <h4 className={styles.otherModulesHeading}>Módulos del Curso</h4>
               <div className={styles.otherModulesList}>
