@@ -33,6 +33,7 @@ $privacy_url     = ! empty( $auth_settings['privacy_url'] ) ? $auth_settings['pr
 $terms_url       = ! empty( $auth_settings['terms_url'] ) ? $auth_settings['terms_url'] : home_url( '/terminos-y-condiciones' );
 $standalone      = isset( $standalone ) ? (bool) $standalone : true;
 
+$form_theme      = ! empty( $auth_settings['form_theme'] ) ? $auth_settings['form_theme'] : 'light';
 $allow_register  = isset( $auth_settings['allow_registration'] ) ? (bool) $auth_settings['allow_registration'] : true;
 $login_title     = ! empty( $auth_settings['login_title'] ) ? $auth_settings['login_title'] : 'Welcome Back';
 $login_subtitle  = ! empty( $auth_settings['login_subtitle'] ) ? $auth_settings['login_subtitle'] : 'Inicia sesión en tu cuenta para continuar';
@@ -136,6 +137,29 @@ $calc_hover = function( $hex ) {
 $login_rgb   = $calc_rgb( $login_primary );
 $login_hover = $calc_hover( $login_primary );
 
+// Cálculo de contraste WCAG para el texto de botones dinámicos (idéntico al sistema global)
+$calc_contrast_foreground = function( $hex ) {
+	$clean = ltrim( $hex, '#' );
+	if ( strlen( $clean ) === 3 ) {
+		$clean = $clean[0] . $clean[0] . $clean[1] . $clean[1] . $clean[2] . $clean[2];
+	}
+	if ( strlen( $clean ) === 6 ) {
+		$r = hexdec( substr( $clean, 0, 2 ) ) / 255;
+		$g = hexdec( substr( $clean, 2, 2 ) ) / 255;
+		$b = hexdec( substr( $clean, 4, 2 ) ) / 255;
+
+		$calc_c = function( $v ) {
+			return $v <= 0.03928 ? $v / 12.92 : pow( ( $v + 0.055 ) / 1.055, 2.4 );
+		};
+
+		$lum = $calc_c( $r ) * 0.2126 + $calc_c( $g ) * 0.7152 + $calc_c( $b ) * 0.0722;
+		return $lum > 0.44 ? '#090a0f' : '#ffffff';
+	}
+	return '#ffffff';
+};
+
+$btn_text_color = $calc_contrast_foreground( $login_primary );
+
 $is_register     = ( $action === 'register' || ( function_exists( 'is_page' ) && is_page( [ 'registro', 'register' ] ) ) );
 $is_recover      = ( in_array( $action, [ 'lostpassword', 'recover' ], true ) );
 $is_reset        = ( in_array( $action, [ 'rp', 'resetpass' ], true ) || ( ! empty( $reset_key ) && ! empty( $reset_login ) ) );
@@ -165,14 +189,21 @@ if ( $standalone ) : ?>
       --auth-primary-hover: <?php echo esc_attr( $login_hover ); ?>;
       --auth-primary-rgb: <?php echo esc_attr( $login_rgb ); ?>;
       --auth-input-focus: <?php echo esc_attr( $login_primary ); ?>;
+      --auth-btn-text: <?php echo esc_attr( $btn_text_color ); ?>;
     }
     .auth-submit-btn {
       background: <?php echo esc_attr( $login_primary ); ?> !important;
+      color: <?php echo esc_attr( $btn_text_color ); ?> !important;
       box-shadow: 0 4px 14px rgba(<?php echo esc_attr( $login_rgb ); ?>, 0.35) !important;
     }
     .auth-submit-btn:hover {
       background: <?php echo esc_attr( $login_hover ); ?> !important;
+      color: <?php echo esc_attr( $btn_text_color ); ?> !important;
       box-shadow: 0 6px 20px rgba(<?php echo esc_attr( $login_rgb ); ?>, 0.45) !important;
+    }
+    .auth-submit-btn .auth-spinner {
+      border-color: <?php echo $btn_text_color === '#ffffff' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(9, 10, 15, 0.3)'; ?> !important;
+      border-top-color: <?php echo esc_attr( $btn_text_color ); ?> !important;
     }
     .auth-link {
       color: <?php echo esc_attr( $login_primary ); ?> !important;
@@ -210,13 +241,13 @@ if ( $standalone ) : ?>
     <?php endif; ?>
   </style>
 </head>
-<body class="alezux-auth-body">
+<body class="alezux-auth-body <?php echo $form_theme === 'dark' ? 'theme-dark' : 'theme-light'; ?>">
 <?php else : ?>
-<div class="alezux-auth-body">
+<div class="alezux-auth-body <?php echo $form_theme === 'dark' ? 'theme-dark' : 'theme-light'; ?>">
 <?php endif; ?>
 
 <div class="alezux-auth-wrapper">
-  <div class="alezux-auth-card">
+  <div class="alezux-auth-card <?php echo $form_theme === 'dark' ? 'theme-dark' : 'theme-light'; ?>">
     
     <!-- ======================================================== -->
     <!-- PANEL IZQUIERDO: HERO PERSONALIZABLE (SOLO DESKTOP)      -->
@@ -279,7 +310,7 @@ if ( $standalone ) : ?>
     <!-- ======================================================== -->
     <!-- PANEL DERECHO: FORMULARIOS (WHITE SURFACE)               -->
     <!-- ======================================================== -->
-    <div class="alezux-form-panel">
+    <div class="alezux-form-panel <?php echo $form_theme === 'dark' ? 'theme-dark' : 'theme-light'; ?>">
 
       <!-- Cabecera Móvil: Logo arriba solo en teléfonos a petición del usuario -->
       <div class="mobile-brand-header">

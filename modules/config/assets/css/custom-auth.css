@@ -725,3 +725,105 @@ div.alezux-auth-body .alezux-form-panel {
     margin: 0 auto;
   }
 }
+
+/* ==========================================================================
+   TEMA DARK (SUPERFICIE OSCURA DE ACCESO)
+   ========================================================================== */
+body.theme-dark,
+div.alezux-auth-body.theme-dark {
+  background: #090d16;
+}
+
+.alezux-auth-card.theme-dark {
+  background: #090d16;
+}
+
+.alezux-form-panel.theme-dark {
+  background: #0f121a;
+  color: #f8fafc;
+}
+
+.alezux-form-panel.theme-dark .form-title {
+  color: #f8fafc;
+}
+
+.alezux-form-panel.theme-dark .form-subtitle {
+  color: #94a3b8;
+}
+
+.alezux-form-panel.theme-dark .field-label {
+  color: #cbd5e1;
+}
+
+.alezux-form-panel.theme-dark .auth-input {
+  background: #161b26;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+.alezux-form-panel.theme-dark .auth-input:focus {
+  background: #19202e;
+  border-color: var(--auth-primary, #1d63ed);
+  box-shadow: 0 0 0 3px rgba(var(--auth-primary-rgb, 29, 99, 237), 0.25);
+}
+
+.alezux-form-panel.theme-dark .auth-input::placeholder {
+  color: #64748b;
+}
+
+.alezux-form-panel.theme-dark .toggle-pwd-btn {
+  color: #64748b;
+}
+
+.alezux-form-panel.theme-dark .toggle-pwd-btn:hover {
+  color: #f1f5f9;
+}
+
+.alezux-form-panel.theme-dark .remember-label {
+  color: #94a3b8;
+}
+
+.alezux-form-panel.theme-dark .auth-switch-row {
+  color: #94a3b8;
+}
+
+.alezux-form-panel.theme-dark .field-helper-text {
+  color: #94a3b8;
+}
+
+.alezux-form-panel.theme-dark .password-meter-bar {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.alezux-form-panel.theme-dark .auth-terms-footer {
+  color: #64748b;
+}
+
+.alezux-form-panel.theme-dark .auth-terms-footer a {
+  color: #94a3b8;
+}
+
+.alezux-form-panel.theme-dark .mobile-brand-link {
+  color: #f8fafc;
+}
+
+.alezux-form-panel.theme-dark .auth-alert.error {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+.alezux-form-panel.theme-dark .auth-alert.success {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+@media (max-width: 900px) {
+  body.alezux-auth-body.theme-dark,
+  div.alezux-auth-body.theme-dark,
+  .alezux-auth-card.theme-dark,
+  .alezux-form-panel.theme-dark {
+    background: #0f121a !important;
+  }
+}

@@ -725,11 +725,6 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
           {/* Fila de Título y Acciones de la Lección */}
           <div className={styles.topicActionHeader}>
             <div className={styles.topicMetaInfo}>
-              <div className={styles.topicMetaModuleHint}>
-                <span className={styles.metaModuleName}>{currentLesson.title}</span>
-                <span className={styles.metaDot}>•</span>
-                <span className={styles.metaProgressText}>{completedInModule}/{allPlayableItems.length} completadas ({modulePercentage}%)</span>
-              </div>
               <h1 className={styles.activeTopicTitle}>
                 {currentItem?.title || "Lección del módulo"}
               </h1>

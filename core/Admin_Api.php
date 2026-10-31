@@ -3267,6 +3267,7 @@ class Admin_Api {
 			'sync_academy_colors',
 			'student_default_view',
 			'admin_default_redirect',
+			'form_theme',
 		];
 
 		foreach ( $allowed_keys as $key ) {

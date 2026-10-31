@@ -308,6 +308,7 @@ function crezca_get_auth_settings() {
 		'sync_academy_colors'    => true,
 		'student_default_view'   => 'courses', // 'courses' | 'dashboard'
 		'admin_default_redirect' => 'academy', // 'academy' | 'wp'
+		'form_theme'             => 'light', // 'light' | 'dark'
 	];
 
 	$saved = get_option( 'crezca_auth_settings', [] );

@@ -176,6 +176,7 @@ export function SettingsView({
     sync_academy_colors: true,
     student_default_view: "courses",
     admin_default_redirect: "academy",
+    form_theme: "light",
   });
 
   useEffect(() => {
@@ -1080,6 +1081,57 @@ export function SettingsView({
                         onChange={(e) => setAuthSettings((prev) => ({ ...prev, login_subtitle: e.target.value }))}
                         placeholder="Inicia sesión en tu cuenta para continuar"
                       />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 14 }}>
+                    <label className={styles.fieldLabel}>Aspecto / Fondo del Formulario (White vs Dark):</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 6 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "10px 14px",
+                          borderRadius: "var(--radius-panel, 12px)",
+                          border: `1.5px solid ${authSettings.form_theme !== "dark" ? "var(--control-on, #7747ff)" : "var(--border)"}`,
+                          background: authSettings.form_theme !== "dark" ? "var(--control-on-subtle, rgba(119, 71, 255, 0.08))" : "var(--surface)",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                        }}
+                        onClick={() => setAuthSettings((prev) => ({ ...prev, form_theme: "light" }))}
+                      >
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#ffffff", border: "1px solid #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {authSettings.form_theme !== "dark" && <Check size={12} color="#0f172a" strokeWidth={3} />}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Claro (White)</div>
+                          <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Superficie blanca limpia tradicional</div>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "10px 14px",
+                          borderRadius: "var(--radius-panel, 12px)",
+                          border: `1.5px solid ${authSettings.form_theme === "dark" ? "var(--control-on, #7747ff)" : "var(--border)"}`,
+                          background: authSettings.form_theme === "dark" ? "var(--control-on-subtle, rgba(119, 71, 255, 0.08))" : "var(--surface)",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                        }}
+                        onClick={() => setAuthSettings((prev) => ({ ...prev, form_theme: "dark" }))}
+                      >
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#0f121a", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {authSettings.form_theme === "dark" && <Check size={12} color="#ffffff" strokeWidth={3} />}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Oscuro (Dark)</div>
+                          <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>Superficie grafito oscuro complementario</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

@@ -19,7 +19,9 @@ import {
   DollarSign,
   CreditCard,
   Receipt,
-  ShoppingCart
+  ShoppingCart,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { FinancePlan } from "../services/api";
 import { Button } from "../components/arc/button/button";
@@ -74,6 +76,9 @@ export function StudentsView({ isInstructor = false }: StudentsViewProps = {}) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterCourse, setFilterCourse] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Modal de Gestión (Editar información, clave y cursos)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -344,13 +349,57 @@ export function StudentsView({ isInstructor = false }: StudentsViewProps = {}) {
     }
   };
 
-  const filteredStudents = students.filter((student) => {
-    const matchesSearch =
-      student.name.toLowerCase().includes(search.toLowerCase()) ||
-      student.email.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = filterStatus === "all" || student.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const courseFilterOptions = useMemo(() => [
+    { value: "all", label: "Todos los cursos", icon: <GraduationCap size={14} /> },
+    ...activeCourses.map((c) => ({
+      value: String(c.id),
+      label: c.title.length > 25 ? c.title.substring(0, 23) + "..." : c.title,
+    })),
+  ], [activeCourses]);
+
+  const filteredStudents = useMemo(() => {
+    return students.filter((student) => {
+      const matchesSearch =
+        student.name.toLowerCase().includes(search.toLowerCase()) ||
+        student.email.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = filterStatus === "all" || student.status === filterStatus;
+      const matchesCourse =
+        filterCourse === "all" || (student.enabledCourseIds || []).includes(Number(filterCourse));
+      return matchesSearch && matchesStatus && matchesCourse;
+    });
+  }, [students, search, filterStatus, filterCourse]);
+
+  const totalItems = filteredStudents.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  // Ajustar página actual si excede totalPages tras filtrar
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedStudents = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredStudents.slice(start, start + pageSize);
+  }, [filteredStudents, currentPage, pageSize]);
+
+  // Generador de números de página para la barra de paginación
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        pages.push(1, 2, 3, 4, 5, "...", totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+      }
+    }
+    return pages;
+  };
 
   if (isLoading) {
     return <ModuleSkeleton type="students" />;
@@ -374,7 +423,10 @@ export function StudentsView({ isInstructor = false }: StudentsViewProps = {}) {
               leftIcon={<Search size={14} />}
               placeholder="Buscar por nombre o correo..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
@@ -382,13 +434,28 @@ export function StudentsView({ isInstructor = false }: StudentsViewProps = {}) {
             <Select<string>
               size="sm"
               value={filterStatus}
-              onChange={(val) => setFilterStatus(val)}
+              onChange={(val) => {
+                setFilterStatus(val);
+                setCurrentPage(1);
+              }}
               options={[
                 { value: "all", label: "Todos los estados", icon: <Filter size={14} /> },
                 { value: "active", label: "Activos", icon: <CheckCircle2 size={14} /> },
                 { value: "inactive", label: "Inactivos", icon: <Clock size={14} /> },
                 { value: "blocked", label: "Bloqueados", icon: <Ban size={14} /> },
               ]}
+            />
+          </div>
+
+          <div className={styles.filterWrap}>
+            <Select<string>
+              size="sm"
+              value={filterCourse}
+              onChange={(val) => {
+                setFilterCourse(val);
+                setCurrentPage(1);
+              }}
+              options={courseFilterOptions}
             />
           </div>
 
@@ -415,7 +482,7 @@ export function StudentsView({ isInstructor = false }: StudentsViewProps = {}) {
             </tr>
           </thead>
           <tbody>
-            {filteredStudents.map((student) => {
+            {paginatedStudents.map((student) => {
               const enabledCount = (student.enabledCourseIds || []).filter((id) =>
                 activeCourses.some((c) => c.id === id)
               ).length;
@@ -480,6 +547,79 @@ export function StudentsView({ isInstructor = false }: StudentsViewProps = {}) {
           </div>
         )}
       </div>
+
+      {/* Paginación */}
+      {filteredStudents.length > 0 && (
+        <div className={styles.paginationFooter}>
+          <div className={styles.paginationInfo}>
+            <span>
+              Mostrando <strong>{Math.min((currentPage - 1) * pageSize + 1, totalItems)}</strong> a{" "}
+              <strong>{Math.min(currentPage * pageSize, totalItems)}</strong> de{" "}
+              <strong>{totalItems}</strong> estudiantes
+            </span>
+            <div className={styles.pageSizeSelectWrap}>
+              <span>Filas por página:</span>
+              <select
+                className={styles.pageSizeSelect}
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.paginationControls}>
+            <button
+              type="button"
+              className={styles.pageNavBtn}
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              aria-label="Página anterior"
+              title="Página anterior"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            {getPageNumbers().map((page, index) =>
+              page === "..." ? (
+                <span key={`ellipsis-${index}`} className={styles.pageEllipsis}>
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={`page-${page}`}
+                  type="button"
+                  className={[
+                    styles.pageNumberBtn,
+                    currentPage === page ? styles.pageNumberBtnActive : "",
+                  ].join(" ")}
+                  onClick={() => setCurrentPage(Number(page))}
+                >
+                  {page}
+                </button>
+              )
+            )}
+
+            <button
+              type="button"
+              className={styles.pageNavBtn}
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              aria-label="Página siguiente"
+              title="Página siguiente"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL GESTIONAR ESTUDIANTE */}
       <Modal

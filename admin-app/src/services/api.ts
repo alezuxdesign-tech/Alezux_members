@@ -467,6 +467,7 @@ export interface AuthSettings {
   sync_academy_colors: boolean;
   student_default_view: "courses" | "dashboard";
   admin_default_redirect: "academy" | "wp";
+  form_theme?: "light" | "dark";
 }
 
 export interface EmailLogItem {
