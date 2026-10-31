@@ -1797,30 +1797,34 @@
 }
 
 .ytCircleBtn:hover {
-  background: var(--surface-raised, rgba(255, 255, 255, 0.18));
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.22);
-  transform: scale(1.05);
+  background: var(--accent, #f3ad20) !important;
+  color: #090a0f !important;
+  border-color: var(--accent, #f3ad20) !important;
+  transform: scale(1.06);
+}
+
+.ytCircleBtn:hover svg {
+  stroke: #090a0f !important;
+  color: #090a0f !important;
 }
 
 .ytCircleBtn:active {
   transform: scale(0.95);
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--accent, #f3ad20) !important;
+  opacity: 0.9;
 }
 
 /* Estado activo para Modo Cine */
 .ytCircleBtnActive {
-  background: var(--accent, #7747ff) !important;
-  color: #ffffff !important;
-  border-color: var(--accent, #7747ff) !important;
-  box-shadow: 0 0 14px var(--accent-subtle, rgba(119, 71, 255, 0.4));
+  background: var(--accent, #f3ad20) !important;
+  color: #090a0f !important;
+  border-color: var(--accent, #f3ad20) !important;
+  box-shadow: 0 0 14px var(--accent-subtle, rgba(243, 173, 32, 0.4));
 }
 
-/* Estado copiado para Compartir enlace */
-.ytCircleBtnCopied {
-  background: rgba(16, 185, 129, 0.2) !important;
-  color: #34d399 !important;
-  border-color: rgba(16, 185, 129, 0.45) !important;
+.ytCircleBtnActive svg {
+  stroke: #090a0f !important;
+  color: #090a0f !important;
 }
 
 /* Botón Píldora Estilo YouTube (Completar clase) */
@@ -1867,25 +1871,25 @@
   border-color: rgba(16, 185, 129, 0.55) !important;
 }
 
-/* Sugerencia de avanzar al siguiente módulo */
+/* Sugerencia de avanzar al siguiente módulo (Discreto por defecto, resalta en hover) */
 .ytNextModuleHighlight {
-  background: var(--accent, #7747ff) !important;
-  color: #ffffff !important;
-  border-color: var(--accent, #7747ff) !important;
-  box-shadow: 0 0 14px var(--accent-subtle, rgba(119, 71, 255, 0.4));
-  animation: ytModulePulse 2.4s infinite;
+  background: var(--surface-muted, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--foreground, #f1f1f1) !important;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: none !important;
 }
 
-@keyframes ytModulePulse {
-  0% {
-    box-shadow: 0 0 0 0 var(--accent-subtle, rgba(119, 71, 255, 0.6));
-  }
-  70% {
-    box-shadow: 0 0 0 7px transparent;
-  }
-  100% {
-    box-shadow: 0 0 0 0 transparent;
-  }
+.ytNextModuleHighlight:hover {
+  background: var(--accent, #f3ad20) !important;
+  color: #090a0f !important;
+  border-color: var(--accent, #f3ad20) !important;
+  box-shadow: 0 0 16px var(--accent-subtle, rgba(243, 173, 32, 0.45)) !important;
+  transform: scale(1.06);
+}
+
+.ytNextModuleHighlight:hover svg {
+  stroke: #090a0f !important;
+  color: #090a0f !important;
 }
 
 /* Tooltip Flotante Estilo YouTube */
@@ -2161,8 +2165,14 @@
 }
 
 .sidebarNextModuleBtn:hover {
-  background: var(--accent-subtle, rgba(119, 71, 255, 0.15));
+  background: var(--accent, #f3ad20);
+  color: #090a0f;
+  border-color: var(--accent, #f3ad20);
   border-style: solid;
+}
+
+.sidebarNextModuleBtn:hover svg {
+  stroke: #090a0f;
 }
 
 .classroomStandardLayout {

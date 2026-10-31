@@ -23,8 +23,7 @@ import {
   Award,
   Maximize2,
   Minimize2,
-  SkipForward,
-  Share2
+  SkipForward
 } from "lucide-react";
 import { 
   Course, 
@@ -105,21 +104,6 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
       } catch {}
       return next;
     });
-  };
-
-  // Estado para feedback de enlace copiado (Estilo YouTube)
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  const handleCopyLink = () => {
-    try {
-      if (navigator?.clipboard?.writeText) {
-        navigator.clipboard.writeText(window.location.href);
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2200);
-      }
-    } catch (e) {
-      console.error("No se pudo copiar el enlace", e);
-    }
   };
 
   // Lista ordenada de todos los módulos del curso para navegación secuencial entre módulos
@@ -955,35 +939,12 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                 >
                   {isCinemaMode ? <Minimize2 size={18} strokeWidth={2} /> : <Maximize2 size={18} strokeWidth={2} />}
                 </button>
-                <div className={styles.ytTooltip} role="tooltip">
+                <div className={[styles.ytTooltip, styles.ytTooltipRight].join(" ")} role="tooltip">
                   <span className={styles.ytTooltipTitle}>
                     {isCinemaMode ? "Modo normal" : "Modo cine"}
                   </span>
                   <span className={styles.ytTooltipDesc}>
                     {isCinemaMode ? "Volver a vista estándar" : "Expandir video a pantalla ancha"}
-                  </span>
-                </div>
-              </div>
-
-              {/* 6. Botón Compartir / Copiar enlace de la clase (Icono circular YouTube) */}
-              <div className={styles.ytActionItem}>
-                <button
-                  type="button"
-                  className={[
-                    styles.ytCircleBtn,
-                    copiedLink ? styles.ytCircleBtnCopied : "",
-                  ].join(" ")}
-                  onClick={handleCopyLink}
-                  aria-label="Compartir enlace de la clase"
-                >
-                  {copiedLink ? <Check size={18} strokeWidth={2.4} /> : <Share2 size={17} strokeWidth={2} />}
-                </button>
-                <div className={[styles.ytTooltip, styles.ytTooltipRight].join(" ")} role="tooltip">
-                  <span className={styles.ytTooltipTitle}>
-                    {copiedLink ? "¡Enlace copiado!" : "Compartir clase"}
-                  </span>
-                  <span className={styles.ytTooltipDesc}>
-                    {copiedLink ? "Enlace copiado al portapapeles" : "Copiar enlace directo de esta clase"}
                   </span>
                 </div>
               </div>
@@ -1474,7 +1435,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                 onClick={handleGoToNextModule}
                 title={`Saltar a: ${nextModule.lesson.title}`}
               >
-                <span>Siguiente módulo: {nextModule.lesson.title}</span>
+                <span>{nextModule.lesson.title}</span>
                 <ChevronRight size={14} />
               </button>
             )}
