@@ -727,102 +727,107 @@ div.alezux-auth-body .alezux-form-panel {
 }
 
 /* ==========================================================================
-   TEMA DARK (SUPERFICIE OSCURA DE ACCESO)
+   TEMA DARK (SUPERFICIE OSCURA NEUTRA - 100% FIEL A LA PLATAFORMA)
    ========================================================================== */
 body.theme-dark,
 div.alezux-auth-body.theme-dark {
-  background: #090d16;
+  background: #090a0f !important;
 }
 
 .alezux-auth-card.theme-dark {
-  background: #090d16;
+  background: #0e0f13 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .alezux-form-panel.theme-dark {
-  background: #0f121a;
-  color: #f8fafc;
+  background: #121316 !important;
+  color: #f4f4f5 !important;
 }
 
 .alezux-form-panel.theme-dark .form-title {
-  color: #f8fafc;
+  color: #f4f4f5 !important;
 }
 
 .alezux-form-panel.theme-dark .form-subtitle {
-  color: #94a3b8;
+  color: #a1a1aa !important;
 }
 
 .alezux-form-panel.theme-dark .field-label {
-  color: #cbd5e1;
+  color: #d4d4d8 !important;
 }
 
 .alezux-form-panel.theme-dark .auth-input {
-  background: #161b26;
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #f8fafc;
+  background: #18191e !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f4f4f5 !important;
 }
 
 .alezux-form-panel.theme-dark .auth-input:focus {
-  background: #19202e;
-  border-color: var(--auth-primary, #1d63ed);
-  box-shadow: 0 0 0 3px rgba(var(--auth-primary-rgb, 29, 99, 237), 0.25);
+  background: #1c1d23 !important;
+  border-color: var(--auth-primary, #1d63ed) !important;
+  box-shadow: 0 0 0 3px rgba(var(--auth-primary-rgb, 29, 99, 237), 0.22) !important;
 }
 
 .alezux-form-panel.theme-dark .auth-input::placeholder {
-  color: #64748b;
+  color: #71717a !important;
 }
 
 .alezux-form-panel.theme-dark .toggle-pwd-btn {
-  color: #64748b;
+  color: #71717a !important;
 }
 
 .alezux-form-panel.theme-dark .toggle-pwd-btn:hover {
-  color: #f1f5f9;
+  color: #f4f4f5 !important;
 }
 
 .alezux-form-panel.theme-dark .remember-label {
-  color: #94a3b8;
+  color: #a1a1aa !important;
 }
 
 .alezux-form-panel.theme-dark .auth-switch-row {
-  color: #94a3b8;
+  color: #a1a1aa !important;
 }
 
 .alezux-form-panel.theme-dark .field-helper-text {
-  color: #94a3b8;
+  color: #71717a !important;
 }
 
 .alezux-form-panel.theme-dark .password-meter-bar {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .alezux-form-panel.theme-dark .auth-terms-footer {
-  color: #64748b;
+  color: #71717a !important;
 }
 
 .alezux-form-panel.theme-dark .auth-terms-footer a {
-  color: #94a3b8;
+  color: #a1a1aa !important;
 }
 
 .alezux-form-panel.theme-dark .mobile-brand-link {
-  color: #f8fafc;
+  color: #f4f4f5 !important;
 }
 
 .alezux-form-panel.theme-dark .auth-alert.error {
-  background: rgba(239, 68, 68, 0.14);
-  border-color: rgba(239, 68, 68, 0.35);
-  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #f87171 !important;
 }
 
 .alezux-form-panel.theme-dark .auth-alert.success {
-  background: rgba(16, 185, 129, 0.14);
-  border-color: rgba(16, 185, 129, 0.35);
-  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
 }
 
 @media (max-width: 900px) {
   body.alezux-auth-body.theme-dark,
   div.alezux-auth-body.theme-dark,
   .alezux-auth-card.theme-dark,
+  .alezux-form-panel.theme-dark {
+    background: #121316 !important;
+  }
+}
   .alezux-form-panel.theme-dark {
     background: #0f121a !important;
   }

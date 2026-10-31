@@ -936,3 +936,16 @@
   font-weight: 600;
   color: #fff;
 }
+
+.spinIcon {
+  animation: spinSettings 1s linear infinite;
+}
+
+@keyframes spinSettings {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

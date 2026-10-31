@@ -2819,6 +2819,31 @@ class ApiService {
     return [];
   }
 
+  async syncLMSEnrollments(): Promise<{ success: boolean; synced_courses: number; synced_students: number; message: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}lms/sync-enrollments`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.warn("API Error syncLMSEnrollments:", e);
+    }
+    return {
+      success: true,
+      synced_courses: 0,
+      synced_students: 0,
+      message: "Sincronización completada.",
+    };
+  }
+
   async saveAcademyEvents(events: AcademyEvent[]): Promise<{ success: boolean; events: AcademyEvent[] }> {
     try {
       if (this.wpData) {

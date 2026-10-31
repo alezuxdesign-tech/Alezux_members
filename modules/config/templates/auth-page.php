@@ -221,15 +221,18 @@ if ( $standalone ) : ?>
     .hero-step-card.active .card-badge {
       background: <?php echo esc_attr( $login_primary ); ?> !important;
     }
-    <?php if ( ! $sync_colors && ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'solid' && ! empty( $auth_settings['bg_color'] ) ) : ?>
+    <?php if ( ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'image' && ! empty( $auth_settings['bg_image_url'] ) ) : ?>
       .alezux-hero-panel {
-        background: <?php echo esc_attr( $auth_settings['bg_color'] ); ?> !important;
-      }
-    <?php elseif ( ! $sync_colors && ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'image' && ! empty( $auth_settings['bg_image_url'] ) ) : ?>
-      .alezux-hero-panel {
-        background-image: linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.85)), url('<?php echo esc_url( $auth_settings['bg_image_url'] ); ?>') !important;
+        background-image: linear-gradient(rgba(0, 0, 0, 0.40), rgba(0, 0, 0, 0.70)), url('<?php echo esc_url( $auth_settings['bg_image_url'] ); ?>') !important;
         background-size: cover !important;
         background-position: center !important;
+      }
+      .alezux-hero-panel::before {
+        display: none !important;
+      }
+    <?php elseif ( ! $sync_colors && ! empty( $auth_settings['bg_type'] ) && $auth_settings['bg_type'] === 'solid' && ! empty( $auth_settings['bg_color'] ) ) : ?>
+      .alezux-hero-panel {
+        background: <?php echo esc_attr( $auth_settings['bg_color'] ); ?> !important;
       }
     <?php else : ?>
       .alezux-hero-panel {

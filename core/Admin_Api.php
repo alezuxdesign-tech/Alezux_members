@@ -72,6 +72,12 @@ class Admin_Api {
 				'permission_callback' => [ $this, 'admin_permissions_check' ],
 			] );
 
+			register_rest_route( $namespace, '/lms/sync-enrollments', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'sync_lms_enrollments' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
 			// Estudiantes & Accesos
 			register_rest_route( $namespace, '/students', [
 				[
@@ -1071,6 +1077,17 @@ class Admin_Api {
 	}
 
 	/**
+	 * Sincronizar masivamente matrículas de estudiantes entre LearnDash y Crezca LMS Nativo
+	 */
+	public function sync_lms_enrollments( \WP_REST_Request $request ) {
+		if ( ! class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+			return new \WP_Error( 'not_found', 'Motor LMS no disponible.', [ 'status' => 404 ] );
+		}
+		$res = LMS_Engine::sync_all_migrated_course_enrollments();
+		return rest_ensure_response( $res );
+	}
+
+	/**
 	 * Listar estudiantes con sus cursos habilitados
 	 */
 	public function get_students() {
@@ -1081,14 +1098,35 @@ class Admin_Api {
 
 		$students = [];
 		foreach ( $users as $user ) {
-			// Obtener cursos LearnDash del estudiante si la función existe
-			$course_ids = [];
-			if ( function_exists( 'learndash_user_get_enrolled_courses' ) ) {
-				$course_ids = learndash_user_get_enrolled_courses( $user->ID );
-			} else {
-				$meta_courses = get_user_meta( $user->ID, '_alezux_enabled_courses', true );
-				$course_ids = is_array( $meta_courses ) ? $meta_courses : [];
+			// Obtener cursos LearnDash y Crezca Nativo con mapeo bidireccional
+			$raw_ids = [];
+			$meta_courses = get_user_meta( $user->ID, '_alezux_enabled_courses', true );
+			if ( is_array( $meta_courses ) ) {
+				$raw_ids = array_merge( $raw_ids, array_map( 'intval', $meta_courses ) );
 			}
+			if ( function_exists( 'learndash_user_get_enrolled_courses' ) ) {
+				$ld_c = learndash_user_get_enrolled_courses( $user->ID );
+				if ( is_array( $ld_c ) ) {
+					$raw_ids = array_merge( $raw_ids, array_map( 'intval', $ld_c ) );
+				}
+			} elseif ( function_exists( 'ld_get_mycourses' ) ) {
+				$ld_c = ld_get_mycourses( $user->ID );
+				if ( is_array( $ld_c ) ) {
+					$raw_ids = array_merge( $raw_ids, array_map( 'intval', $ld_c ) );
+				}
+			}
+			if ( class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+				$map = \Alezux_Members\Core\LMS_Engine::get_course_id_map();
+				foreach ( $raw_ids as $rid ) {
+					if ( isset( $map['ld_to_native'][ $rid ] ) ) {
+						$raw_ids[] = (int) $map['ld_to_native'][ $rid ];
+					}
+					if ( isset( $map['native_to_ld'][ $rid ] ) ) {
+						$raw_ids[] = (int) $map['native_to_ld'][ $rid ];
+					}
+				}
+			}
+			$course_ids = array_values( array_unique( $raw_ids ) );
 
 			$valid_course_ids = [];
 			if ( ! empty( $course_ids ) && is_array( $course_ids ) ) {
@@ -1097,6 +1135,14 @@ class Admin_Api {
 					if ( $cid > 0 && get_post_status( $cid ) ) {
 						$valid_course_ids[] = $cid;
 					}
+				}
+			}
+
+			if ( ! empty( $valid_course_ids ) ) {
+				$cur_saved = is_array( $meta_courses ) ? array_map( 'intval', $meta_courses ) : [];
+				$merged = array_values( array_unique( array_merge( $cur_saved, $valid_course_ids ) ) );
+				if ( count( $merged ) !== count( $cur_saved ) ) {
+					update_user_meta( $user->ID, '_alezux_enabled_courses', $merged );
 				}
 			}
 
@@ -3319,6 +3365,25 @@ class Admin_Api {
 				if ( ! empty( $ld_courses ) ) {
 					$enrolled_ids = array_unique( array_merge( $enrolled_ids, array_map( 'intval', $ld_courses ) ) );
 				}
+			}
+			if ( function_exists( 'learndash_user_get_enrolled_courses' ) ) {
+				$ld_courses2 = learndash_user_get_enrolled_courses( $user->ID );
+				if ( ! empty( $ld_courses2 ) && is_array( $ld_courses2 ) ) {
+					$enrolled_ids = array_unique( array_merge( $enrolled_ids, array_map( 'intval', $ld_courses2 ) ) );
+				}
+			}
+			if ( class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+				$map = \Alezux_Members\Core\LMS_Engine::get_course_id_map();
+				foreach ( $enrolled_ids as $eid ) {
+					if ( isset( $map['ld_to_native'][ $eid ] ) ) {
+						$enrolled_ids[] = (int) $map['ld_to_native'][ $eid ];
+					}
+					if ( isset( $map['native_to_ld'][ $eid ] ) ) {
+						$enrolled_ids[] = (int) $map['native_to_ld'][ $eid ];
+					}
+				}
+				$enrolled_ids = array_values( array_unique( $enrolled_ids ) );
+				update_user_meta( $user->ID, '_alezux_enabled_courses', $enrolled_ids );
 			}
 
 			// Respaldo de sincronización automática desde compras/suscripciones en Finanzas

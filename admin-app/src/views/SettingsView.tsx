@@ -260,6 +260,8 @@ export function SettingsView({
       setMigrationResult(res);
       setIsMigrationModalOpen(false);
       if (res.success) {
+        // Sincronizar automáticamente matrículas de alumnos para los nuevos cursos
+        await api.syncLMSEnrollments();
         showToast("success", "Migración completada", res.message);
         const updated = await api.getLMSSettings();
         setLmsSettings(updated);
@@ -272,6 +274,24 @@ export function SettingsView({
       showToast("danger", "Error", "Ocurrió un fallo durante la migración.");
     } finally {
       setIsMigrating(false);
+    }
+  };
+
+  const [isSyncingEnrollments, setIsSyncingEnrollments] = useState(false);
+
+  const handleSyncEnrollments = async () => {
+    setIsSyncingEnrollments(true);
+    try {
+      const res = await api.syncLMSEnrollments();
+      if (res.success) {
+        showToast("success", "Sincronización completada", res.message);
+      } else {
+        showToast("warning", "Aviso de sincronización", res.message);
+      }
+    } catch {
+      showToast("danger", "Error", "No se pudo sincronizar las matrículas.");
+    } finally {
+      setIsSyncingEnrollments(false);
     }
   };
 
@@ -1365,24 +1385,36 @@ export function SettingsView({
                 </div>
               </div>
 
-              {/* Banner de migración con 1 clic */}
-              {(lmsSettings?.learndash_courses_count ?? 0) > 0 && (
+              {/* Banner de migración & sincronización con 1 clic */}
+              {((lmsSettings?.learndash_courses_count ?? 0) > 0 || (lmsSettings?.native_courses_count ?? 0) > 0) && (
                 <div className={styles.migrationNotice}>
                   <div className={styles.migrationNoticeText}>
-                    <strong>¿Deseas independizarte de LearnDash?</strong>
+                    <strong>Sincronización & Migración LMS</strong>
                     <p>
-                      Detectamos {lmsSettings?.learndash_courses_count} curso(s). Puedes migrarlos a Crezca LMS en 1 clic
-                      conservando lecciones, videos y progreso de los alumnos.
+                      Crezca LMS y LearnDash operan con sincronización automática de cursos y alumnos. Si acabas de migrar o importar formaciones, puedes sincronizar los accesos de todos tus alumnos inmediatamente.
                     </p>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleOpenMigrateModal}
-                    disabled={isMigrating}
-                  >
-                    <ArrowRightLeft size={13} /> Migrar Cursos
-                  </Button>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleSyncEnrollments}
+                      disabled={isSyncingEnrollments || isMigrating}
+                    >
+                      <RefreshCw size={13} className={isSyncingEnrollments ? styles.spinIcon : ""} />
+                      {isSyncingEnrollments ? "Sincronizando..." : "Sincronizar Alumnos"}
+                    </Button>
+                    {(lmsSettings?.learndash_courses_count ?? 0) > 0 && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleOpenMigrateModal}
+                        disabled={isMigrating || isSyncingEnrollments}
+                      >
+                        <ArrowRightLeft size={13} /> Migrar Cursos
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
 

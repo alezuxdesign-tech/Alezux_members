@@ -158,6 +158,35 @@ class LMS_Engine {
 	}
 
 	/**
+	 * Obtener mapa bidireccional entre IDs de cursos de LearnDash y Crezca LMS Nativo
+	 */
+	public static function get_course_id_map() {
+		global $wpdb;
+		$results = $wpdb->get_results(
+			"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_crezca_migrated_from_ld_id'"
+		);
+
+		$ld_to_native = [];
+		$native_to_ld = [];
+
+		if ( ! empty( $results ) ) {
+			foreach ( $results as $row ) {
+				$native_id = (int) $row->post_id;
+				$ld_id     = (int) $row->meta_value;
+				if ( $native_id > 0 && $ld_id > 0 ) {
+					$ld_to_native[ $ld_id ]     = $native_id;
+					$native_to_ld[ $native_id ] = $ld_id;
+				}
+			}
+		}
+
+		return [
+			'ld_to_native' => $ld_to_native,
+			'native_to_ld' => $native_to_ld,
+		];
+	}
+
+	/**
 	 * Verifica si un usuario tiene acceso a un curso
 	 */
 	public static function has_access( $course_id, $user_id = 0 ) {
@@ -175,43 +204,80 @@ class LMS_Engine {
 		}
 
 		$course_id = (int) $course_id;
-
-		// 1. Si LearnDash está activo y tiene función de acceso, consultar
-		if ( self::is_learndash_active() && function_exists( 'sfwd_lms_has_access' ) ) {
-			$post_type = get_post_type( $course_id );
-			if ( 'sfwd-courses' === $post_type && sfwd_lms_has_access( $course_id, $user_id ) ) {
-				return true;
-			}
+		if ( ! $course_id ) {
+			return false;
 		}
 
-		// 2. Verificación nativa: lista de cursos habilitados del estudiante
+		// 1. Verificación nativa directa: lista de cursos habilitados del estudiante
 		$enabled_courses = get_user_meta( $user_id, '_alezux_enabled_courses', true );
-		if ( is_array( $enabled_courses ) && in_array( $course_id, array_map( 'intval', $enabled_courses ), true ) ) {
+		$enabled_array   = is_array( $enabled_courses ) ? array_map( 'intval', $enabled_courses ) : [];
+		if ( in_array( $course_id, $enabled_array, true ) ) {
 			return true;
 		}
 
-		// 3. Verificación con el módulo Finanzas (planes de suscripción o pago único)
+		// 2. Si el curso es nativo y fue migrado de LearnDash, comprobar acceso al curso original
+		$orig_ld_id = (int) get_post_meta( $course_id, '_crezca_migrated_from_ld_id', true );
+		if ( $orig_ld_id > 0 ) {
+			if ( in_array( $orig_ld_id, $enabled_array, true ) ) {
+				self::enroll_student( $user_id, $course_id );
+				return true;
+			}
+			if ( self::is_learndash_active() ) {
+				if ( ( function_exists( 'sfwd_lms_has_access' ) && sfwd_lms_has_access( $orig_ld_id, $user_id ) )
+					|| ( function_exists( 'ld_course_check_user_access' ) && ld_course_check_user_access( $orig_ld_id, $user_id ) ) ) {
+					self::enroll_student( $user_id, $course_id );
+					return true;
+				}
+			}
+		}
+
+		// 3. Si el curso es LearnDash y fue migrado a nativo, comprobar acceso al curso nativo
+		$post_type = get_post_type( $course_id );
+		if ( 'sfwd-courses' === $post_type ) {
+			global $wpdb;
+			$native_id = (int) $wpdb->get_var( $wpdb->prepare(
+				"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_crezca_migrated_from_ld_id' AND meta_value = %d LIMIT 1",
+				$course_id
+			) );
+			if ( $native_id > 0 && in_array( $native_id, $enabled_array, true ) ) {
+				return true;
+			}
+			if ( self::is_learndash_active() ) {
+				if ( ( function_exists( 'sfwd_lms_has_access' ) && sfwd_lms_has_access( $course_id, $user_id ) )
+					|| ( function_exists( 'ld_course_check_user_access' ) && ld_course_check_user_access( $course_id, $user_id ) ) ) {
+					return true;
+				}
+			}
+		}
+
+		// 4. Verificación con el módulo Finanzas (planes de suscripción o pago único)
 		global $wpdb;
 		$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
 		$subscriptions_table = $wpdb->prefix . 'alezux_finanzas_subscriptions';
 
 		if ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table ) {
-			// Buscar plan asignado al curso
-			$plan_id = (int) get_post_meta( $course_id, '_course_linked_plan_id', true );
-			if ( ! $plan_id ) {
-				$plan_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $plans_table WHERE course_id = %d LIMIT 1", $course_id ) );
+			$check_ids = [ $course_id ];
+			if ( ! empty( $orig_ld_id ) ) {
+				$check_ids[] = $orig_ld_id;
 			}
+			foreach ( $check_ids as $cid ) {
+				$plan_id = (int) get_post_meta( $cid, '_course_linked_plan_id', true );
+				if ( ! $plan_id ) {
+					$plan_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $plans_table WHERE course_id = %d LIMIT 1", $cid ) );
+				}
 
-			if ( $plan_id && $wpdb->get_var( "SHOW TABLES LIKE '$subscriptions_table'" ) === $subscriptions_table ) {
-				$has_active_sub = $wpdb->get_var( $wpdb->prepare(
-					"SELECT id FROM $subscriptions_table 
-					 WHERE user_id = %d AND plan_id = %d AND status IN ('active', 'trialing', 'paid', 'completed') 
-					 LIMIT 1",
-					$user_id,
-					$plan_id
-				) );
-				if ( ! empty( $has_active_sub ) ) {
-					return true;
+				if ( $plan_id && $wpdb->get_var( "SHOW TABLES LIKE '$subscriptions_table'" ) === $subscriptions_table ) {
+					$has_active_sub = $wpdb->get_var( $wpdb->prepare(
+						"SELECT id FROM $subscriptions_table 
+						 WHERE user_id = %d AND plan_id = %d AND status IN ('active', 'trialing', 'paid', 'completed') 
+						 LIMIT 1",
+						$user_id,
+						$plan_id
+					) );
+					if ( ! empty( $has_active_sub ) ) {
+						self::enroll_student( $user_id, $course_id );
+						return true;
+					}
 				}
 			}
 		}
@@ -232,17 +298,19 @@ class LMS_Engine {
 
 		// 1. Guardar en meta nativo
 		$courses = get_user_meta( $user_id, '_alezux_enabled_courses', true );
-		if ( ! is_array( $courses ) ) {
-			$courses = [];
-		}
+		$courses = is_array( $courses ) ? array_map( 'intval', $courses ) : [];
 		if ( ! in_array( $course_id, $courses, true ) ) {
 			$courses[] = $course_id;
-			update_user_meta( $user_id, '_alezux_enabled_courses', $courses );
+			update_user_meta( $user_id, '_alezux_enabled_courses', array_values( array_unique( $courses ) ) );
 		}
 
 		// 2. Si LearnDash está activo, matricularlo también en LearnDash
 		if ( self::is_learndash_active() && function_exists( 'ld_update_course_access' ) ) {
 			ld_update_course_access( $user_id, $course_id, false );
+			$orig_ld_id = (int) get_post_meta( $course_id, '_crezca_migrated_from_ld_id', true );
+			if ( $orig_ld_id > 0 ) {
+				ld_update_course_access( $user_id, $orig_ld_id, false );
+			}
 		}
 
 		return true;
@@ -562,6 +630,12 @@ class LMS_Engine {
 		// Cambiar modo a 'native' para que Crezca asuma el control completo
 		update_option( 'crezca_lms_mode', 'native' );
 
+		// Sincronización exhaustiva de matrículas de todos los cursos migrados
+		$sync_result = self::sync_all_migrated_course_enrollments();
+		if ( ! empty( $sync_result['synced_students'] ) ) {
+			$migrated_students_count = max( $migrated_students_count, (int) $sync_result['synced_students'] );
+		}
+
 		return [
 			'success'                 => true,
 			'migrated_courses'        => $migrated_courses_count,
@@ -724,18 +798,57 @@ class LMS_Engine {
 	 */
 	public static function get_learndash_enrolled_users( $course_id ) {
 		global $wpdb;
-		$user_ids = [];
-
-		// 1. Usuarios con meta _alezux_enabled_courses que contenga course_id
-		$alezux_users = $wpdb->get_col( $wpdb->prepare(
-			"SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = '_alezux_enabled_courses' AND meta_value LIKE %s",
-			'%' . $wpdb->esc_like( (string) $course_id ) . '%'
-		) );
-		if ( ! empty( $alezux_users ) ) {
-			$user_ids = array_merge( $user_ids, array_map( 'intval', $alezux_users ) );
+		$user_ids  = [];
+		$course_id = (int) $course_id;
+		if ( ! $course_id ) {
+			return [];
 		}
 
-		// 2. Usuarios con meta nativo de LearnDash: course_{id}_access_from
+		// 1. LearnDash función oficial: learndash_get_users_for_course
+		if ( function_exists( 'learndash_get_users_for_course' ) ) {
+			$ld_users = learndash_get_users_for_course( $course_id );
+			if ( is_array( $ld_users ) ) {
+				foreach ( $ld_users as $u ) {
+					$user_ids[] = is_object( $u ) ? (int) $u->ID : (int) $u;
+				}
+			}
+		}
+
+		// 2. LearnDash función alternativa: learndash_get_course_users
+		if ( function_exists( 'learndash_get_course_users' ) ) {
+			$ld_users = learndash_get_course_users( $course_id );
+			if ( is_array( $ld_users ) ) {
+				foreach ( $ld_users as $u ) {
+					$user_ids[] = is_object( $u ) ? (int) $u->ID : (int) $u;
+				}
+			}
+		}
+
+		// 3. Post meta nativo de LearnDash: course_access_list (lista separada por comas)
+		$access_list = get_post_meta( $course_id, 'course_access_list', true );
+		if ( ! empty( $access_list ) ) {
+			if ( is_string( $access_list ) ) {
+				$parsed = array_filter( array_map( 'intval', explode( ',', $access_list ) ) );
+				$user_ids = array_merge( $user_ids, $parsed );
+			} elseif ( is_array( $access_list ) ) {
+				$user_ids = array_merge( $user_ids, array_map( 'intval', $access_list ) );
+			}
+		}
+
+		// 4. Grupos de LearnDash que tienen este curso asignado
+		if ( function_exists( 'learndash_get_course_groups' ) && function_exists( 'learndash_get_groups_user_ids' ) ) {
+			$groups = learndash_get_course_groups( $course_id );
+			if ( is_array( $groups ) ) {
+				foreach ( $groups as $gid ) {
+					$grp_users = learndash_get_groups_user_ids( (int) $gid );
+					if ( is_array( $grp_users ) ) {
+						$user_ids = array_merge( $user_ids, array_map( 'intval', $grp_users ) );
+					}
+				}
+			}
+		}
+
+		// 5. User meta nativo de LearnDash: course_{id}_access_from
 		$ld_access_users = $wpdb->get_col( $wpdb->prepare(
 			"SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s",
 			'course_' . $course_id . '_access_from'
@@ -744,7 +857,20 @@ class LMS_Engine {
 			$user_ids = array_merge( $user_ids, array_map( 'intval', $ld_access_users ) );
 		}
 
-		// 3. Usuarios con progreso registrado en este curso
+		// 6. User meta _alezux_enabled_courses que contenga course_id
+		$alezux_metas = $wpdb->get_results(
+			"SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = '_alezux_enabled_courses'"
+		);
+		if ( ! empty( $alezux_metas ) ) {
+			foreach ( $alezux_metas as $row ) {
+				$val = maybe_unserialize( $row->meta_value );
+				if ( is_array( $val ) && in_array( $course_id, array_map( 'intval', $val ), true ) ) {
+					$user_ids[] = (int) $row->user_id;
+				}
+			}
+		}
+
+		// 7. Usuarios con progreso registrado en este curso
 		$ld_progress_users = $wpdb->get_col( $wpdb->prepare(
 			"SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = '_sfwd-course_progress' AND meta_value LIKE %s",
 			'%' . $wpdb->esc_like( (string) $course_id ) . '%'
@@ -753,7 +879,104 @@ class LMS_Engine {
 			$user_ids = array_merge( $user_ids, array_map( 'intval', $ld_progress_users ) );
 		}
 
-		return array_values( array_unique( $user_ids ) );
+		// 8. Chequeo por función sfwd_lms_has_access o ld_course_check_user_access si la lista sigue vacía
+		if ( empty( $user_ids ) && ( function_exists( 'sfwd_lms_has_access' ) || function_exists( 'ld_course_check_user_access' ) ) ) {
+			$all_users = $wpdb->get_col( "SELECT ID FROM {$wpdb->users} LIMIT 500" );
+			foreach ( $all_users as $uid ) {
+				$uid = (int) $uid;
+				if ( ( function_exists( 'sfwd_lms_has_access' ) && sfwd_lms_has_access( $course_id, $uid ) )
+					|| ( function_exists( 'ld_course_check_user_access' ) && ld_course_check_user_access( $course_id, $uid ) ) ) {
+					$user_ids[] = $uid;
+				}
+			}
+		}
+
+		return array_values( array_unique( array_filter( array_map( 'intval', $user_ids ) ) ) );
+	}
+
+	/**
+	 * Sincronizar masivamente todas las matrículas entre cursos de LearnDash y Crezca LMS Nativo
+	 */
+	public static function sync_all_migrated_course_enrollments() {
+		global $wpdb;
+
+		$migrated_courses = $wpdb->get_results(
+			"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_crezca_migrated_from_ld_id'"
+		);
+
+		if ( empty( $migrated_courses ) ) {
+			return [
+				'success'         => true,
+				'synced_courses'  => 0,
+				'synced_students' => 0,
+				'message'         => 'No hay cursos migrados registrados para sincronizar.',
+			];
+		}
+
+		$total_synced_courses = 0;
+		$unique_synced_students = [];
+
+		foreach ( $migrated_courses as $mc ) {
+			$native_id = (int) $mc->post_id;
+			$ld_id     = (int) $mc->meta_value;
+
+			if ( ! $native_id || ! $ld_id || ! get_post_status( $native_id ) ) {
+				continue;
+			}
+
+			// 1. Alumnos provenientes de LearnDash
+			$ld_users = self::get_learndash_enrolled_users( $ld_id );
+
+			// 2. Alumnos con curso nativo en _alezux_enabled_courses
+			$native_users = [];
+			$all_enabled = $wpdb->get_results( "SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = '_alezux_enabled_courses'" );
+			foreach ( $all_enabled as $row ) {
+				$val = maybe_unserialize( $row->meta_value );
+				if ( is_array( $val ) && in_array( $native_id, array_map( 'intval', $val ), true ) ) {
+					$native_users[] = (int) $row->user_id;
+				}
+			}
+
+			// 3. Alumnos con compras en Finanzas vinculadas a este curso
+			$finance_users = [];
+			$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
+			$subs_table  = $wpdb->prefix . 'alezux_finanzas_subscriptions';
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table && $wpdb->get_var( "SHOW TABLES LIKE '$subs_table'" ) === $subs_table ) {
+				$fu = $wpdb->get_col( $wpdb->prepare(
+					"SELECT s.user_id 
+					 FROM $subs_table s 
+					 INNER JOIN $plans_table p ON s.plan_id = p.id 
+					 WHERE p.course_id IN (%d, %d) AND s.status IN ('active', 'completed', 'paid', 'trialing')",
+					$native_id,
+					$ld_id
+				) );
+				if ( ! empty( $fu ) ) {
+					$finance_users = array_map( 'intval', $fu );
+				}
+			}
+
+			// Combinar todos los estudiantes detectados
+			$combined_students = array_values( array_unique( array_merge( $ld_users, $native_users, $finance_users ) ) );
+
+			// Matricularlos en el curso nativo y mantener sincronizado LD
+			foreach ( $combined_students as $uid ) {
+				self::enroll_student( $uid, $native_id );
+				$unique_synced_students[ $uid ] = true;
+			}
+
+			$total_synced_courses++;
+		}
+
+		return [
+			'success'         => true,
+			'synced_courses'  => $total_synced_courses,
+			'synced_students' => count( $unique_synced_students ),
+			'message'         => sprintf(
+				'Se sincronizaron con éxito %d cursos y %d estudiantes en Crezca LMS.',
+				$total_synced_courses,
+				count( $unique_synced_students )
+			),
+		];
 	}
 
 	/**
