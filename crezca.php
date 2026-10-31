@@ -143,6 +143,30 @@ function crezca_is_user_instructor( $user_id = 0 ) {
 }
 
 /**
+ * Calcular el color de texto con máximo contraste WCAG (#ffffff o #090a0f) para cualquier fondo hex
+ */
+function crezca_get_contrast_foreground( $hex ) {
+	$clean = ltrim( (string) $hex, '#' );
+	if ( strlen( $clean ) === 3 ) {
+		$clean = $clean[0] . $clean[0] . $clean[1] . $clean[1] . $clean[2] . $clean[2];
+	}
+	if ( strlen( $clean ) !== 6 || ! ctype_xdigit( $clean ) ) {
+		return '#ffffff';
+	}
+	$r = hexdec( substr( $clean, 0, 2 ) );
+	$g = hexdec( substr( $clean, 2, 2 ) );
+	$b = hexdec( substr( $clean, 4, 2 ) );
+
+	// Fórmula WCAG 2.1 de luminancia relativa
+	$to_linear = function( $val ) {
+		$v = $val / 255;
+		return ( $v <= 0.03928 ) ? ( $v / 12.92 ) : pow( ( $v + 0.055 ) / 1.055, 2.4 );
+	};
+	$lum = 0.2126 * $to_linear( $r ) + 0.7152 * $to_linear( $g ) + 0.0722 * $to_linear( $b );
+	return ( $lum > 0.44 ) ? '#090a0f' : '#ffffff';
+}
+
+/**
  * Encolar estilos globales del plugin
  */
 function crezca_enqueue_global_assets() {
@@ -452,14 +476,26 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 	$student_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
 
 	$accent_colors = [
+		'dark'    => '#18181b',
 		'violet'  => '#7747ff',
-		'emerald' => '#10b981',
-		'blue'    => '#3b82f6',
-		'amber'   => '#f59e0b',
+		'blue'    => '#0562ef',
+		'ocean'   => '#0284c7',
+		'sky'     => '#0ea5e9',
+		'teal'    => '#0d9488',
+		'emerald' => '#0db879',
+		'green'   => '#0db879',
+		'amber'   => '#f3ad20',
+		'coral'   => '#f15f55',
 		'rose'    => '#f43f5e',
 		'cyan'    => '#06b6d4',
+		'neutral' => '#71717a',
 	];
-	$accent_color = isset( $accent_colors[ $accent ] ) ? $accent_colors[ $accent ] : '#7747ff';
+	$accent_key = strtolower( trim( (string) $accent ) );
+	$accent_color = isset( $accent_colors[ $accent_key ] )
+		? $accent_colors[ $accent_key ]
+		: ( str_starts_with( $accent, '#' ) ? $accent : '#7747ff' );
+
+	$contrast_fg  = crezca_get_contrast_foreground( $accent_color );
 	$is_light     = ( 'light' === $theme );
 	$bg_color     = $is_light ? '#f8fafc' : '#090a0f';
 	$text_color   = $is_light ? '#0f172a' : '#f8fafc';
@@ -495,6 +531,15 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 		window.crezca_student_data = <?php echo json_encode( $data ); ?>;
 		window.crezca_admin_data = window.crezca_admin_data || window.crezca_student_data;
 	</script>
+	<style id="crezca-dynamic-branding">
+		:root {
+			--accent: <?php echo esc_attr( $accent_color ); ?> !important;
+			--control-on: <?php echo esc_attr( $accent_color ); ?> !important;
+			--control-fill: <?php echo esc_attr( $accent_color ); ?> !important;
+			--accent-foreground: <?php echo esc_attr( $contrast_fg ); ?> !important;
+			--control-glyph: <?php echo esc_attr( $contrast_fg ); ?> !important;
+		}
+	</style>
 	<div id="crezca-student-root" data-mode="student" style="min-height:100vh;background:<?php echo esc_attr( $bg_color ); ?>;"></div>
 	<?php
 	return ob_get_clean();
@@ -614,6 +659,13 @@ function crezca_student_portal_canvas_template( $template ) {
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
 <?php wp_head(); ?>
 <style>
+	:root {
+		--accent: <?php echo esc_attr( $accent_color ); ?>;
+		--control-on: <?php echo esc_attr( $accent_color ); ?>;
+		--control-fill: <?php echo esc_attr( $accent_color ); ?>;
+		--accent-foreground: <?php echo esc_attr( $contrast_fg ); ?>;
+		--control-glyph: <?php echo esc_attr( $contrast_fg ); ?>;
+	}
 	html, body, #crezca-student-root, #crezca-student-root * {
 		font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 	}

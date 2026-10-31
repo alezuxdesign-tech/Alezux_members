@@ -64,43 +64,38 @@ interface NavItemConfig<T extends string = string> {
 
 function applyAccentColor(accent: string, theme: "dark" | "light") {
   const root = document.documentElement;
-  const presets: Record<string, { hex: string; fg: string }> = {
-    violet: { hex: "#7747ff", fg: "#ffffff" },
-    blue: { hex: "#0562ef", fg: "#ffffff" },
-    green: { hex: "#0db879", fg: "#ffffff" },
-    amber: { hex: "#f3ad20", fg: "#090a0f" },
-    coral: { hex: "#f15f55", fg: "#ffffff" },
-    neutral: { hex: "#71717a", fg: "#ffffff" },
+  const presetHexMap: Record<string, string> = {
+    dark: "#18181b",
+    violet: "#7747ff",
+    blue: "#0562ef",
+    ocean: "#0284c7",
+    sky: "#0ea5e9",
+    teal: "#0d9488",
+    emerald: "#0db879",
+    green: "#0db879",
+    amber: "#f3ad20",
+    coral: "#f15f55",
+    neutral: "#71717a",
   };
 
-  if (presets[accent]) {
-    root.dataset.accent = accent;
-    root.style.removeProperty("--accent");
-    root.style.removeProperty("--accent-strong");
-    root.style.removeProperty("--accent-subtle");
-    root.style.removeProperty("--control-on");
-    root.style.removeProperty("--control-fill");
-    root.style.setProperty("--accent-foreground", presets[accent].fg);
-    root.style.setProperty("--control-glyph", presets[accent].fg);
-  } else {
-    root.dataset.accent = "custom";
-    const hex = accent.startsWith("#") ? accent : `#${accent}`;
-    const { r, g, b } = hexToRgb(hex);
-    const fg = getContrastForeground(hex);
+  const normalized = (accent || "violet").toLowerCase().trim();
+  const hex = presetHexMap[normalized] || (accent.startsWith("#") ? accent : `#${accent}`);
+  const { r, g, b } = hexToRgb(hex);
+  const fg = getContrastForeground(hex);
 
-    const subtleAlpha = theme === "dark" ? 0.22 : 0.13;
-    const strongHex = theme === "dark"
-      ? `color-mix(in srgb, ${hex} 82%, #ffffff)`
-      : `color-mix(in srgb, ${hex} 82%, #000000)`;
+  const subtleAlpha = theme === "dark" ? 0.22 : 0.13;
+  const strongHex = theme === "dark"
+    ? `color-mix(in srgb, ${hex} 82%, #ffffff)`
+    : `color-mix(in srgb, ${hex} 82%, #000000)`;
 
-    root.style.setProperty("--accent", hex);
-    root.style.setProperty("--control-on", hex);
-    root.style.setProperty("--control-fill", hex);
-    root.style.setProperty("--accent-strong", strongHex);
-    root.style.setProperty("--accent-subtle", `rgba(${r}, ${g}, ${b}, ${subtleAlpha})`);
-    root.style.setProperty("--accent-foreground", fg);
-    root.style.setProperty("--control-glyph", fg);
-  }
+  root.dataset.accent = presetHexMap[normalized] ? normalized : "custom";
+  root.style.setProperty("--accent", hex);
+  root.style.setProperty("--control-on", hex);
+  root.style.setProperty("--control-fill", hex);
+  root.style.setProperty("--accent-strong", strongHex);
+  root.style.setProperty("--accent-subtle", `rgba(${r}, ${g}, ${b}, ${subtleAlpha})`);
+  root.style.setProperty("--accent-foreground", fg);
+  root.style.setProperty("--control-glyph", fg);
 }
 
 function setBrowserFavicon(url: string) {

@@ -433,14 +433,15 @@ class Admin_Api {
 	 * Obtener métricas generales para Arc MetricCards y gráficos
 	 */
 	public function get_stats( $request = null ) {
-		// 1. Total Estudiantes reales de WordPress
+		// 1. Total Estudiantes reales de WordPress (todos los usuarios que no son administradores)
 		$students_query = new \WP_User_Query( [
-			'role__in'    => [ 'subscriber', 'student', 'customer' ],
-			'count_total' => true,
+			'role__not_in' => [ 'administrator' ],
+			'count_total'  => true,
 		] );
 		$total_students = $students_query->get_total();
 		if ( $total_students === 0 ) {
-			$total_students = count_users()['total_users'];
+			$counts = count_users();
+			$total_students = isset( $counts['total_users'] ) ? (int) $counts['total_users'] : 1;
 		}
 		if ( $total_students === 0 ) {
 			$total_students = 1;
@@ -668,108 +669,55 @@ class Admin_Api {
 
 			if ( ! empty( $saved_curriculum ) && is_array( $saved_curriculum ) ) {
 				$sections = $saved_curriculum;
-			} else {
-				// 2. Si no, construir desde sfwd-lessons y sfwd-topic nativos
-				$lessons_posts = get_posts( [
-					'post_type'      => 'sfwd-lessons',
-					'post_status'    => [ 'publish', 'draft' ],
-					'meta_key'       => 'course_id',
-					'meta_value'     => $post->ID,
-					'posts_per_page' => 100,
-					'orderby'        => 'menu_order',
-					'order'          => 'ASC',
-				] );
 
-				if ( ! empty( $lessons_posts ) ) {
-					foreach ( $lessons_posts as $les ) {
-						// Obtener topics de cada lección
-						$topics_posts = get_posts( [
-							'post_type'      => 'sfwd-topic',
-							'post_status'    => [ 'publish', 'draft' ],
-							'meta_key'       => 'lesson_id',
-							'meta_value'     => $les->ID,
-							'posts_per_page' => 100,
-							'orderby'        => 'menu_order',
-							'order'          => 'ASC',
-						] );
-
-						$topics_data = [];
-						foreach ( $topics_posts as $top ) {
-							$video_url = get_post_meta( $top->ID, '_topic_video_url', true ) ?: '';
-							if ( empty( $video_url ) && ! empty( $top->post_content ) ) {
-								if ( preg_match( '/(\[vdo\s+id=["\']?[a-zA-Z0-9_-]+["\']?[^\]]*\])/i', $top->post_content, $vdo_m ) ) {
-									$video_url = $vdo_m[1];
-								} elseif ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $top->post_content, $if_m ) ) {
-									$video_url = $if_m[0];
-								}
-							}
-							$cover_url = get_post_meta( $top->ID, '_topic_cover', true ) ?: '';
-							$files     = get_post_meta( $top->ID, '_topic_files', true ) ?: [];
-							$duration  = get_post_meta( $top->ID, '_topic_duration', true ) ?: '15m';
-
-							$topics_data[] = [
-								'id'          => (string) $top->ID,
-								'title'       => $top->post_title,
-								'description' => wp_strip_all_tags( $top->post_content ),
-								'video_url'   => $video_url,
-								'cover'       => $cover_url,
-								'duration'    => $duration,
-								'files'       => is_array( $files ) ? $files : [],
-								'questions'   => [],
-								'subtopics'   => [],
-							];
+				// Limpiar y enriquecer secciones y clases existentes (separadores, portadas, etc.)
+				foreach ( $sections as &$sec ) {
+					if ( isset( $sec['title'] ) && class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+						$sep_info = \Alezux_Members\Core\LMS_Engine::parse_separator_title( $sec['title'] );
+						if ( $sep_info['is_separator'] && ! empty( $sep_info['clean_title'] ) ) {
+							$sec['title'] = $sep_info['clean_title'];
+							$sec['is_separator'] = true;
 						}
-
-						// Si el módulo no tiene topics hijos, convertir la propia lección en el topic principal
-						if ( empty( $topics_data ) ) {
-							$video_url = get_post_meta( $les->ID, '_topic_video_url', true ) ?: '';
-							if ( empty( $video_url ) && ! empty( $les->post_content ) ) {
-								if ( preg_match( '/(\[vdo\s+id=["\']?[a-zA-Z0-9_-]+["\']?[^\]]*\])/i', $les->post_content, $vdo_m ) ) {
-									$video_url = $vdo_m[1];
-								} elseif ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $les->post_content, $if_m ) ) {
-									$video_url = $if_m[0];
-								}
-							}
-							$cover_url = get_post_meta( $les->ID, '_topic_cover', true ) ?: '';
-							$files     = get_post_meta( $les->ID, '_topic_files', true ) ?: [];
-
-							$topics_data[] = [
-								'id'          => 'top-' . $les->ID,
-								'title'       => $les->post_title,
-								'description' => wp_strip_all_tags( $les->post_content ),
-								'video_url'   => $video_url,
-								'cover'       => $cover_url,
-								'duration'    => '15m',
-								'files'       => is_array( $files ) ? $files : [],
-								'questions'   => [],
-								'subtopics'   => [],
-							];
-						}
-
-						$sections[] = [
-							'id'      => (string) $les->ID,
-							'title'   => $les->post_title,
-							'lessons' => $topics_data,
-						];
 					}
+					// Respaldar portada de sección si está vacía
+					if ( empty( $sec['cover'] ) && ! empty( $sec['id'] ) && class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+						$sec_post_id = intval( preg_replace( '/[^0-9]/', '', (string) $sec['id'] ) );
+						if ( $sec_post_id > 0 ) {
+							$sec['cover'] = \Alezux_Members\Core\LMS_Engine::extract_cover_from_post( $sec_post_id );
+						}
+					}
+					if ( isset( $sec['lessons'] ) && is_array( $sec['lessons'] ) ) {
+						foreach ( $sec['lessons'] as &$les_item ) {
+							if ( isset( $les_item['title'] ) && class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+								$les_sep = \Alezux_Members\Core\LMS_Engine::parse_separator_title( $les_item['title'] );
+								if ( $les_sep['is_separator'] && ! empty( $les_sep['clean_title'] ) ) {
+									$les_item['title'] = $les_sep['clean_title'];
+								}
+							}
+							$les_post_id = ! empty( $les_item['id'] ) ? intval( preg_replace( '/[^0-9]/', '', (string) $les_item['id'] ) ) : 0;
+							if ( class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) && $les_post_id > 0 ) {
+								if ( empty( $les_item['cover'] ) ) {
+									$les_item['cover'] = \Alezux_Members\Core\LMS_Engine::extract_cover_from_post( $les_post_id ) ?: ( ! empty( $sec['cover'] ) ? $sec['cover'] : '' );
+								}
+								if ( empty( $les_item['video_url'] ) ) {
+									$les_item['video_url'] = \Alezux_Members\Core\LMS_Engine::extract_video_from_post( $les_post_id );
+								}
+							}
+						}
+						unset( $les_item );
+					}
+				}
+				unset( $sec );
+			} else {
+				// 2. Si no tiene currículum guardado, construir dinámicamente con LMS_Engine
+				if ( class_exists( '\\Alezux_Members\\Core\\LMS_Engine' ) ) {
+					$sections = \Alezux_Members\Core\LMS_Engine::build_curriculum_from_learndash_course( $post->ID );
 				} else {
 					$sections = [
 						[
 							'id'      => 'sec-' . $post->ID . '-1',
 							'title'   => 'Módulo 1: Introducción',
-							'lessons' => [
-								[ 
-									'id'          => 'top-demo-1', 
-									'title'       => 'Lección 1: Bienvenida al Curso', 
-									'duration'    => '12m',
-									'cover'       => 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80',
-									'description' => 'Bienvenida a la formación.',
-									'video_url'   => '',
-									'files'       => [],
-									'questions'   => [],
-									'subtopics'   => [],
-								],
-							],
+							'lessons' => [],
 						],
 					];
 				}
@@ -1091,13 +1039,26 @@ class Admin_Api {
 	 * Listar estudiantes con sus cursos habilitados
 	 */
 	public function get_students() {
+		// Obtener todos los usuarios registrados en WordPress que no sean administradores
 		$users = get_users( [
-			'role__in' => [ 'subscriber', 'student', 'customer' ],
-			'number'   => 50,
+			'role__not_in' => [ 'administrator' ],
+			'number'       => 0, // 0 = sin límite para listar a todos los estudiantes (233+ usuarios)
+			'orderby'      => 'registered',
+			'order'        => 'DESC',
 		] );
 
 		$students = [];
 		foreach ( $users as $user ) {
+			// Saltar usuarios administradores por capacidad
+			if ( user_can( $user, 'administrator' ) || user_can( $user, 'manage_options' ) ) {
+				continue;
+			}
+
+			// Saltar docentes / instructores registrados
+			if ( function_exists( 'crezca_is_user_instructor' ) && crezca_is_user_instructor( $user->ID ) ) {
+				continue;
+			}
+
 			// Obtener cursos LearnDash y Crezca Nativo con mapeo bidireccional
 			$raw_ids = [];
 			$meta_courses = get_user_meta( $user->ID, '_alezux_enabled_courses', true );
@@ -1148,6 +1109,12 @@ class Admin_Api {
 
 			$avatar_url = get_avatar_url( $user->ID, [ 'size' => 80 ] );
 			$is_blocked = (bool) get_user_meta( $user->ID, 'alezux_is_blocked', true );
+			$saved_plan = get_user_meta( $user->ID, '_alezux_plan_name', true );
+			$plan_name  = ! empty( $saved_plan )
+				? $saved_plan
+				: ( count( $valid_course_ids ) > 0
+					? ( count( $valid_course_ids ) === 1 ? '1 curso activo' : count( $valid_course_ids ) . ' cursos activos' )
+					: 'Sin cursos asignados' );
 
 			$students[] = [
 				'id'               => $user->ID,
@@ -1156,7 +1123,7 @@ class Admin_Api {
 				'avatar'           => $avatar_url,
 				'joinedDate'       => date( 'd/m/Y', strtotime( $user->user_registered ) ),
 				'status'           => $is_blocked ? 'blocked' : 'active',
-				'planName'         => get_user_meta( $user->ID, '_alezux_plan_name', true ) ?: 'Acceso Completo',
+				'planName'         => $plan_name,
 				'enabledCourseIds' => array_values( array_unique( $valid_course_ids ) ),
 			];
 		}

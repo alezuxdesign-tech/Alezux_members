@@ -546,7 +546,10 @@ class LMS_Engine {
 			}
 
 			// 1. Obtener o construir estructura curricular en formato JSON de Crezca
-			$curriculum = get_post_meta( $ld_id, '_alezux_curriculum_structure', true );
+			$curriculum = null;
+			if ( ! $overwrite ) {
+				$curriculum = get_post_meta( $ld_id, '_alezux_curriculum_structure', true );
+			}
 			if ( empty( $curriculum ) || ! is_array( $curriculum ) ) {
 				$curriculum = self::build_curriculum_from_learndash_course( $ld_id );
 			}
@@ -653,10 +656,120 @@ class LMS_Engine {
 	}
 
 	/**
+	 * Extraer información de separador en un título de lección
+	 * Ejemplo: [Separador (Titulo: Plataforma Atas Basico)] -> Plataforma Atas Basico
+	 */
+	public static function parse_separator_title( $title ) {
+		$clean = trim( (string) $title );
+		// Coincide con:
+		// [Separador (Titulo: Plataforma Atas Basico)]
+		// [Separador (Título: Plataforma Atas Basico)]
+		// [Separador: Plataforma Atas Basico]
+		// Separador (Titulo: Plataforma Atas Basico)
+		// [Separador] Plataforma Atas Basico
+		if ( preg_match( '/\[?\s*Separador\s*[\(\:\-]?\s*(?:T[ií]tulo\s*[\:\-])?\s*([^\]\)]+?)[\)\]]?\s*$/iu', $clean, $m ) ) {
+			return [
+				'is_separator' => true,
+				'clean_title'  => trim( $m[1] ),
+			];
+		}
+		if ( preg_match( '/^\[?\s*Separador\s*\]?$/iu', $clean ) ) {
+			return [
+				'is_separator' => true,
+				'clean_title'  => '',
+			];
+		}
+		return [
+			'is_separator' => false,
+			'clean_title'  => $clean,
+		];
+	}
+
+	/**
+	 * Extraer URL o shortcode de video desde contenido o metadatos de WordPress / LearnDash
+	 */
+	public static function extract_video_from_post( $post_id, $post_type = 'sfwd-topic' ) {
+		// 1. Metadatos directos del post
+		$video = get_post_meta( $post_id, '_topic_video_url', true );
+		if ( empty( $video ) ) {
+			$video = get_post_meta( $post_id, '_lesson_video_url', true );
+		}
+		if ( empty( $video ) ) {
+			$video = get_post_meta( $post_id, '_alezux_video_url', true );
+		}
+		if ( empty( $video ) ) {
+			$video = get_post_meta( $post_id, '_video_url', true );
+		}
+		if ( empty( $video ) ) {
+			$meta_key = ( 'sfwd-topic' === $post_type ) ? '_sfwd-topic' : '_sfwd-lessons';
+			$settings = get_post_meta( $post_id, $meta_key, true );
+			if ( is_array( $settings ) ) {
+				if ( ! empty( $settings[ $meta_key . '_lesson_video_url' ] ) ) {
+					$video = $settings[ $meta_key . '_lesson_video_url' ];
+				}
+			}
+		}
+
+		if ( ! empty( $video ) ) {
+			return trim( (string) $video );
+		}
+
+		// 2. Extraer del contenido del post (post_content)
+		$post = get_post( $post_id );
+		if ( ! $post || empty( $post->post_content ) ) {
+			return '';
+		}
+
+		$decoded_content = html_entity_decode( $post->post_content, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// A. Shortcode [vdo id="..."] o [vdocipher id="..."]
+		if ( preg_match( '/\[vdo(?:cipher)?\s+id=(?:&quot;|&#34;|&apos;|&#39;|["\'])?([a-f0-9]{32}|[a-zA-Z0-9_-]+)(?:&quot;|&#34;|&apos;|&#39;|["\'])?[^\]]*\]/i', $decoded_content, $m ) ) {
+			return '[vdo id="' . $m[1] . '"]';
+		}
+
+		// B. ID directo hexadecimal de VdoCipher (32 caracteres alfanuméricos)
+		if ( preg_match( '/\b([a-f0-9]{32})\b/i', $decoded_content, $m ) ) {
+			return '[vdo id="' . $m[1] . '"]';
+		}
+
+		// C. Iframe directo
+		if ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $decoded_content, $m ) ) {
+			return $m[0];
+		}
+
+		// D. URLs directas de video
+		if ( preg_match( '/(https?:\/\/[^\s"\'<>]+(?:youtube\.com|youtu\.be|vimeo\.com|b-cdn\.net|vdocipher\.com|[a-zA-Z0-9_\-\.]+\.(?:mp4|webm|m3u8))[^\s"\'<>]*)/i', $decoded_content, $m ) ) {
+			return $m[1];
+		}
+
+		return '';
+	}
+
+	/**
+	 * Extraer la portada destacada (featured image) de un post de WordPress
+	 */
+	public static function extract_cover_from_post( $post_id ) {
+		$thumb = get_the_post_thumbnail_url( $post_id, 'full' );
+		if ( ! $thumb ) {
+			$thumb_id = get_post_thumbnail_id( $post_id );
+			if ( $thumb_id ) {
+				$thumb = wp_get_attachment_url( $thumb_id );
+			}
+		}
+		if ( ! $thumb ) {
+			$thumb = get_post_meta( $post_id, '_topic_cover', true );
+		}
+		if ( ! $thumb ) {
+			$thumb = get_post_meta( $post_id, '_lesson_cover', true );
+		}
+		return $thumb ? esc_url_raw( $thumb ) : '';
+	}
+
+	/**
 	 * Construir estructura curricular a partir de las lecciones y temas nativos de LearnDash
 	 */
 	public static function build_curriculum_from_learndash_course( $course_id ) {
-		$curriculum = [];
+		$sections = [];
 		$lessons = [];
 
 		if ( function_exists( 'learndash_get_course_lessons_list' ) ) {
@@ -673,7 +786,7 @@ class LMS_Engine {
 		if ( empty( $lessons ) ) {
 			$lessons = get_posts([
 				'post_type'      => 'sfwd-lessons',
-				'post_status'    => 'publish',
+				'post_status'    => [ 'publish', 'future', 'draft', 'private', 'pending', 'any' ],
 				'posts_per_page' => -1,
 				'orderby'        => 'menu_order',
 				'order'          => 'ASC',
@@ -687,33 +800,20 @@ class LMS_Engine {
 			]);
 		}
 
-		$formatted_topics = [];
+		$course_cover = self::extract_cover_from_post( $course_id );
+		$current_section = null;
+		$section_index = 1;
+
 		foreach ( $lessons as $l_idx => $lesson ) {
-			$l_id = is_object( $lesson ) ? $lesson->ID : (int) $lesson;
+			$l_id   = is_object( $lesson ) ? $lesson->ID : (int) $lesson;
 			$l_post = get_post( $l_id );
 			if ( ! $l_post ) continue;
 
-			// Video de la lección
-			$video_url = get_post_meta( $l_id, '_lesson_video_url', true );
-			if ( empty( $video_url ) ) {
-				$video_url = get_post_meta( $l_id, '_alezux_video_url', true );
-			}
-			if ( empty( $video_url ) ) {
-				$ld_settings = get_post_meta( $l_id, '_sfwd-lessons', true );
-				if ( is_array( $ld_settings ) && ! empty( $ld_settings['sfwd-lessons_lesson_video_url'] ) ) {
-					$video_url = $ld_settings['sfwd-lessons_lesson_video_url'];
-				}
-			}
-			if ( empty( $video_url ) && ! empty( $l_post->post_content ) ) {
-				if ( preg_match( '/(\[vdo\s+id=["\']?[a-zA-Z0-9_-]+["\']?[^\]]*\])/i', $l_post->post_content, $vdo_m ) ) {
-					$video_url = $vdo_m[1];
-				} elseif ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $l_post->post_content, $if_m ) ) {
-					$video_url = $if_m[0];
-				}
-			}
+			$sep_info = self::parse_separator_title( $l_post->post_title );
+			$l_cover  = self::extract_cover_from_post( $l_id ) ?: $course_cover;
+			$l_video  = self::extract_video_from_post( $l_id, 'sfwd-lessons' );
 
-			// Topics de esta lección (se convierten en subtopics en Crezca)
-			$subtopics = [];
+			// Obtener Topics de esta lección (sfwd-topic)
 			$topics_raw = [];
 			if ( function_exists( 'learndash_get_topic_list' ) ) {
 				$topics_raw = learndash_get_topic_list( $l_id, $course_id );
@@ -721,7 +821,7 @@ class LMS_Engine {
 			if ( empty( $topics_raw ) ) {
 				$topics_raw = get_posts([
 					'post_type'      => 'sfwd-topic',
-					'post_status'    => 'publish',
+					'post_status'    => [ 'publish', 'future', 'draft', 'private', 'pending', 'any' ],
 					'posts_per_page' => -1,
 					'orderby'        => 'menu_order',
 					'order'          => 'ASC',
@@ -734,63 +834,139 @@ class LMS_Engine {
 					],
 				]);
 			}
+			if ( empty( $topics_raw ) ) {
+				$topics_raw = get_posts([
+					'post_type'      => 'sfwd-topic',
+					'post_status'    => [ 'publish', 'future', 'draft', 'private', 'pending', 'any' ],
+					'posts_per_page' => -1,
+					'post_parent'    => $l_id,
+					'orderby'        => 'menu_order',
+					'order'          => 'ASC',
+				]);
+			}
 
+			// Construir lista de clases a partir de los topics de esta lección
+			$lesson_classes = [];
 			if ( ! empty( $topics_raw ) ) {
-				foreach ( $topics_raw as $t_idx => $top ) {
-					$t_id = is_object( $top ) ? $top->ID : (int) $top;
+				foreach ( $topics_raw as $top ) {
+					$t_id   = is_object( $top ) ? $top->ID : (int) $top;
 					$t_post = get_post( $t_id );
 					if ( ! $t_post ) continue;
 
-					$sub_video = get_post_meta( $t_id, '_topic_video_url', true );
-					if ( empty( $sub_video ) ) {
-						$sub_video = get_post_meta( $t_id, '_alezux_video_url', true );
-					}
-					if ( empty( $sub_video ) ) {
-						$t_settings = get_post_meta( $t_id, '_sfwd-topic', true );
-						if ( is_array( $t_settings ) && ! empty( $t_settings['sfwd-topic_lesson_video_url'] ) ) {
-							$sub_video = $t_settings['sfwd-topic_lesson_video_url'];
-						}
-					}
-					if ( empty( $sub_video ) && ! empty( $t_post->post_content ) ) {
-						if ( preg_match( '/(\[vdo\s+id=["\']?[a-zA-Z0-9_-]+["\']?[^\]]*\])/i', $t_post->post_content, $vdo_m ) ) {
-							$sub_video = $vdo_m[1];
-						} elseif ( preg_match( '/<iframe[^>]+src=["\']([^"\']+)["\']/i', $t_post->post_content, $if_m ) ) {
-							$sub_video = $if_m[0];
-						}
-					}
+					$t_video = self::extract_video_from_post( $t_id, 'sfwd-topic' );
+					$t_cover = self::extract_cover_from_post( $t_id ) ?: $l_cover;
 
-					$subtopics[] = [
-						'id'          => 'sub_' . $t_id,
+					$lesson_classes[] = [
+						'id'          => 'top_' . $t_id,
 						'title'       => $t_post->post_title,
-						'duration'    => '10m',
-						'video_url'   => $sub_video ? $sub_video : '',
+						'duration'    => get_post_meta( $t_id, '_topic_duration', true ) ?: '15m',
+						'cover'       => $t_cover,
+						'video_url'   => $t_video ?: '',
 						'description' => wp_strip_all_tags( $t_post->post_content ),
-						'files'       => [],
+						'files'       => get_post_meta( $t_id, '_topic_files', true ) ?: [],
 						'questions'   => [],
 					];
 				}
 			}
 
-			$formatted_topics[] = [
+			// CASO A: La lección de LearnDash actúa como SEPARADOR / MÓDULO
+			if ( $sep_info['is_separator'] ) {
+				if ( $current_section !== null ) {
+					$sections[] = $current_section;
+					$current_section = null;
+				}
+
+				$sec_title = ! empty( $sep_info['clean_title'] ) ? $sep_info['clean_title'] : sprintf( __( 'Módulo %d', 'crezca' ), $section_index );
+				$section_index++;
+
+				if ( ! empty( $lesson_classes ) ) {
+					// El separador tiene topics que son las clases directas
+					$sections[] = [
+						'id'           => 'sec_' . $l_id,
+						'title'        => $sec_title,
+						'cover'        => $l_cover,
+						'description'  => wp_strip_all_tags( $l_post->post_content ),
+						'is_separator' => true,
+						'lessons'      => $lesson_classes,
+					];
+				} else {
+					// El separador es un divisor entre lecciones
+					$current_section = [
+						'id'           => 'sec_' . $l_id,
+						'title'        => $sec_title,
+						'cover'        => $l_cover,
+						'description'  => wp_strip_all_tags( $l_post->post_content ),
+						'is_separator' => true,
+						'lessons'      => [],
+					];
+				}
+				continue;
+			}
+
+			// CASO B: Lección estándar que contiene Topics
+			if ( ! empty( $lesson_classes ) ) {
+				if ( $current_section !== null && empty( $current_section['lessons'] ) ) {
+					$current_section['lessons'] = $lesson_classes;
+					$sections[] = $current_section;
+					$current_section = null;
+				} else {
+					if ( $current_section !== null ) {
+						$sections[] = $current_section;
+						$current_section = null;
+					}
+					$sections[] = [
+						'id'          => 'sec_' . $l_id,
+						'title'       => $l_post->post_title,
+						'cover'       => $l_cover,
+						'description' => wp_strip_all_tags( $l_post->post_content ),
+						'lessons'     => $lesson_classes,
+					];
+					$section_index++;
+				}
+				continue;
+			}
+
+			// CASO C: Lección independiente sin topics (ella misma es la clase con video)
+			$standalone_class = [
 				'id'          => 'top_' . $l_id,
 				'title'       => $l_post->post_title,
-				'duration'    => '15m',
-				'video_url'   => $video_url ? $video_url : '',
+				'duration'    => get_post_meta( $l_id, '_lesson_duration', true ) ?: '15m',
+				'cover'       => $l_cover,
+				'video_url'   => $l_video ?: '',
 				'description' => wp_strip_all_tags( $l_post->post_content ),
-				'files'       => [],
+				'files'       => get_post_meta( $l_id, '_lesson_files', true ) ?: [],
 				'questions'   => [],
-				'subtopics'   => $subtopics,
+			];
+
+			if ( $current_section !== null ) {
+				$current_section['lessons'][] = $standalone_class;
+			} else {
+				$current_section = [
+					'id'          => 'sec_init_' . $section_index,
+					'title'       => sprintf( __( 'Módulo %d', 'crezca' ), $section_index ),
+					'cover'       => $course_cover,
+					'description' => '',
+					'lessons'     => [ $standalone_class ],
+				];
+				$section_index++;
+			}
+		}
+
+		if ( $current_section !== null && ! empty( $current_section['lessons'] ) ) {
+			$sections[] = $current_section;
+		}
+
+		if ( empty( $sections ) ) {
+			$sections[] = [
+				'id'          => 'sec_main',
+				'title'       => __( 'Módulo Principal', 'crezca' ),
+				'cover'       => $course_cover,
+				'description' => '',
+				'lessons'     => [],
 			];
 		}
 
-		$curriculum[] = [
-			'id'          => 'sec_main',
-			'title'       => __( 'Módulo Principal', 'crezca' ),
-			'description' => '',
-			'lessons'     => $formatted_topics,
-		];
-
-		return $curriculum;
+		return $sections;
 	}
 
 	/**
