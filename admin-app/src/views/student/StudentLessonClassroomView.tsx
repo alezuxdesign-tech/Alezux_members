@@ -770,17 +770,6 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
             <ArrowLeft size={16} />
             <span>Volver al curso</span>
           </button>
-          <div className={styles.classroomBreadcrumb}>
-            <span className={styles.classroomCourseName}>{course.title}</span>
-            <span className={styles.classroomDivider}>/</span>
-            <span className={styles.classroomModuleName}>{currentLesson.title}</span>
-            {currentItem?.isSubtopic && currentItem.parentTopicTitle && (
-              <>
-                <span className={styles.classroomDivider}>/</span>
-                <span className={styles.classroomCourseName}>{currentItem.parentTopicTitle}</span>
-              </>
-            )}
-          </div>
         </div>
 
         <div className={styles.classroomHeaderRight}>
@@ -790,16 +779,6 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
               {completedInModule} de {allPlayableItems.length} completadas ({modulePercentage}%)
             </span>
           </div>
-
-          <button
-            type="button"
-            className={[styles.headerCinemaBtn, isCinemaMode ? styles.headerCinemaBtnActive : ""].join(" ")}
-            onClick={toggleCinemaMode}
-            title={isCinemaMode ? "Desactivar modo cine (volver a vista normal)" : "Activar modo cine (pantalla ancha)"}
-          >
-            {isCinemaMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            <span>{isCinemaMode ? "Normal" : "Cine"}</span>
-          </button>
         </div>
       </header>
 
@@ -1428,17 +1407,6 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                 style={{ width: `${modulePercentage}%` }} 
               />
             </div>
-            {nextModule && (
-              <button
-                type="button"
-                className={styles.sidebarNextModuleBtn}
-                onClick={handleGoToNextModule}
-                title={`Saltar a: ${nextModule.lesson.title}`}
-              >
-                <span>{nextModule.lesson.title}</span>
-                <ChevronRight size={14} />
-              </button>
-            )}
           </div>
 
           {/* Menú desplegable para saltar a otros módulos del curso */}
