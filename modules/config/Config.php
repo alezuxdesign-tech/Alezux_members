@@ -86,9 +86,15 @@ class Config extends Module_Base {
 
         if ( is_page( $restricted_pages ) ) {
             if ( ! is_user_logged_in() || ! current_user_can( 'administrator' ) ) {
-                header( 'X-Crezca-Redirect: check_restricted_pages_to_home' );
-                wp_redirect( home_url() );
-                exit;
+                $login_url   = function_exists( 'crezca_get_login_page_url' ) ? crezca_get_login_page_url() : home_url( '/login/' );
+                $current_url = home_url( add_query_arg( [] ) );
+                $current_path = trim( (string) parse_url( $current_url, PHP_URL_PATH ), '/' );
+                $login_path   = trim( (string) parse_url( $login_url, PHP_URL_PATH ), '/' );
+                if ( $current_path !== $login_path ) {
+                    header( 'X-Crezca-Redirect: check_restricted_pages_to_login' );
+                    wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
+                    exit;
+                }
             }
         }
     }
@@ -97,6 +103,11 @@ class Config extends Module_Base {
      * Verifica si la página actual requiere estar logueado
      */
     public function check_private_pages() {
+        // Si la petición contiene parámetros del Aula Virtual (?tab=courses, etc.), NUNCA bloquear con check_private_pages
+        if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
+            return;
+        }
+
         $private_pages = get_option( 'alezux_private_pages', [] );
         
         if ( empty( $private_pages ) || ! is_array( $private_pages ) ) {
@@ -105,9 +116,14 @@ class Config extends Module_Base {
 
         if ( is_page( $private_pages ) ) {
             if ( ! is_user_logged_in() ) {
-                // Redirigir a Home si intenta entrar a una página privada sin estar logueado
-                wp_redirect( home_url() );
-                exit;
+                $login_url   = function_exists( 'crezca_get_login_page_url' ) ? crezca_get_login_page_url() : home_url( '/login/' );
+                $current_url = home_url( add_query_arg( [] ) );
+                $current_path = trim( (string) parse_url( $current_url, PHP_URL_PATH ), '/' );
+                $login_path   = trim( (string) parse_url( $login_url, PHP_URL_PATH ), '/' );
+                if ( $current_path !== $login_path ) {
+                    wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
+                    exit;
+                }
             }
         }
     }

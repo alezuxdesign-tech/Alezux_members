@@ -418,12 +418,9 @@ function crezca_get_student_portal_url() {
 	$login_page_id    = (int) get_option( 'alezux_login_page_id' );
 	$restricted_pages = (array) get_option( 'alezux_restricted_pages', [] );
 
-	// Si student_page_id es válido, no es login, no está restringida a administradores y no es el panel admin 'estudiantes'
+	// Si student_page_id es válido, no es login y no está restringida a administradores
 	if ( $student_page_id && $student_page_id !== $login_page_id && ! in_array( $student_page_id, $restricted_pages, true ) && get_post_status( $student_page_id ) === 'publish' ) {
-		$post_obj = get_post( $student_page_id );
-		if ( $post_obj && $post_obj->post_name !== 'estudiantes' ) {
-			return get_permalink( $student_page_id );
-		}
+		return get_permalink( $student_page_id );
 	}
 
 	global $wpdb;
@@ -433,7 +430,6 @@ function crezca_get_student_portal_url() {
 		SELECT ID FROM {$wpdb->posts}
 		WHERE post_type = 'page'
 		  AND post_status = 'publish'
-		  AND post_name != 'estudiantes'
 		  {$exclude_sql}
 		  AND (post_content LIKE '%[crezca_aula%' OR post_content LIKE '%[alezux_aula%')
 		ORDER BY ID ASC LIMIT 1
@@ -444,7 +440,7 @@ function crezca_get_student_portal_url() {
 		return get_permalink( $found_page_id );
 	}
 
-	$slugs = [ 'campus', 'aula', 'aula-virtual', 'cursos', 'mi-aula', 'mi-cuenta' ];
+	$slugs = [ 'estudiantes', 'campus', 'aula', 'aula-virtual', 'cursos', 'mi-aula', 'mi-cuenta' ];
 	foreach ( $slugs as $slug ) {
 		$page = get_page_by_path( $slug );
 		if ( $page && (int) $page->ID !== $login_page_id && ! in_array( (int) $page->ID, $restricted_pages, true ) && $page->post_status === 'publish' ) {
@@ -626,12 +622,42 @@ function crezca_redirect_student_tabs_to_campus() {
 	if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
 		// Si no está autenticado, redirigir a login directamente
 		if ( ! is_user_logged_in() ) {
-			$login_url     = crezca_get_login_page_url();
-			$is_secure     = crezca_is_ssl();
-			$current_req   = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
-			wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_req ), $login_url ) );
-			exit;
+			$login_url   = crezca_get_login_page_url();
+			$is_secure   = crezca_is_ssl();
+			$current_req = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+			
+			$current_path = trim( (string) parse_url( $current_req, PHP_URL_PATH ), '/' );
+			$login_path   = trim( (string) parse_url( $login_url, PHP_URL_PATH ), '/' );
+			if ( $current_path !== $login_path ) {
+				wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_req ), $login_url ) );
+				exit;
+			}
 		}
+	}
+}
+
+/**
+ * Desactivar estilos del tema Hello Elementor que rompen botones con bordes magenta/rojos (#c36)
+ */
+add_action( 'wp_enqueue_scripts', 'crezca_dequeue_conflicting_elementor_styles', 9999 );
+add_action( 'wp_print_styles', 'crezca_dequeue_conflicting_elementor_styles', 9999 );
+function crezca_dequeue_conflicting_elementor_styles() {
+	$portal_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
+	global $post;
+
+	$is_portal = false;
+	if ( $portal_page_id > 0 && is_page( $portal_page_id ) ) {
+		$is_portal = true;
+	} elseif ( is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'crezca_aula' ) || has_shortcode( $post->post_content, 'alezux_aula' ) ) ) {
+		$is_portal = true;
+	} elseif ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
+		$is_portal = true;
+	}
+
+	if ( $is_portal ) {
+		wp_dequeue_style( 'hello-elementor' );
+		wp_dequeue_style( 'hello-elementor-theme-style' );
+		wp_dequeue_style( 'hello-elementor-header-footer' );
 	}
 }
 
@@ -659,11 +685,16 @@ function crezca_student_portal_canvas_template( $template ) {
 	if ( $is_portal ) {
 		// Si es acceso no autenticado al aula, redirigir al login personalizado
 		if ( ! is_user_logged_in() ) {
-			$login_url     = crezca_get_login_page_url();
-			$is_secure     = crezca_is_ssl();
-			$current_url   = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
-			wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
-			exit;
+			$login_url   = crezca_get_login_page_url();
+			$is_secure   = crezca_is_ssl();
+			$current_url = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+			
+			$current_path = trim( (string) parse_url( $current_url, PHP_URL_PATH ), '/' );
+			$login_path   = trim( (string) parse_url( $login_url, PHP_URL_PATH ), '/' );
+			if ( $current_path !== $login_path ) {
+				wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
+				exit;
+			}
 		}
 		add_filter( 'show_admin_bar', '__return_false' );
 
@@ -745,27 +776,16 @@ function crezca_student_portal_canvas_template( $template ) {
 	#wpadminbar { display: none !important; }
 	html { margin-top: 0 !important; }
 
-	/* Inmunidad absoluta contra estilos de Hello Elementor (#c36) y temas de WordPress */
+	/* Inmunidad contra estilos heredados de temas de WordPress */
 	#crezca-student-root button,
-	#crezca-student-root button[type="button"],
-	#crezca-student-root [type="button"],
-	#crezca-student-root .btn,
 	#crezca-student-root a.button {
 		font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-		border: 1px solid transparent;
-		color: inherit;
-		background-color: transparent;
 		text-transform: none !important;
 		letter-spacing: normal !important;
 		box-shadow: none !important;
 		text-shadow: none !important;
-		text-decoration: none !important;
-		padding: 0;
-		line-height: inherit;
 	}
 	#crezca-student-root button:hover,
-	#crezca-student-root button[type="button"]:hover,
-	#crezca-student-root [type="button"]:hover,
 	#crezca-student-root a.button:hover {
 		background-image: none !important;
 		text-decoration: none !important;
