@@ -526,17 +526,21 @@
   justify-content: center;
   gap: 8px;
   padding: 10px 18px;
-  background: var(--accent);
-  color: var(--accent-foreground, #ffffff);
+  background: var(--accent, #7747ff) !important;
+  background-color: var(--accent, #7747ff) !important;
+  color: var(--accent-foreground, #ffffff) !important;
   border: none;
   border-radius: var(--radius-control, 8px);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: filter var(--duration-fast, 150ms), transform var(--duration-fast, 150ms);
+  transition: all var(--duration-fast, 150ms);
 }
 
 .buyCourseBtn:hover {
+  background: var(--accent-strong, var(--accent, #7747ff)) !important;
+  background-color: var(--accent-strong, var(--accent, #7747ff)) !important;
+  color: var(--accent-foreground, #ffffff) !important;
   filter: brightness(1.12);
   transform: translateY(-1px);
 }
@@ -637,24 +641,33 @@
 
 .enterCourseBtn {
   width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: var(--accent, #7747ff);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 18px !important;
+  background: var(--accent, #7747ff) !important;
+  background-color: var(--accent, #7747ff) !important;
   color: var(--accent-foreground, #ffffff) !important;
-  border: 1px solid var(--accent, #7747ff);
-  border-radius: var(--radius-control, 8px);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--duration-fast, 150ms), color var(--duration-fast, 150ms), filter 150ms ease;
+  border: 1px solid var(--accent, #7747ff) !important;
+  border-radius: var(--radius-control, 8px) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all var(--duration-fast, 150ms) ease !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  box-sizing: border-box !important;
 }
 
 .enterCourseBtn svg {
   color: inherit !important;
   fill: currentColor !important;
+  stroke: currentColor !important;
+  width: 14px !important;
+  height: 14px !important;
+  display: block !important;
+  flex-shrink: 0 !important;
 }
 
 .enterCourseBtn span {
@@ -662,8 +675,13 @@
 }
 
 .enterCourseBtn:hover {
-  filter: brightness(1.1);
+  background: var(--accent-strong, var(--accent, #7747ff)) !important;
+  background-color: var(--accent-strong, var(--accent, #7747ff)) !important;
+  border-color: var(--accent-strong, var(--accent, #7747ff)) !important;
   color: var(--accent-foreground, #ffffff) !important;
+  filter: brightness(1.1) !important;
+  opacity: 1 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
 }
 
 .courseFooterLocked {
@@ -690,9 +708,10 @@
 }
 
 .exploreCurriculumBtn:hover {
-  background: var(--surface-muted, #252830);
-  border-color: var(--accent, #7747ff);
-  color: var(--accent, #7747ff);
+  background: var(--surface-muted, #252830) !important;
+  background-color: var(--surface-muted, #252830) !important;
+  border-color: var(--accent, #7747ff) !important;
+  color: var(--accent, #7747ff) !important;
 }
 
 .buyShortcutBtn {
@@ -700,16 +719,20 @@
   align-items: center;
   gap: 4px;
   padding: 9px 14px;
-  background: var(--accent, #7747ff);
+  background: var(--accent, #7747ff) !important;
+  background-color: var(--accent, #7747ff) !important;
   color: var(--accent-foreground, #ffffff) !important;
   border-radius: var(--radius-control, 8px);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
-  transition: filter var(--duration-fast, 150ms);
+  transition: all var(--duration-fast, 150ms);
 }
 
 .buyShortcutBtn:hover {
+  background: var(--accent-strong, var(--accent, #7747ff)) !important;
+  background-color: var(--accent-strong, var(--accent, #7747ff)) !important;
+  color: var(--accent-foreground, #ffffff) !important;
   filter: brightness(1.1);
 }
 
@@ -4190,17 +4213,21 @@
   gap: 8px;
   width: 100%;
   padding: 9px 16px;
-  background: var(--accent, #7747ff);
-  color: var(--accent-foreground, #ffffff);
+  background: var(--accent, #7747ff) !important;
+  background-color: var(--accent, #7747ff) !important;
+  color: var(--accent-foreground, #ffffff) !important;
   border: none;
   border-radius: var(--radius-control, 8px);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: filter var(--duration-fast, 150ms);
+  transition: all var(--duration-fast, 150ms);
 }
 
 .continueCourseBtn:hover {
+  background: var(--accent-strong, var(--accent, #7747ff)) !important;
+  background-color: var(--accent-strong, var(--accent, #7747ff)) !important;
+  color: var(--accent-foreground, #ffffff) !important;
   filter: brightness(1.1);
 }
 
@@ -5761,26 +5788,35 @@
 }
 
 .enterCourseBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
   width: 100%;
-  padding: 9px 14px;
-  background: var(--accent, #7747ff);
+  padding: 10px 18px !important;
+  background: var(--accent, #7747ff) !important;
+  background-color: var(--accent, #7747ff) !important;
   color: var(--accent-foreground, #ffffff) !important;
-  border: 1px solid var(--accent, #7747ff);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s ease, filter 0.15s ease, color 0.15s ease;
+  border: 1px solid var(--accent, #7747ff) !important;
+  border-radius: var(--radius-control, 8px) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all var(--duration-fast, 150ms) ease !important;
   margin-top: 4px;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  box-sizing: border-box !important;
 }
 
 .enterCourseBtn svg {
   color: inherit !important;
   fill: currentColor !important;
+  stroke: currentColor !important;
+  width: 14px !important;
+  height: 14px !important;
+  display: block !important;
+  flex-shrink: 0 !important;
 }
 
 .enterCourseBtn span {
@@ -5788,9 +5824,13 @@
 }
 
 .enterCourseBtn:hover {
-  opacity: 0.92;
-  filter: brightness(1.08);
+  background: var(--accent-strong, var(--accent, #7747ff)) !important;
+  background-color: var(--accent-strong, var(--accent, #7747ff)) !important;
+  border-color: var(--accent-strong, var(--accent, #7747ff)) !important;
   color: var(--accent-foreground, #ffffff) !important;
+  filter: brightness(1.1) !important;
+  opacity: 1 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
 }
 
 .emptyCoursesBox {

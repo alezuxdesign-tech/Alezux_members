@@ -190,10 +190,43 @@ body {
   outline: none !important;
 }
 
-/* Reset buttons from WP Admin styling */
+/* Reset buttons from WP Admin & Elementor styling */
 #crezca-admin-root button,
 #crezca-student-root button,
 #alezux-admin-root button {
-  box-shadow: none;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+/* Evitar que Elementor o temas inyecten colores rojos en el estado :hover de los botones */
+#crezca-admin-root button:hover,
+#crezca-student-root button:hover,
+#alezux-admin-root button:hover {
+  background-image: none !important;
+}
+
+/* Asegurar renderizado correcto de todos los iconos SVG de Lucide */
+#crezca-admin-root svg,
+#crezca-student-root svg,
+#alezux-admin-root svg {
+  box-sizing: content-box;
+  vertical-align: middle;
+}
+
+#crezca-admin-root svg.lucide,
+#crezca-student-root svg.lucide,
+#alezux-admin-root svg.lucide {
+  fill: none;
+  stroke: currentColor;
+}
+
+#crezca-admin-root button svg,
+#crezca-student-root button svg,
+#alezux-admin-root button svg {
+  flex-shrink: 0;
+  display: block;
 }
 

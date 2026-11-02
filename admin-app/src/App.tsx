@@ -705,7 +705,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             </div>
           )}
 
-          {/* Botones de acción rápida: Tema y Pantalla Completa */}
+          {/* Botones de acción rápida: Tema, Contraer Sidebar y Pantalla Completa */}
           <div className={styles.footerActionsGrid}>
             <button
               type="button"
@@ -721,12 +721,23 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             <button
               type="button"
               className={styles.iconBtn}
+              onClick={toggleSidebar}
+              title={isCollapsed ? "Expandir barra lateral" : "Contraer barra lateral"}
+              aria-label="Alternar barra lateral"
+            >
+              {isCollapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
+              {!isCollapsed && <span>{isCollapsed ? "Expandir" : "Contraer"}</span>}
+            </button>
+
+            <button
+              type="button"
+              className={styles.iconBtn}
               onClick={toggleFullscreen}
               title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               aria-label="Alternar pantalla completa"
             >
               {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-              {!isCollapsed && <span>{isFullscreen ? "Reducir" : "Expandir"}</span>}
+              {!isCollapsed && <span>{isFullscreen ? "Reducir" : "Pantalla"}</span>}
             </button>
           </div>
 

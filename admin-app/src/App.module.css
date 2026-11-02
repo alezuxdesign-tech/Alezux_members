@@ -14,8 +14,8 @@
    SIDEBAR ESTILO ARC UI
    ========================================================= */
 .sidebar {
-  width: 268px;
-  min-width: 268px;
+  width: 280px;
+  min-width: 280px;
   height: 100vh;
   max-height: 100vh;
   display: flex;
@@ -159,19 +159,22 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-5) var(--space-4);
+  padding: 16px 14px;
   border-bottom: 1px solid var(--border-subtle);
   min-height: 72px;
   box-sizing: border-box;
+  gap: 8px;
 }
 
 .brandGroup {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 10px;
   text-decoration: none;
   color: inherit;
   overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
 
 .logoMark {
@@ -216,20 +219,26 @@
   flex-direction: column;
   overflow: hidden;
   white-space: nowrap;
+  min-width: 0;
+  flex: 1;
 }
 
 .brandTitleWrap {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
+  min-width: 0;
 }
 
 .brandName {
   font-family: var(--font-display);
-  font-size: var(--text-base);
+  font-size: 15px;
   font-weight: 700;
   color: var(--foreground);
   letter-spacing: var(--tracking-display);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .versionBadge {
@@ -240,6 +249,7 @@
   color: var(--accent);
   padding: 1px 6px;
   border-radius: var(--radius-pill);
+  flex-shrink: 0;
 }
 
 .brandSubtitle {
@@ -247,27 +257,53 @@
   color: var(--text-muted);
   text-overflow: ellipsis;
   overflow: hidden;
+  white-space: nowrap;
 }
 
 .collapseBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  color: var(--text-muted);
-  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: var(--surface-muted, rgba(255, 255, 255, 0.05)) !important;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1)) !important;
+  border-radius: var(--radius-control, 8px) !important;
+  color: var(--text-secondary, #cbd5e1) !important;
+  cursor: pointer !important;
   transition: all var(--duration-fast);
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+}
+
+.collapseBtn svg {
+  color: inherit !important;
+  stroke: currentColor !important;
+  fill: none !important;
+  stroke-width: 2px !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  display: block !important;
+  flex-shrink: 0 !important;
+  pointer-events: none;
 }
 
 .collapseBtn:hover {
-  color: var(--foreground);
-  background: var(--surface-muted);
-  border-color: var(--border);
+  color: var(--foreground, #ffffff) !important;
+  background: var(--surface-hover, rgba(255, 255, 255, 0.12)) !important;
+  border-color: var(--border, rgba(255, 255, 255, 0.2)) !important;
+}
+
+.collapseBtn:hover svg {
+  color: var(--foreground, #ffffff) !important;
+  stroke: currentColor !important;
 }
 
 /* Navegación */
@@ -589,42 +625,71 @@
 }
 
 .headerIconButton {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--surface-raised);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  border: 1px solid var(--border) !important;
+  background: var(--surface-raised) !important;
+  color: var(--text-secondary, #cbd5e1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  position: relative !important;
   transition: all var(--duration-fast);
+  box-sizing: border-box !important;
+  outline: none !important;
+}
+
+.headerIconButton svg {
+  color: var(--text-secondary, #cbd5e1) !important;
+  stroke: currentColor !important;
+  fill: none !important;
+  stroke-width: 2px !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  display: block !important;
+  flex-shrink: 0 !important;
+  pointer-events: none;
 }
 
 .headerIconButton:hover {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
-  color: var(--foreground);
-  border-color: var(--accent);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--foreground, #ffffff) !important;
+  border-color: var(--accent) !important;
+}
+
+.headerIconButton:hover svg {
+  color: var(--foreground, #ffffff) !important;
+  stroke: currentColor !important;
 }
 
 .headerNotificationBadge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 8px;
-  background: var(--accent, #7747ff);
-  color: var(--accent-foreground, #ffffff);
-  font-size: 10px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  box-shadow: 0 0 0 2px var(--background);
+  position: absolute !important;
+  top: -2px !important;
+  right: -2px !important;
+  min-width: 16px !important;
+  height: 16px !important;
+  border-radius: 8px !important;
+  background: var(--accent, #7747ff) !important;
+  color: var(--accent-foreground, #ffffff) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 4px !important;
+  box-shadow: 0 0 0 2px var(--background) !important;
+  pointer-events: none;
+  z-index: 2;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
 }
 
 .headerProfileBtn {

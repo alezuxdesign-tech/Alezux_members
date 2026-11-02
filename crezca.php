@@ -672,6 +672,38 @@ function crezca_student_portal_canvas_template( $template ) {
 		$bg_color     = $is_light ? '#f8fafc' : '#090a0f';
 		$text_color   = $is_light ? '#0f172a' : '#f8fafc';
 		$academy_name = get_option( 'alezux_academy_name', 'Campus Virtual' );
+		$accent       = get_option( 'alezux_accent', 'violet' );
+
+		$accent_colors = [
+			'dark'    => '#18181b',
+			'violet'  => '#7747ff',
+			'blue'    => '#0562ef',
+			'ocean'   => '#0284c7',
+			'sky'     => '#0ea5e9',
+			'teal'    => '#0d9488',
+			'emerald' => '#0db879',
+			'green'   => '#0db879',
+			'amber'   => '#f3ad20',
+			'coral'   => '#f15f55',
+			'rose'    => '#f43f5e',
+			'cyan'    => '#06b6d4',
+			'neutral' => '#71717a',
+		];
+		$accent_key = strtolower( trim( (string) $accent ) );
+		$accent_color = isset( $accent_colors[ $accent_key ] )
+			? $accent_colors[ $accent_key ]
+			: ( str_starts_with( $accent, '#' ) ? $accent : '#7747ff' );
+
+		$contrast_fg  = crezca_get_contrast_foreground( $accent_color );
+
+		// Pre-cargar estilos y scripts del bundle antes de ejecutar wp_head
+		$dist_css = CREZCA_PATH . 'assets/dist/alezux-dashboard.css';
+		$dist_js  = CREZCA_PATH . 'assets/dist/alezux-dashboard.js';
+		$js_ver   = file_exists( $dist_js ) ? filemtime( $dist_js ) : time();
+		$css_ver  = file_exists( $dist_css ) ? filemtime( $dist_css ) : time();
+		wp_enqueue_style( 'crezca-inter-font', 'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap', [], null );
+		wp_enqueue_style( 'crezca-dashboard-style', CREZCA_URL . 'assets/dist/alezux-dashboard.css', [ 'crezca-inter-font' ], $css_ver );
+		wp_enqueue_script( 'crezca-dashboard-script', CREZCA_URL . 'assets/dist/alezux-dashboard.js', [], $js_ver, true );
 
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		?>
@@ -707,6 +739,25 @@ function crezca_student_portal_canvas_template( $template ) {
 	}
 	#wpadminbar { display: none !important; }
 	html { margin-top: 0 !important; }
+
+	/* Inmunidad absoluta contra estilos de Elementor y temas de WordPress */
+	#crezca-student-root button,
+	#crezca-student-root a.button {
+		font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+		text-transform: none !important;
+		letter-spacing: normal !important;
+		box-shadow: none !important;
+		text-shadow: none !important;
+	}
+	#crezca-student-root button:hover,
+	#crezca-student-root a.button:hover {
+		background-image: none !important;
+	}
+	#crezca-student-root svg.lucide {
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2px;
+	}
 </style>
 </head>
 <body class="crezca-campus-portal <?php echo $is_light ? 'theme-light' : 'theme-dark'; ?>">
