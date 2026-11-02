@@ -705,6 +705,11 @@ function crezca_student_portal_canvas_template( $template ) {
 		wp_enqueue_style( 'crezca-dashboard-style', CREZCA_URL . 'assets/dist/alezux-dashboard.css', [ 'crezca-inter-font' ], $css_ver );
 		wp_enqueue_script( 'crezca-dashboard-script', CREZCA_URL . 'assets/dist/alezux-dashboard.js', [], $js_ver, true );
 
+		// Desactivar estilos del tema Hello Elementor que rompen botones con bordes magenta/rojos (#c36)
+		wp_dequeue_style( 'hello-elementor' );
+		wp_dequeue_style( 'hello-elementor-theme-style' );
+		wp_dequeue_style( 'hello-elementor-header-footer' );
+
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		?>
 <!DOCTYPE html>
@@ -740,18 +745,30 @@ function crezca_student_portal_canvas_template( $template ) {
 	#wpadminbar { display: none !important; }
 	html { margin-top: 0 !important; }
 
-	/* Inmunidad absoluta contra estilos de Elementor y temas de WordPress */
+	/* Inmunidad absoluta contra estilos de Hello Elementor (#c36) y temas de WordPress */
 	#crezca-student-root button,
+	#crezca-student-root button[type="button"],
+	#crezca-student-root [type="button"],
+	#crezca-student-root .btn,
 	#crezca-student-root a.button {
 		font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+		border: 1px solid transparent;
+		color: inherit;
+		background-color: transparent;
 		text-transform: none !important;
 		letter-spacing: normal !important;
 		box-shadow: none !important;
 		text-shadow: none !important;
+		text-decoration: none !important;
+		padding: 0;
+		line-height: inherit;
 	}
 	#crezca-student-root button:hover,
+	#crezca-student-root button[type="button"]:hover,
+	#crezca-student-root [type="button"]:hover,
 	#crezca-student-root a.button:hover {
 		background-image: none !important;
+		text-decoration: none !important;
 	}
 	#crezca-student-root svg.lucide {
 		fill: none;
