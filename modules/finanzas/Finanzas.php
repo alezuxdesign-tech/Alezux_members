@@ -85,6 +85,13 @@ class Finanzas extends Module_Base {
             global $wpdb;
             $table_plans = $wpdb->prefix . 'alezux_finanzas_plans';
 
+            // Asegurar que la tabla de planes exista
+            if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_plans'" ) !== $table_plans ) {
+                if ( class_exists( 'Alezux_Members\Modules\Finanzas\Includes\Database_Installer' ) ) {
+                    \Alezux_Members\Modules\Finanzas\Includes\Database_Installer::install();
+                }
+            }
+
             // Asegurar que la columna token exista en la tabla si no fue creada previamente
             static $token_col_checked = false;
             if ( ! $token_col_checked ) {
