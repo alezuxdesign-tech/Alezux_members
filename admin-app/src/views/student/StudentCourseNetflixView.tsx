@@ -46,7 +46,20 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
   const sections = course.sections || [];
   const progress = course.progress ?? 0;
   const hasAccess = !!course.hasAccess;
-  const effectiveCheckoutUrl = course.checkoutUrl || (course.id ? `/?alezux_action=checkout&course_id=${course.id}` : null);
+
+  const effectiveCheckoutUrl = useMemo(() => {
+    if (course.checkoutUrl) {
+      if (!course.checkoutUrl.includes("course_id=") && course.id) {
+        const sep = course.checkoutUrl.includes("?") ? "&" : "?";
+        return `${course.checkoutUrl}${sep}course_id=${course.id}`;
+      }
+      return course.checkoutUrl;
+    }
+    if (course.id) {
+      return `/?alezux_action=checkout&course_id=${course.id}`;
+    }
+    return null;
+  }, [course.checkoutUrl, course.id]);
 
   // Agrupar los módulos del temario en filas de carrusel delimitadas por separadores
   const carouselRows: CarouselRow[] = useMemo(() => {

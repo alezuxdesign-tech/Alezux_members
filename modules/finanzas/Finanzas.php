@@ -111,6 +111,54 @@ class Finanzas extends Module_Base {
                 $plan_id = intval( $_GET['token'] );
             }
 
+            // 4. Fallback directo por course_id (si el usuario pulsa adquirir desde el campus o temario)
+            if ( ! $plan_id && ( ! empty( $_GET['course_id'] ) || ! empty( $_GET['course'] ) ) ) {
+                $c_id = intval( ! empty( $_GET['course_id'] ) ? $_GET['course_id'] : $_GET['course'] );
+                if ( $c_id > 0 ) {
+                    // Buscar si ya existe un plan para este curso en la tabla de planes
+                    $plan_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table_plans WHERE course_id = %d ORDER BY id ASC LIMIT 1", $c_id ) );
+
+                    // Si no está por course_id directo, revisar el meta '_alezux_linked_plan_id' del curso
+                    if ( ! $plan_id ) {
+                        $meta_plan = (int) get_post_meta( $c_id, '_alezux_linked_plan_id', true );
+                        if ( $meta_plan > 0 && $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table_plans WHERE id = %d", $meta_plan ) ) ) {
+                            $plan_id = $meta_plan;
+                        }
+                    }
+
+                    // Si aún no existe ningún plan para este curso, auto-crear un plan en $table_plans
+                    if ( ! $plan_id ) {
+                        $course_post = get_post( $c_id );
+                        if ( $course_post ) {
+                            $price = get_post_meta( $c_id, '_course_price', true ) ?: ( get_post_meta( $c_id, '_alezux_course_price', true ) ?: 49 );
+                            $gen_token = wp_generate_password( 32, false );
+                            $wpdb->insert( $table_plans, [
+                                'name'         => $course_post->post_title,
+                                'course_id'    => $c_id,
+                                'total_quotas' => 1,
+                                'quota_amount' => floatval( $price ),
+                                'frequency'    => 'unique',
+                                'token'        => $gen_token,
+                                'created_at'   => current_time( 'mysql' ),
+                            ] );
+                            $plan_id = (int) $wpdb->insert_id;
+                            if ( $plan_id > 0 ) {
+                                update_post_meta( $c_id, '_alezux_linked_plan_id', $plan_id );
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Asegurar que el plan tenga token asignado
+            if ( $plan_id > 0 ) {
+                $curr_token = $wpdb->get_var( $wpdb->prepare( "SELECT token FROM $table_plans WHERE id = %d", $plan_id ) );
+                if ( empty( $curr_token ) ) {
+                    $new_token = wp_generate_password( 32, false );
+                    $wpdb->update( $table_plans, [ 'token' => $new_token ], [ 'id' => $plan_id ] );
+                }
+            }
+
             if ( ! $plan_id ) {
                 wp_die( 'Error: Enlace de pago inválido (Token no encontrado o ID faltante).', 'Error de Checkout' );
             }

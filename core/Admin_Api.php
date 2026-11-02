@@ -746,12 +746,28 @@ class Admin_Api {
 				$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
 				$plans_table_exists = ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table );
 			}
-			if ( $plans_table_exists && ! empty( $linked_plan_id ) ) {
+			if ( $plans_table_exists ) {
 				$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
-				$token = $wpdb->get_var( $wpdb->prepare( "SELECT token FROM $plans_table WHERE id = %d", $linked_plan_id ) );
-				if ( $token ) {
-					$checkout_url = home_url( "/?alezux_action=checkout&token={$token}&plan_id={$linked_plan_id}" );
+				if ( ! empty( $linked_plan_id ) ) {
+					$token = $wpdb->get_var( $wpdb->prepare( "SELECT token FROM $plans_table WHERE id = %d", $linked_plan_id ) );
+				} else {
+					$plan_row = $wpdb->get_row( $wpdb->prepare( "SELECT id, token FROM $plans_table WHERE course_id = %d ORDER BY id ASC LIMIT 1", $post->ID ) );
+					if ( $plan_row ) {
+						$linked_plan_id = (int) $plan_row->id;
+						$token = $plan_row->token;
+					}
 				}
+				if ( ! empty( $linked_plan_id ) ) {
+					if ( empty( $token ) ) {
+						$token = wp_generate_password( 32, false );
+						$wpdb->update( $plans_table, [ 'token' => $token ], [ 'id' => $linked_plan_id ] );
+					}
+					$checkout_url = home_url( "/?alezux_action=checkout&token={$token}&plan_id={$linked_plan_id}&course_id={$post->ID}" );
+				} else {
+					$checkout_url = home_url( "/?alezux_action=checkout&course_id={$post->ID}" );
+				}
+			} else {
+				$checkout_url = home_url( "/?alezux_action=checkout&course_id={$post->ID}" );
 			}
 
 			// Contar estudiantes reales (Optimizado con cache en post_meta para evitar escaneos pesados de tabla)

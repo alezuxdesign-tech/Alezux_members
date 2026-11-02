@@ -415,8 +415,9 @@
 .courseCoverWrapper {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 11;
-  min-height: 205px;
+  height: 450px !important;
+  min-height: 450px !important;
+  max-height: 450px !important;
   background: #000000;
   overflow: hidden;
 }
