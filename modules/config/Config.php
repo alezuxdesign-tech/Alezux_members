@@ -195,6 +195,11 @@ class Config extends Module_Base {
 			return $template;
 		}
 
+		// Si la petición contiene parámetros del Campus Virtual (?tab=courses, etc.), NUNCA es login: dejar que cargue el Campus
+		if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
+			return $template;
+		}
+
 		$login_page_id = get_option( 'alezux_login_page_id' );
 		$is_login_page = false;
 
@@ -207,7 +212,7 @@ class Config extends Module_Base {
 		}
 
 		if ( ! $is_login_page && isset( $_SERVER['REQUEST_URI'] ) ) {
-			$uri = trim( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' );
+			$uri = trim( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) ?: '', '/' );
 			if ( in_array( $uri, [ 'login', 'iniciar-sesion', 'acceso', 'members-login', 'auth', 'registro', 'register' ], true ) ) {
 				$is_login_page = true;
 			}
@@ -223,7 +228,14 @@ class Config extends Module_Base {
 					$portal_url    = function_exists( 'crezca_get_student_portal_url' ) ? crezca_get_student_portal_url() : home_url();
 					$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
 					$default_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
-					wp_safe_redirect( add_query_arg( 'tab', $default_view, $portal_url ) );
+					$target_url    = add_query_arg( 'tab', $default_view, $portal_url );
+
+					// Evitar bucle infinito si la URL actual ya es la URL de destino
+					$is_secure   = function_exists( 'crezca_is_ssl' ) ? crezca_is_ssl() : is_ssl();
+					$current_req = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+					if ( untrailingslashit( $current_req ) !== untrailingslashit( $target_url ) ) {
+						wp_safe_redirect( $target_url );
+					}
 				}
 				exit;
 			}

@@ -616,32 +616,13 @@ function crezca_redirect_student_tabs_to_campus() {
 	}
 
 	if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
-		$login_page_id = (int) get_option( 'alezux_login_page_id' );
-		if ( $login_page_id > 0 && is_page( $login_page_id ) ) {
-			return;
-		}
-
 		// Si no está autenticado, redirigir a login directamente
 		if ( ! is_user_logged_in() ) {
 			$login_url     = crezca_get_login_page_url();
-			$portal_url    = crezca_get_student_portal_url();
-			$redirect_dest = add_query_arg( 'tab', sanitize_text_field( $_GET['tab'] ), $portal_url );
-			wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $redirect_dest ), $login_url ) );
+			$is_secure     = crezca_is_ssl();
+			$current_req   = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+			wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_req ), $login_url ) );
 			exit;
-		}
-
-		$portal_url     = crezca_get_student_portal_url();
-		$portal_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
-
-		// Si no estamos en la página del portal del estudiante, redirigir
-		if ( $portal_page_id > 0 && ! is_page( $portal_page_id ) ) {
-			$target = add_query_arg( 'tab', sanitize_text_field( $_GET['tab'] ), $portal_url );
-			$is_secure = crezca_is_ssl();
-			$current_req = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
-			if ( untrailingslashit( $current_req ) !== untrailingslashit( $target ) ) {
-				wp_safe_redirect( $target );
-				exit;
-			}
 		}
 	}
 }
@@ -656,7 +637,6 @@ function crezca_student_portal_canvas_template( $template ) {
 	}
 
 	$portal_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
-	$login_page_id  = (int) get_option( 'alezux_login_page_id' );
 	global $post;
 
 	$is_portal = false;
@@ -665,9 +645,7 @@ function crezca_student_portal_canvas_template( $template ) {
 	} elseif ( is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'crezca_aula' ) || has_shortcode( $post->post_content, 'alezux_aula' ) ) ) {
 		$is_portal = true;
 	} elseif ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
-		if ( ! ( $login_page_id > 0 && is_page( $login_page_id ) ) ) {
-			$is_portal = true;
-		}
+		$is_portal = true;
 	}
 
 	if ( $is_portal ) {
