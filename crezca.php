@@ -414,19 +414,26 @@ function crezca_get_login_page_url() {
  * Obtener la URL del Campus Virtual / Portal del Estudiante
  */
 function crezca_get_student_portal_url() {
-	$student_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
-	$login_page_id   = (int) get_option( 'alezux_login_page_id' );
+	$student_page_id  = (int) get_option( 'alezux_student_dashboard_page_id' );
+	$login_page_id    = (int) get_option( 'alezux_login_page_id' );
+	$restricted_pages = (array) get_option( 'alezux_restricted_pages', [] );
 
-	if ( $student_page_id && $student_page_id !== $login_page_id && get_post_status( $student_page_id ) === 'publish' ) {
-		return get_permalink( $student_page_id );
+	// Si student_page_id es válido, no es login, no está restringida a administradores y no es el panel admin 'estudiantes'
+	if ( $student_page_id && $student_page_id !== $login_page_id && ! in_array( $student_page_id, $restricted_pages, true ) && get_post_status( $student_page_id ) === 'publish' ) {
+		$post_obj = get_post( $student_page_id );
+		if ( $post_obj && $post_obj->post_name !== 'estudiantes' ) {
+			return get_permalink( $student_page_id );
+		}
 	}
 
 	global $wpdb;
-	$exclude_sql = ( $login_page_id > 0 ) ? "AND ID != {$login_page_id}" : '';
+	$exclude_ids = array_filter( array_merge( [ $login_page_id ], $restricted_pages ) );
+	$exclude_sql = ! empty( $exclude_ids ) ? "AND ID NOT IN (" . implode( ',', array_map( 'intval', $exclude_ids ) ) . ")" : '';
 	$found_page_id = $wpdb->get_var( "
 		SELECT ID FROM {$wpdb->posts}
 		WHERE post_type = 'page'
 		  AND post_status = 'publish'
+		  AND post_name != 'estudiantes'
 		  {$exclude_sql}
 		  AND (post_content LIKE '%[crezca_aula%' OR post_content LIKE '%[alezux_aula%')
 		ORDER BY ID ASC LIMIT 1
@@ -437,10 +444,10 @@ function crezca_get_student_portal_url() {
 		return get_permalink( $found_page_id );
 	}
 
-	$slugs = [ 'campus', 'aula', 'cursos', 'estudiantes', 'mi-cuenta' ];
+	$slugs = [ 'campus', 'aula', 'aula-virtual', 'cursos', 'mi-aula', 'mi-cuenta' ];
 	foreach ( $slugs as $slug ) {
 		$page = get_page_by_path( $slug );
-		if ( $page && (int) $page->ID !== $login_page_id && $page->post_status === 'publish' ) {
+		if ( $page && (int) $page->ID !== $login_page_id && ! in_array( (int) $page->ID, $restricted_pages, true ) && $page->post_status === 'publish' ) {
 			if ( strpos( $page->post_content, 'crezca_aula' ) === false && strpos( $page->post_content, 'alezux_aula' ) === false ) {
 				wp_update_post( [
 					'ID'           => $page->ID,
@@ -561,6 +568,7 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 	<script id="crezca-student-portal-data">
 		window.crezca_student_data = <?php echo json_encode( $data ); ?>;
 		window.crezca_admin_data = window.crezca_admin_data || window.crezca_student_data;
+		console.log('%c[Crezca Aula Virtual] 🎓 Inicializando Campus Virtual...', 'color: #8b5cf6; font-weight: bold; font-size: 13px;', window.crezca_student_data);
 	</script>
 	<style id="crezca-dynamic-branding">
 		:root {

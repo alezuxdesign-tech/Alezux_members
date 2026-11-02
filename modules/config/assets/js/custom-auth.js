@@ -210,6 +210,13 @@
         formData.append('remember', remember);
         formData.append('redirect_to', redirectTo);
 
+        console.log('%c[Alezux Auth] 📤 Enviando credenciales de acceso...', 'color: #3b82f6; font-weight: bold;', {
+          username: username.trim(),
+          remember: remember,
+          redirectTo: redirectTo,
+          endpoint: config.ajaxUrl
+        });
+
         fetch(config.ajaxUrl, {
           method: 'POST',
           body: formData,
@@ -217,19 +224,23 @@
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
+          console.log('%c[Alezux Auth] 📥 Respuesta del servidor:', 'color: #10b981; font-weight: bold;', data);
           setButtonLoading(submitBtn, false);
           if (data && data.success) {
             showAlert(views.login, 'success', '¡Inicio de sesión exitoso! Redirigiendo...');
             const targetUrl = (data.data && data.data.redirect) ? data.data.redirect : (redirectTo || '/');
+            console.log('%c[Alezux Auth] 🚀 Redirigiendo navegador a:', 'color: #8b5cf6; font-weight: bold;', targetUrl);
             setTimeout(function() {
               window.location.assign(targetUrl);
             }, 600);
           } else {
             const msg = (data && data.data && data.data.message) ? data.data.message : 'Usuario o contraseña incorrectos.';
+            console.warn('[Alezux Auth] ⚠️ Error de autenticación devuelto:', msg);
             showAlert(views.login, 'error', msg);
           }
         })
         .catch(function(err) {
+          console.error('[Alezux Auth] ❌ Error en petición fetch:', err);
           setButtonLoading(submitBtn, false);
           showAlert(views.login, 'error', 'Error al conectar con el servidor. Intenta de nuevo.');
         });

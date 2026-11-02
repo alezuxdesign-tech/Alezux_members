@@ -79,11 +79,14 @@ class Config extends Module_Base {
             return;
         }
 
+        // Si la petición contiene parámetros del Aula Virtual (?tab=courses, etc.), NUNCA bloquear con check_restricted_pages
+        if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
+            return;
+        }
+
         if ( is_page( $restricted_pages ) ) {
             if ( ! is_user_logged_in() || ! current_user_can( 'administrator' ) ) {
-                // Redirigir a Home o Login. Por seguridad y UX, mejor home o login.
-                // Si redirigimos a login, el usuario podría intentar loguearse y seguir sin permiso.
-                // Redirigir al inicio es más seguro/claro: "No tienes acceso".
+                header( 'X-Crezca-Redirect: check_restricted_pages_to_home' );
                 wp_redirect( home_url() );
                 exit;
             }
