@@ -103,9 +103,16 @@ interface DeleteConfirmState {
 interface CoursesViewProps {
   onNavigateToInstructors?: () => void;
   isInstructor?: boolean;
+  resetSignal?: number;
+  onSelectedCourseChange?: (course: Course | null) => void;
 }
 
-export function CoursesView({ onNavigateToInstructors, isInstructor = false }: CoursesViewProps = {}) {
+export function CoursesView({ 
+  onNavigateToInstructors, 
+  isInstructor = false,
+  resetSignal = 0,
+  onSelectedCourseChange,
+}: CoursesViewProps = {}) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [availablePlans, setAvailablePlans] = useState<FinancePlan[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -132,6 +139,19 @@ export function CoursesView({ onNavigateToInstructors, isInstructor = false }: C
   // Modo de Vista: "grid" (catálogo de tarjetas) | "builder" (página de edición del curso)
   const [viewMode, setViewMode] = useState<"grid" | "builder">("grid");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+
+  // Reseteo rápido hacia la lista principal cuando se pulsa Cursos en el sidebar
+  useEffect(() => {
+    if (resetSignal > 0) {
+      setViewMode("grid");
+      setSelectedCourse(null);
+      setBuilderTab("curriculum");
+      if (onSelectedCourseChange) {
+        onSelectedCourseChange(null);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [resetSignal]);
 
   // Sub-tab dentro del editor: "curriculum" (módulos y lecciones) | "settings" (configuración general)
   const [builderTab, setBuilderTab] = useState<"curriculum" | "settings">("curriculum");
@@ -326,6 +346,9 @@ export function CoursesView({ onNavigateToInstructors, isInstructor = false }: C
     setBuilderTab("curriculum");
     setSavedSuccess(false);
     setViewMode("builder");
+    if (onSelectedCourseChange) {
+      onSelectedCourseChange(course);
+    }
   };
 
   // Manejador del Switch de visibilidad de textos en tarjetas de módulos
@@ -488,6 +511,10 @@ export function CoursesView({ onNavigateToInstructors, isInstructor = false }: C
       );
     }
     setViewMode("grid");
+    setSelectedCourse(null);
+    if (onSelectedCourseChange) {
+      onSelectedCourseChange(null);
+    }
   };
 
   // Guardar todos los datos del curso (metadatos + currículum)

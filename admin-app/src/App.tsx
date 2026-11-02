@@ -178,6 +178,8 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
   const [appMode, setAppMode] = useState<AppMode>(calculatedInitialMode);
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTabId>("overview");
   const [activeStudentTab, setActiveStudentTab] = useState<StudentTabId>(defaultStudentTab);
+  const [adminCoursesResetSignal, setAdminCoursesResetSignal] = useState(0);
+  const [adminEditingCourse, setAdminEditingCourse] = useState<Course | null>(null);
 
   // Estado del Estudiante
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -620,7 +622,16 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 key={item.id}
                 type="button"
                 className={`${styles.navItem} ${isActive ? styles.active : ""}`}
-                onClick={() => setActiveInstructorTab(item.id)}
+                onClick={() => {
+                  if (item.id === "courses") {
+                    setAdminCoursesResetSignal((prev) => prev + 1);
+                    setAdminEditingCourse(null);
+                  }
+                  setActiveInstructorTab(item.id);
+                  if (mainAreaRef.current) {
+                    mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
+                  }
+                }}
                 title={isCollapsed ? item.label : undefined}
               >
                 {isActive && <span className={styles.activeIndicator} />}
@@ -638,7 +649,16 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 key={item.id}
                 type="button"
                 className={`${styles.navItem} ${isActive ? styles.active : ""}`}
-                onClick={() => setActiveAdminTab(item.id)}
+                onClick={() => {
+                  if (item.id === "courses") {
+                    setAdminCoursesResetSignal((prev) => prev + 1);
+                    setAdminEditingCourse(null);
+                  }
+                  setActiveAdminTab(item.id);
+                  if (mainAreaRef.current) {
+                    mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
+                  }
+                }}
                 title={isCollapsed ? item.label : undefined}
               >
                 {isActive && <span className={styles.activeIndicator} />}
@@ -651,7 +671,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             );
           })}
 
-          {/* Menú para Estudiante (Dashboard, Cursos, Logros, Comunidad) */}
+          {/* Menú para Estudiante (Dashboard, Cursos, Comunidad) */}
           {appMode === "student" && studentNavItems.map((item) => {
             const isActive = activeStudentTab === item.id;
             return (
@@ -660,9 +680,14 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 type="button"
                 className={`${styles.navItem} ${isActive ? styles.active : ""}`}
                 onClick={() => {
+                  // Regreso directo e instantáneo a la raíz de la pestaña (sin tener que pulsar atrás 3 veces)
+                  setSelectedCourse(null);
+                  setSelectedSection(null);
+                  setSelectedLesson(null);
+                  setSelectedTopic(null);
                   setActiveStudentTab(item.id);
-                  if (item.id === "courses" && !selectedCourse) {
-                    // Mantener catálogo
+                  if (mainAreaRef.current) {
+                    mainAreaRef.current.scrollTo({ top: 0, behavior: "smooth" });
                   }
                 }}
                 title={isCollapsed ? item.label : undefined}
@@ -900,9 +925,69 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             <ChevronRight size={14} />
 
             {appMode === "admin" ? (
-              <span className={styles.headerTitle}>{currentAdminNav.label}</span>
+              activeAdminTab === "courses" && adminEditingCourse ? (
+                <>
+                  <span
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      setAdminCoursesResetSignal((prev) => prev + 1);
+                      setAdminEditingCourse(null);
+                    }}
+                    title="Volver al catálogo de cursos"
+                    className={styles.breadcrumbLink}
+                  >
+                    Cursos
+                  </span>
+                  <ChevronRight size={14} />
+                  <span className={styles.headerTitle}>{adminEditingCourse.title}</span>
+                </>
+              ) : (
+                <span 
+                  className={styles.headerTitle}
+                  style={activeAdminTab === "courses" ? { cursor: "pointer" } : undefined}
+                  onClick={() => {
+                    if (activeAdminTab === "courses") {
+                      setAdminCoursesResetSignal((prev) => prev + 1);
+                      setAdminEditingCourse(null);
+                    }
+                  }}
+                  title={activeAdminTab === "courses" ? "Ir al listado principal de cursos" : undefined}
+                >
+                  {currentAdminNav.label}
+                </span>
+              )
             ) : appMode === "instructor" ? (
-              <span className={styles.headerTitle}>{currentInstructorNav.label}</span>
+              activeInstructorTab === "courses" && adminEditingCourse ? (
+                <>
+                  <span
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      setAdminCoursesResetSignal((prev) => prev + 1);
+                      setAdminEditingCourse(null);
+                    }}
+                    title="Volver a mis cursos"
+                    className={styles.breadcrumbLink}
+                  >
+                    Mis Cursos
+                  </span>
+                  <ChevronRight size={14} />
+                  <span className={styles.headerTitle}>{adminEditingCourse.title}</span>
+                </>
+              ) : (
+                <span 
+                  className={styles.headerTitle}
+                  style={activeInstructorTab === "courses" ? { cursor: "pointer" } : undefined}
+                  onClick={() => {
+                    if (activeInstructorTab === "courses") {
+                      setAdminCoursesResetSignal((prev) => prev + 1);
+                      setAdminEditingCourse(null);
+                    }
+                  }}
+                  title={activeInstructorTab === "courses" ? "Ir al listado de cursos" : undefined}
+                >
+                  {currentInstructorNav.label}
+                </span>
+              )
             ) : (
               <>
                 {activeStudentTab === "dashboard" && <span className={styles.headerTitle}>Dashboard</span>}
@@ -913,8 +998,10 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                   ) : !selectedLesson ? (
                     <>
                       <span 
-                        style={{ cursor: "pointer", color: "var(--text-muted)" }} 
+                        style={{ cursor: "pointer" }} 
                         onClick={handleBackToCatalog}
+                        title="Volver al catálogo de cursos"
+                        className={styles.breadcrumbLink}
                       >
                         Cursos
                       </span>
@@ -924,8 +1011,19 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                   ) : (
                     <>
                       <span 
-                        style={{ cursor: "pointer", color: "var(--text-muted)" }} 
+                        style={{ cursor: "pointer" }} 
+                        onClick={handleBackToCatalog}
+                        title="Volver al catálogo de cursos"
+                        className={styles.breadcrumbLink}
+                      >
+                        Cursos
+                      </span>
+                      <ChevronRight size={14} />
+                      <span 
+                        style={{ cursor: "pointer" }} 
                         onClick={handleBackToCourse}
+                        title={`Volver a ${selectedCourse.title}`}
+                        className={styles.breadcrumbLink}
                       >
                         {selectedCourse.title}
                       </span>
@@ -1073,7 +1171,12 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
           {appMode === "instructor" && (
             <>
               {activeInstructorTab === "courses" && (
-                <CoursesView onNavigateToInstructors={() => {}} isInstructor={true} />
+                <CoursesView 
+                  onNavigateToInstructors={() => {}} 
+                  isInstructor={true} 
+                  resetSignal={adminCoursesResetSignal}
+                  onSelectedCourseChange={setAdminEditingCourse}
+                />
               )}
               {activeInstructorTab === "students" && (
                 <StudentsView isInstructor={true} />
@@ -1104,7 +1207,13 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
           {appMode === "admin" && (
             <>
               {activeAdminTab === "overview" && <OverviewView onNavigate={(tab) => setActiveAdminTab(tab as AdminTabId)} />}
-              {activeAdminTab === "courses" && <CoursesView onNavigateToInstructors={() => setActiveAdminTab("instructors")} />}
+              {activeAdminTab === "courses" && (
+                <CoursesView 
+                  onNavigateToInstructors={() => setActiveAdminTab("instructors")}
+                  resetSignal={adminCoursesResetSignal}
+                  onSelectedCourseChange={setAdminEditingCourse}
+                />
+              )}
               {activeAdminTab === "students" && <StudentsView />}
               {activeAdminTab === "instructors" && <InstructorsView />}
               {activeAdminTab === "events" && <EventsView />}
