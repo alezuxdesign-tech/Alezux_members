@@ -212,16 +212,17 @@
 
         fetch(config.ajaxUrl, {
           method: 'POST',
-          body: formData
+          body: formData,
+          credentials: 'same-origin'
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
           setButtonLoading(submitBtn, false);
           if (data && data.success) {
             showAlert(views.login, 'success', '¡Inicio de sesión exitoso! Redirigiendo...');
-            const targetUrl = (data.data && data.data.redirect) ? data.data.redirect : redirectTo;
+            const targetUrl = (data.data && data.data.redirect) ? data.data.redirect : (redirectTo || '/');
             setTimeout(function() {
-              window.location.href = targetUrl;
+              window.location.assign(targetUrl);
             }, 600);
           } else {
             const msg = (data && data.data && data.data.message) ? data.data.message : 'Usuario o contraseña incorrectos.';
@@ -270,7 +271,8 @@
 
         fetch(config.ajaxUrl, {
           method: 'POST',
-          body: formData
+          body: formData,
+          credentials: 'same-origin'
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
@@ -316,7 +318,8 @@
 
         fetch(config.ajaxUrl, {
           method: 'POST',
-          body: formData
+          body: formData,
+          credentials: 'same-origin'
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
@@ -374,7 +377,8 @@
 
         fetch(config.ajaxUrl, {
           method: 'POST',
-          body: formData
+          body: formData,
+          credentials: 'same-origin'
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {

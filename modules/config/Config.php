@@ -214,6 +214,20 @@ class Config extends Module_Base {
 		}
 
 		if ( $is_login_page ) {
+			// Si el usuario ya está autenticado, no volver a mostrarle el login: redirigir a su panel/campus
+			$action = isset( $_REQUEST['action'] ) ? sanitize_text_field( $_REQUEST['action'] ) : 'login';
+			if ( is_user_logged_in() && ! isset( $_GET['preview_auth'] ) && ! isset( $_GET['preview'] ) && ! in_array( $action, [ 'rp', 'resetpass' ], true ) ) {
+				if ( current_user_can( 'administrator' ) || current_user_can( 'manage_options' ) ) {
+					wp_safe_redirect( admin_url( 'admin.php?page=crezca' ) );
+				} else {
+					$portal_url    = function_exists( 'crezca_get_student_portal_url' ) ? crezca_get_student_portal_url() : home_url();
+					$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+					$default_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
+					wp_safe_redirect( add_query_arg( 'tab', $default_view, $portal_url ) );
+				}
+				exit;
+			}
+
 			$this->render_auth_page( true );
 			exit;
 		}
@@ -478,43 +492,70 @@ class Config extends Module_Base {
 			}
 		}
 
+		$remember = ! empty( $_POST['remember'] ) ? true : false;
 		$info = [];
 		$info['user_login']    = $login_identifier;
 		$info['user_password'] = $password;
-		$info['remember']      = ! empty( $_POST['remember'] ) ? true : false;
+		$info['remember']      = $remember;
 
-		$user_signon = wp_signon( $info, is_ssl() );
+		$is_secure = function_exists( 'crezca_is_ssl' ) ? crezca_is_ssl() : is_ssl();
+		if ( $is_secure && ! isset( $_SERVER['HTTPS'] ) ) {
+			$_SERVER['HTTPS'] = 'on';
+		}
+
+		$user_signon = wp_signon( $info, $is_secure );
 
 		if ( is_wp_error( $user_signon ) ) {
 			wp_send_json_error( [ 'message' => 'Usuario o contraseña incorrectos.' ] );
 		} else {
-            // Determinar Redirección
-            $redirect_url = home_url();
-            
-            // 1. Redirección General
-            if ( ! empty( $_POST['redirect_to'] ) ) {
-                $redirect_url = esc_url_raw( $_POST['redirect_to'] );
-            }
+			// Establecer usuario actual y cookies de autenticación de forma explícita
+			wp_set_current_user( $user_signon->ID, $user_signon->user_login );
+			wp_set_auth_cookie( $user_signon->ID, $remember, $is_secure );
+			do_action( 'wp_login', $user_signon->user_login, $user_signon );
 
-            // 2. Lógica por Roles (Admin a Academia, Estudiantes a Cursos/Dashboard)
-            $roles = (array) $user_signon->roles;
+			if ( function_exists( 'do_action' ) ) {
+				do_action( 'litespeed_disable_cache' );
+			}
+			nocache_headers();
 
-            if ( in_array( 'administrator', $roles, true ) || user_can( $user_signon, 'manage_options' ) ) {
-                if ( ! empty( $_POST['redirect_admin'] ) ) {
-                    $redirect_url = esc_url_raw( $_POST['redirect_admin'] );
-                } else {
-                    $redirect_url = admin_url( 'admin.php?page=crezca' );
-                }
-            } else {
-                if ( ! empty( $_POST['redirect_student'] ) ) {
-                    $redirect_url = esc_url_raw( $_POST['redirect_student'] );
-                } else {
-                    $portal_url    = function_exists( 'crezca_get_student_portal_url' ) ? crezca_get_student_portal_url() : home_url();
-                    $auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
-                    $default_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
-                    $redirect_url  = add_query_arg( 'tab', $default_view, $portal_url );
-                }
-            }
+			// Determinar Redirección
+			$redirect_url = '';
+			$login_url    = function_exists( 'crezca_get_login_page_url' ) ? crezca_get_login_page_url() : home_url( '/login/' );
+
+			// 1. Redirección solicitada (si existe y no es la propia página de login)
+			if ( ! empty( $_POST['redirect_to'] ) ) {
+				$candidate = esc_url_raw( $_POST['redirect_to'] );
+				$candidate_path = trim( parse_url( $candidate, PHP_URL_PATH ) ?: '', '/' );
+				$login_path     = trim( parse_url( $login_url, PHP_URL_PATH ) ?: '', '/' );
+				if ( $candidate_path !== $login_path && ! in_array( $candidate_path, [ 'login', 'iniciar-sesion', 'acceso', 'auth', 'wp-login.php' ], true ) ) {
+					$redirect_url = $candidate;
+				}
+			}
+
+			// 2. Lógica por Roles (Admin a Academia, Estudiantes a Cursos/Dashboard)
+			$roles = (array) $user_signon->roles;
+
+			if ( in_array( 'administrator', $roles, true ) || user_can( $user_signon, 'manage_options' ) ) {
+				if ( ! empty( $_POST['redirect_admin'] ) ) {
+					$redirect_url = esc_url_raw( $_POST['redirect_admin'] );
+				} elseif ( empty( $redirect_url ) ) {
+					$redirect_url = admin_url( 'admin.php?page=crezca' );
+				}
+			} else {
+				if ( ! empty( $_POST['redirect_student'] ) ) {
+					$redirect_url = esc_url_raw( $_POST['redirect_student'] );
+				} elseif ( empty( $redirect_url ) ) {
+					$portal_url    = function_exists( 'crezca_get_student_portal_url' ) ? crezca_get_student_portal_url() : home_url();
+					$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+					$default_view  = ! empty( $auth_settings['student_default_view'] ) ? $auth_settings['student_default_view'] : 'courses';
+					$redirect_url  = add_query_arg( 'tab', $default_view, $portal_url );
+				}
+			}
+
+			if ( empty( $redirect_url ) ) {
+				$portal_url   = function_exists( 'crezca_get_student_portal_url' ) ? crezca_get_student_portal_url() : home_url();
+				$redirect_url = add_query_arg( 'tab', 'courses', $portal_url );
+			}
 
 			wp_send_json_success( [ 'redirect' => $redirect_url ] );
 		}
@@ -604,18 +645,28 @@ class Config extends Module_Base {
 		}
 
 		// Autenticación automática tras el registro
+		$is_secure = function_exists( 'crezca_is_ssl' ) ? crezca_is_ssl() : is_ssl();
+		if ( $is_secure && ! isset( $_SERVER['HTTPS'] ) ) {
+			$_SERVER['HTTPS'] = 'on';
+		}
 		wp_set_current_user( $user_id, $username );
-		wp_set_auth_cookie( $user_id, true, is_ssl() );
+		wp_set_auth_cookie( $user_id, true, $is_secure );
 		do_action( 'wp_login', $username, get_userdata( $user_id ) );
 
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'litespeed_disable_cache' );
+		}
+		nocache_headers();
+
 		// Redirección
-		$redirect_url = home_url();
+		$portal_url   = function_exists( 'crezca_get_student_portal_url' ) ? crezca_get_student_portal_url() : home_url();
+		$redirect_url = add_query_arg( 'tab', 'courses', $portal_url );
+
 		if ( ! empty( $_POST['redirect_to'] ) ) {
-			$redirect_url = esc_url_raw( $_POST['redirect_to'] );
-		} else {
-			$student_page = get_option( 'alezux_student_dashboard_page_id' );
-			if ( $student_page ) {
-				$redirect_url = get_permalink( $student_page );
+			$candidate = esc_url_raw( $_POST['redirect_to'] );
+			$candidate_path = trim( parse_url( $candidate, PHP_URL_PATH ) ?: '', '/' );
+			if ( ! in_array( $candidate_path, [ 'login', 'iniciar-sesion', 'acceso', 'auth', 'wp-login.php' ], true ) ) {
+				$redirect_url = $candidate;
 			}
 		}
 

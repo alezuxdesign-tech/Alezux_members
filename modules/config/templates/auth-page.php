@@ -18,7 +18,14 @@ $logo_img        = ! empty( $auth_settings['logo_url'] ) ? $auth_settings['logo_
 $logo_width      = ! empty( $auth_settings['logo_width'] ) ? intval( $auth_settings['logo_width'] ) : 160;
 $site_icon       = get_site_icon_url( 64 );
 
-$redirect_to     = ! empty( $_REQUEST['redirect_to'] ) ? esc_url_raw( $_REQUEST['redirect_to'] ) : home_url();
+$raw_redirect    = ! empty( $_REQUEST['redirect_to'] ) ? esc_url_raw( $_REQUEST['redirect_to'] ) : '';
+$redirect_to     = '';
+if ( ! empty( $raw_redirect ) ) {
+	$req_path = trim( parse_url( $raw_redirect, PHP_URL_PATH ) ?: '', '/' );
+	if ( ! in_array( $req_path, [ 'login', 'iniciar-sesion', 'acceso', 'auth', 'wp-login.php' ], true ) ) {
+		$redirect_to = $raw_redirect;
+	}
+}
 $action          = isset( $_REQUEST['action'] ) ? sanitize_text_field( $_REQUEST['action'] ) : 'login';
 $reset_key       = isset( $_REQUEST['key'] ) ? sanitize_text_field( $_REQUEST['key'] ) : '';
 $reset_login     = isset( $_REQUEST['login'] ) ? sanitize_user( $_REQUEST['login'] ) : '';

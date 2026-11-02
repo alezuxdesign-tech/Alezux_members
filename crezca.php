@@ -33,6 +33,33 @@ define( 'CREZCA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CREZCA_URL', plugin_dir_url( __FILE__ ) );
 define( 'CREZCA_MODULES_PATH', CREZCA_PATH . 'modules/' );
 
+/**
+ * Detectar SSL real de forma robusta soportando proxys inversos (Hostinger, Cloudflare, Nginx, LiteSpeed, etc.)
+ */
+function crezca_is_ssl() {
+	if ( is_ssl() ) {
+		return true;
+	}
+	if ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && 'https' === strtolower( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) ) {
+		return true;
+	}
+	if ( isset( $_SERVER['HTTP_X_FORWARDED_SSL'] ) && 'on' === strtolower( $_SERVER['HTTP_X_FORWARDED_SSL'] ) ) {
+		return true;
+	}
+	if ( isset( $_SERVER['HTTP_CF_VISITOR'] ) && str_contains( $_SERVER['HTTP_CF_VISITOR'], '"scheme":"https"' ) ) {
+		return true;
+	}
+	if ( ( function_exists( 'home_url' ) && str_starts_with( home_url(), 'https://' ) ) || ( function_exists( 'site_url' ) && str_starts_with( site_url(), 'https://' ) ) ) {
+		return true;
+	}
+	return false;
+}
+
+// Asegurar variable de entorno HTTPS para WordPress y emisión de cookies seguras en Hostinger/Proxies
+if ( crezca_is_ssl() && ! isset( $_SERVER['HTTPS'] ) ) {
+	$_SERVER['HTTPS'] = 'on';
+}
+
 // Aliases de constantes para retrocompatibilidad
 if ( ! defined( 'ALEZUX_MEMBERS_VERSION' ) ) { define( 'ALEZUX_MEMBERS_VERSION', CREZCA_VERSION ); }
 if ( ! defined( 'ALEZUX_MEMBERS_PATH' ) ) { define( 'ALEZUX_MEMBERS_PATH', CREZCA_PATH ); }
@@ -388,15 +415,19 @@ function crezca_get_login_page_url() {
  */
 function crezca_get_student_portal_url() {
 	$student_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
-	if ( $student_page_id && get_post_status( $student_page_id ) === 'publish' ) {
+	$login_page_id   = (int) get_option( 'alezux_login_page_id' );
+
+	if ( $student_page_id && $student_page_id !== $login_page_id && get_post_status( $student_page_id ) === 'publish' ) {
 		return get_permalink( $student_page_id );
 	}
 
 	global $wpdb;
+	$exclude_sql = ( $login_page_id > 0 ) ? "AND ID != {$login_page_id}" : '';
 	$found_page_id = $wpdb->get_var( "
 		SELECT ID FROM {$wpdb->posts}
 		WHERE post_type = 'page'
 		  AND post_status = 'publish'
+		  {$exclude_sql}
 		  AND (post_content LIKE '%[crezca_aula%' OR post_content LIKE '%[alezux_aula%')
 		ORDER BY ID ASC LIMIT 1
 	" );
@@ -409,7 +440,7 @@ function crezca_get_student_portal_url() {
 	$slugs = [ 'campus', 'aula', 'cursos', 'estudiantes', 'mi-cuenta' ];
 	foreach ( $slugs as $slug ) {
 		$page = get_page_by_path( $slug );
-		if ( $page && $page->post_status === 'publish' ) {
+		if ( $page && (int) $page->ID !== $login_page_id && $page->post_status === 'publish' ) {
 			if ( strpos( $page->post_content, 'crezca_aula' ) === false && strpos( $page->post_content, 'alezux_aula' ) === false ) {
 				wp_update_post( [
 					'ID'           => $page->ID,
@@ -585,6 +616,11 @@ function crezca_redirect_student_tabs_to_campus() {
 	}
 
 	if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
+		$login_page_id = (int) get_option( 'alezux_login_page_id' );
+		if ( $login_page_id > 0 && is_page( $login_page_id ) ) {
+			return;
+		}
+
 		// Si no está autenticado, redirigir a login directamente
 		if ( ! is_user_logged_in() ) {
 			$login_url     = crezca_get_login_page_url();
@@ -598,9 +634,10 @@ function crezca_redirect_student_tabs_to_campus() {
 		$portal_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
 
 		// Si no estamos en la página del portal del estudiante, redirigir
-		if ( ! is_page( $portal_page_id ) ) {
+		if ( $portal_page_id > 0 && ! is_page( $portal_page_id ) ) {
 			$target = add_query_arg( 'tab', sanitize_text_field( $_GET['tab'] ), $portal_url );
-			$current_req = ( is_ssl() ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+			$is_secure = crezca_is_ssl();
+			$current_req = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
 			if ( untrailingslashit( $current_req ) !== untrailingslashit( $target ) ) {
 				wp_safe_redirect( $target );
 				exit;
@@ -619,6 +656,7 @@ function crezca_student_portal_canvas_template( $template ) {
 	}
 
 	$portal_page_id = (int) get_option( 'alezux_student_dashboard_page_id' );
+	$login_page_id  = (int) get_option( 'alezux_login_page_id' );
 	global $post;
 
 	$is_portal = false;
@@ -627,14 +665,17 @@ function crezca_student_portal_canvas_template( $template ) {
 	} elseif ( is_a( $post, 'WP_Post' ) && ( has_shortcode( $post->post_content, 'crezca_aula' ) || has_shortcode( $post->post_content, 'alezux_aula' ) ) ) {
 		$is_portal = true;
 	} elseif ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
-		$is_portal = true;
+		if ( ! ( $login_page_id > 0 && is_page( $login_page_id ) ) ) {
+			$is_portal = true;
+		}
 	}
 
 	if ( $is_portal ) {
 		// Si es acceso no autenticado al aula, redirigir al login personalizado
 		if ( ! is_user_logged_in() ) {
 			$login_url     = crezca_get_login_page_url();
-			$current_url   = ( is_ssl() ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+			$is_secure     = crezca_is_ssl();
+			$current_url   = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
 			wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
 			exit;
 		}
