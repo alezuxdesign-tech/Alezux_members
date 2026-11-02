@@ -372,6 +372,14 @@ class Email_Engine {
 		
 		// Global
 		$logo_url = get_option( 'alezux_marketing_logo_url' );
+
+		// Proteccion: si el logo de marketing esta vacio o contiene la imagen de fondo del login por error anterior
+		$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+		$bg_image      = ! empty( $auth_settings['bg_image_url'] ) ? $auth_settings['bg_image_url'] : '';
+		if ( empty( $logo_url ) || ( ! empty( $bg_image ) && $logo_url === $bg_image ) ) {
+			$logo_url = get_option( 'alezux_academy_logo', '' );
+		}
+
 		$vars['{{logo_url}}'] = $logo_url ? $logo_url : '';
 		$vars['{{site_name}}'] = get_bloginfo( 'name' );
 		$vars['{{home_url}}'] = home_url();

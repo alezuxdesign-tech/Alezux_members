@@ -238,9 +238,12 @@ body {
 
 #crezca-admin-root button svg,
 #crezca-student-root button svg,
-#alezux-admin-root button svg {
-  flex-shrink: 0;
-  display: inline-block;
-  vertical-align: middle;
+#alezux-admin-root button svg,
+#crezca-student-root [type="button"] svg,
+#crezca-admin-root [type="button"] svg {
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
 }
 

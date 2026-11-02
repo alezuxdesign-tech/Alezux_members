@@ -9,6 +9,8 @@ import {
   Sparkles,
   ExternalLink,
   ShieldAlert,
+  X,
+  ShoppingBag,
 } from "lucide-react";
 import { Course, CourseSection, CourseLesson, CourseTopic } from "../../services/api";
 import styles from "./StudentPortal.module.css";
@@ -39,10 +41,12 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
 }) => {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [lockedItemName, setLockedItemName] = useState("");
+  const [inAppCheckoutUrl, setInAppCheckoutUrl] = useState<string | null>(null);
 
   const sections = course.sections || [];
   const progress = course.progress ?? 0;
   const hasAccess = !!course.hasAccess;
+  const effectiveCheckoutUrl = course.checkoutUrl || (course.id ? `/?alezux_action=checkout&course_id=${course.id}` : null);
 
   // Agrupar los módulos del temario en filas de carrusel delimitadas por separadores
   const carouselRows: CarouselRow[] = useMemo(() => {
@@ -166,16 +170,15 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
               <p>Estás explorando los módulos del curso. Para desbloquear las reproducciones de video y materiales, adquiere tu acceso.</p>
             </div>
           </div>
-          {course.checkoutUrl && (
-            <a 
-              href={course.checkoutUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
+          {effectiveCheckoutUrl && (
+            <button 
+              type="button" 
+              onClick={() => setInAppCheckoutUrl(effectiveCheckoutUrl)}
               className={styles.unlockCourseBtn}
             >
               <Sparkles size={16} />
-              <span>Comprar Curso {course.price ? `($${course.price} USD)` : ""}</span>
-            </a>
+              <span>Adquirir Formación {course.price ? `($${course.price} USD)` : ""}</span>
+            </button>
           )}
         </div>
       )}
@@ -301,6 +304,16 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
       {purchaseModalOpen && (
         <div className={styles.modalBackdrop} onClick={() => setPurchaseModalOpen(false)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            {/* Botón de cerrar tipo 'X' en la esquina superior derecha */}
+            <button
+              type="button"
+              className={styles.modalCloseIconBtn}
+              onClick={() => setPurchaseModalOpen(false)}
+              aria-label="Cerrar ventana de información"
+            >
+              <X size={16} />
+            </button>
+
             <div className={styles.modalIconRing}>
               <Lock size={28} />
             </div>
@@ -313,25 +326,47 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
               <strong>${course.price || 197} USD</strong>
             </div>
             <div className={styles.modalActions}>
-              <button 
-                type="button" 
-                className={styles.modalCloseBtn}
-                onClick={() => setPurchaseModalOpen(false)}
+              <button
+                type="button"
+                className={styles.modalBuyBtn}
+                onClick={() => {
+                  if (effectiveCheckoutUrl) {
+                    setPurchaseModalOpen(false);
+                    setInAppCheckoutUrl(effectiveCheckoutUrl);
+                  }
+                }}
               >
-                Cerrar
+                <ShoppingBag size={16} />
+                <span>Adquirir Formación Ahora</span>
               </button>
-              {course.checkoutUrl && (
-                <a
-                  href={course.checkoutUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.modalBuyBtn}
-                >
-                  <span>Adquirir Acceso Ahora</span>
-                  <ExternalLink size={15} />
-                </a>
-              )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CHECKOUT INTEGRADO SIN SALIR DE LA PLATAFORMA */}
+      {inAppCheckoutUrl && (
+        <div className={styles.inAppCheckoutOverlay} onClick={() => setInAppCheckoutUrl(null)}>
+          <div className={styles.inAppCheckoutContainer} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.inAppCheckoutHeader}>
+              <div className={styles.inAppCheckoutHeaderTitle}>
+                <ShoppingBag size={18} style={{ color: "var(--accent)" }} />
+                <span>Inscripción y Pago Seguro — {course.title}</span>
+              </div>
+              <button
+                type="button"
+                className={styles.inAppCheckoutCloseBtn}
+                onClick={() => setInAppCheckoutUrl(null)}
+                aria-label="Cerrar pasarela de checkout"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <iframe
+              src={inAppCheckoutUrl}
+              title={`Checkout ${course.title}`}
+              className={styles.inAppCheckoutIframe}
+            />
           </div>
         </div>
       )}

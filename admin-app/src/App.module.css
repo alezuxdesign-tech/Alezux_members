@@ -83,8 +83,8 @@
 }
 
 .topbarToggleBtn:hover {
-  color: var(--accent, #7747ff);
-  border-color: var(--accent, #7747ff);
+  color: var(--accent);
+  border-color: var(--accent);
   background: var(--surface-hover, rgba(255, 255, 255, 0.1));
 }
 
@@ -660,8 +660,8 @@
 }
 
 .headerIconButton svg {
-  color: var(--text-secondary, #cbd5e1) !important;
-  stroke: currentColor !important;
+  color: #e2e8f0 !important;
+  stroke: #e2e8f0 !important;
   fill: none !important;
   stroke-width: 2px !important;
   width: 16px !important;
@@ -681,7 +681,7 @@
 
 .headerIconButton:hover svg {
   color: var(--foreground, #ffffff) !important;
-  stroke: currentColor !important;
+  stroke: #ffffff !important;
 }
 
 .headerNotificationBadge {
@@ -691,7 +691,7 @@
   min-width: 16px !important;
   height: 16px !important;
   border-radius: 8px !important;
-  background: var(--accent, #7747ff) !important;
+  background: var(--accent) !important;
   color: var(--accent-foreground, #ffffff) !important;
   font-size: 10px !important;
   font-weight: 700 !important;
@@ -729,21 +729,29 @@
 }
 
 .headerAvatarCircle {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--surface-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  background: var(--surface-muted, #252830) !important;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1)) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #cbd5e1 !important;
+}
+
+.headerAvatarCircle svg {
+  color: #cbd5e1 !important;
+  stroke: #cbd5e1 !important;
+  width: 15px !important;
+  height: 15px !important;
 }
 
 .headerAvatarImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
 }
 
 /* =========================================================
@@ -804,7 +812,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent, #7747ff);
+  color: var(--accent);
 }
 
 .mobileHeaderName {
@@ -889,7 +897,7 @@
 }
 
 .mobileBottomItem.active {
-  color: var(--accent, #7747ff);
+  color: var(--accent);
 }
 
 .mobileBottomIconWrap {
@@ -904,7 +912,7 @@
 }
 
 .mobileBottomItem.active .mobileBottomIconWrap {
-  background: var(--accent-subtle, rgba(119, 71, 255, 0.15));
+  background: var(--accent-subtle);
   transform: translateY(-1px);
 }
 
@@ -1030,8 +1038,8 @@
 }
 
 .drawerNavItem.active {
-  background: var(--accent-subtle, rgba(119, 71, 255, 0.12));
-  color: var(--accent, #7747ff);
+  background: var(--accent-subtle);
+  color: var(--accent);
   font-weight: 600;
 }
 

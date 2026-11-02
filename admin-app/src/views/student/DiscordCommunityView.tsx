@@ -1568,7 +1568,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                               className={styles.attachMenuItem}
                               onClick={() => handleTriggerAttach("image")}
                             >
-                              <div className={styles.attachMenuItemIconBox} style={{ background: "rgba(139, 92, 246, 0.15)", color: "#8b5cf6" }}>
+                              <div className={styles.attachMenuItemIconBox} style={{ background: "var(--accent-subtle)", color: "var(--accent)" }}>
                                 <ImageIcon size={18} />
                               </div>
                               <div className={styles.attachMenuItemTexts}>
@@ -2215,7 +2215,7 @@ export const DiscordCommunityView: React.FC<DiscordCommunityViewProps> = ({
                           </span>
                         </div>
                         {isEnrolledInCourse && (
-                          <span style={{ fontSize: "10px", color: "var(--accent, #7747ff)", background: "var(--accent-subtle, rgba(119,71,255,0.12))", padding: "1px 6px", borderRadius: "4px", flexShrink: 0 }}>
+                          <span style={{ fontSize: "10px", color: "var(--accent)", background: "var(--accent-subtle)", padding: "1px 6px", borderRadius: "4px", flexShrink: 0 }}>
                             Matriculado
                           </span>
                         )}

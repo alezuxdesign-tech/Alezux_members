@@ -2172,10 +2172,14 @@ class ApiService {
         if (res.ok) {
           const json = await res.json();
           if (json.url) return json.url;
+        } else {
+          console.error("API Error uploading media, status:", res.status);
+          return null;
         }
       }
     } catch (e) {
       console.warn("API Error uploading media:", e);
+      return null;
     }
     return URL.createObjectURL(file);
   }

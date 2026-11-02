@@ -530,6 +530,21 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 		: ( str_starts_with( $accent, '#' ) ? $accent : '#7747ff' );
 
 	$contrast_fg  = crezca_get_contrast_foreground( $accent_color );
+
+	// Calcular variantes cromáticas dinámicas derivadas del color de marca
+	$clean_hex = ltrim( (string) $accent_color, '#' );
+	if ( strlen( $clean_hex ) === 3 ) {
+		$clean_hex = $clean_hex[0] . $clean_hex[0] . $clean_hex[1] . $clean_hex[1] . $clean_hex[2] . $clean_hex[2];
+	}
+	$r_col = hexdec( substr( $clean_hex, 0, 2 ) );
+	$g_col = hexdec( substr( $clean_hex, 2, 2 ) );
+	$b_col = hexdec( substr( $clean_hex, 4, 2 ) );
+
+	$accent_subtle = "rgba({$r_col}, {$g_col}, {$b_col}, 0.15)";
+	$accent_muted  = "rgba({$r_col}, {$g_col}, {$b_col}, 0.08)";
+	$accent_border = "rgba({$r_col}, {$g_col}, {$b_col}, 0.28)";
+	$accent_strong = "rgba({$r_col}, {$g_col}, {$b_col}, 0.88)";
+
 	$is_light     = ( 'light' === $theme );
 	$bg_color     = $is_light ? '#f8fafc' : '#090a0f';
 	$text_color   = $is_light ? '#0f172a' : '#f8fafc';
@@ -569,10 +584,30 @@ function crezca_render_student_portal_shortcode( $atts = [] ) {
 	<style id="crezca-dynamic-branding">
 		:root {
 			--accent: <?php echo esc_attr( $accent_color ); ?> !important;
+			--accent-subtle: <?php echo esc_attr( $accent_subtle ); ?> !important;
+			--accent-muted: <?php echo esc_attr( $accent_muted ); ?> !important;
+			--accent-border: <?php echo esc_attr( $accent_border ); ?> !important;
+			--accent-strong: <?php echo esc_attr( $accent_strong ); ?> !important;
 			--control-on: <?php echo esc_attr( $accent_color ); ?> !important;
 			--control-fill: <?php echo esc_attr( $accent_color ); ?> !important;
 			--accent-foreground: <?php echo esc_attr( $contrast_fg ); ?> !important;
 			--control-glyph: <?php echo esc_attr( $contrast_fg ); ?> !important;
+		}
+		/* Inmunización contra Elementor (#c36) y temas en el Campus Virtual */
+		#crezca-student-root button:hover,
+		#crezca-student-root [type="button"]:hover,
+		#crezca-admin-root button:hover,
+		#crezca-admin-root [type="button"]:hover {
+			outline: none !important;
+			text-decoration: none !important;
+		}
+		#crezca-student-root button svg,
+		#crezca-student-root [type="button"] svg,
+		#crezca-admin-root button svg,
+		#crezca-admin-root [type="button"] svg {
+			flex-shrink: 0 !important;
+			display: inline-block !important;
+			vertical-align: middle !important;
 		}
 	</style>
 	<div id="crezca-student-root" data-mode="student" style="min-height:100vh;background:<?php echo esc_attr( $bg_color ); ?>;"></div>
@@ -620,15 +655,28 @@ function crezca_redirect_student_tabs_to_campus() {
 	}
 
 	if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
-		// Si no está autenticado, redirigir a login directamente
+		nocache_headers();
+
+		// Si no está autenticado, comprobar si existe cookie de sesión de WordPress antes de redirigir (evita loops)
 		if ( ! is_user_logged_in() ) {
+			$has_auth_cookie = false;
+			foreach ( $_COOKIE as $c_name => $c_val ) {
+				if ( str_starts_with( (string) $c_name, 'wordpress_logged_in_' ) ) {
+					$has_auth_cookie = true;
+					break;
+				}
+			}
+			if ( $has_auth_cookie ) {
+				return;
+			}
+
 			$login_url   = crezca_get_login_page_url();
 			$is_secure   = crezca_is_ssl();
 			$current_req = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
 			
 			$current_path = trim( (string) parse_url( $current_req, PHP_URL_PATH ), '/' );
 			$login_path   = trim( (string) parse_url( $login_url, PHP_URL_PATH ), '/' );
-			if ( $current_path !== $login_path ) {
+			if ( $current_path !== $login_path && untrailingslashit( $current_req ) !== untrailingslashit( $login_url ) ) {
 				wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_req ), $login_url ) );
 				exit;
 			}
@@ -685,15 +733,25 @@ function crezca_student_portal_canvas_template( $template ) {
 	if ( $is_portal ) {
 		// Si es acceso no autenticado al aula, redirigir al login personalizado
 		if ( ! is_user_logged_in() ) {
-			$login_url   = crezca_get_login_page_url();
-			$is_secure   = crezca_is_ssl();
-			$current_url = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
-			
-			$current_path = trim( (string) parse_url( $current_url, PHP_URL_PATH ), '/' );
-			$login_path   = trim( (string) parse_url( $login_url, PHP_URL_PATH ), '/' );
-			if ( $current_path !== $login_path ) {
-				wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
-				exit;
+			$has_auth_cookie = false;
+			foreach ( $_COOKIE as $c_name => $c_val ) {
+				if ( str_starts_with( (string) $c_name, 'wordpress_logged_in_' ) ) {
+					$has_auth_cookie = true;
+					break;
+				}
+			}
+			if ( ! $has_auth_cookie ) {
+				nocache_headers();
+				$login_url   = crezca_get_login_page_url();
+				$is_secure   = crezca_is_ssl();
+				$current_url = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+				
+				$current_path = trim( (string) parse_url( $current_url, PHP_URL_PATH ), '/' );
+				$login_path   = trim( (string) parse_url( $login_url, PHP_URL_PATH ), '/' );
+				if ( $current_path !== $login_path && untrailingslashit( $current_url ) !== untrailingslashit( $login_url ) ) {
+					wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
+					exit;
+				}
 			}
 		}
 		add_filter( 'show_admin_bar', '__return_false' );
@@ -727,6 +785,20 @@ function crezca_student_portal_canvas_template( $template ) {
 
 		$contrast_fg  = crezca_get_contrast_foreground( $accent_color );
 
+		// Calcular variantes cromáticas dinámicas derivadas del color de marca
+		$clean_hex = ltrim( (string) $accent_color, '#' );
+		if ( strlen( $clean_hex ) === 3 ) {
+			$clean_hex = $clean_hex[0] . $clean_hex[0] . $clean_hex[1] . $clean_hex[1] . $clean_hex[2] . $clean_hex[2];
+		}
+		$r_col = hexdec( substr( $clean_hex, 0, 2 ) );
+		$g_col = hexdec( substr( $clean_hex, 2, 2 ) );
+		$b_col = hexdec( substr( $clean_hex, 4, 2 ) );
+
+		$accent_subtle = "rgba({$r_col}, {$g_col}, {$b_col}, 0.15)";
+		$accent_muted  = "rgba({$r_col}, {$g_col}, {$b_col}, 0.08)";
+		$accent_border = "rgba({$r_col}, {$g_col}, {$b_col}, 0.28)";
+		$accent_strong = "rgba({$r_col}, {$g_col}, {$b_col}, 0.88)";
+
 		// Pre-cargar estilos y scripts del bundle antes de ejecutar wp_head
 		$dist_css = CREZCA_PATH . 'assets/dist/alezux-dashboard.css';
 		$dist_js  = CREZCA_PATH . 'assets/dist/alezux-dashboard.js';
@@ -755,11 +827,15 @@ function crezca_student_portal_canvas_template( $template ) {
 <?php wp_head(); ?>
 <style>
 	:root {
-		--accent: <?php echo esc_attr( $accent_color ); ?>;
-		--control-on: <?php echo esc_attr( $accent_color ); ?>;
-		--control-fill: <?php echo esc_attr( $accent_color ); ?>;
-		--accent-foreground: <?php echo esc_attr( $contrast_fg ); ?>;
-		--control-glyph: <?php echo esc_attr( $contrast_fg ); ?>;
+		--accent: <?php echo esc_attr( $accent_color ); ?> !important;
+		--accent-subtle: <?php echo esc_attr( $accent_subtle ); ?> !important;
+		--accent-muted: <?php echo esc_attr( $accent_muted ); ?> !important;
+		--accent-border: <?php echo esc_attr( $accent_border ); ?> !important;
+		--accent-strong: <?php echo esc_attr( $accent_strong ); ?> !important;
+		--control-on: <?php echo esc_attr( $accent_color ); ?> !important;
+		--control-fill: <?php echo esc_attr( $accent_color ); ?> !important;
+		--accent-foreground: <?php echo esc_attr( $contrast_fg ); ?> !important;
+		--control-glyph: <?php echo esc_attr( $contrast_fg ); ?> !important;
 	}
 	html, body, #crezca-student-root, #crezca-student-root * {
 		font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;

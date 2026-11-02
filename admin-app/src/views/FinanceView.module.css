@@ -162,7 +162,7 @@
 }
 
 :global([data-theme="light"]) .quotaBadge {
-  background: var(--accent-subtle, rgba(119, 71, 255, 0.12));
+  background: var(--accent-subtle, var(--accent-subtle));
   color: var(--accent, #6332ea);
 }
 

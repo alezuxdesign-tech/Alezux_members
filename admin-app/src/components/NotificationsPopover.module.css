@@ -59,8 +59,8 @@
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 10px;
-  background: var(--accent-subtle, rgba(119, 71, 255, 0.15));
-  color: var(--accent, #7747ff);
+  background: var(--accent-subtle);
+  color: var(--accent);
 }
 
 .headerActions {
@@ -84,7 +84,7 @@
 }
 
 .markAllBtn:hover {
-  color: var(--accent, #7747ff);
+  color: var(--accent);
   background: var(--surface-hover, rgba(255, 255, 255, 0.06));
 }
 
@@ -204,7 +204,7 @@
   justify-content: center;
   flex-shrink: 0;
   background: var(--surface-muted, rgba(255, 255, 255, 0.05));
-  color: var(--accent, #7747ff);
+  color: var(--accent);
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
 }
 
@@ -243,10 +243,10 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent, #7747ff);
+  background: var(--accent);
   flex-shrink: 0;
   margin-top: 6px;
-  box-shadow: 0 0 6px var(--accent, #7747ff);
+  box-shadow: 0 0 6px var(--accent);
 }
 
 .itemRightSide {
@@ -291,7 +291,7 @@
 }
 
 .itemActionBtn.actionRead {
-  color: var(--accent, #7747ff);
+  color: var(--accent);
 }
 
 .itemActionBtn.actionUnread:hover {

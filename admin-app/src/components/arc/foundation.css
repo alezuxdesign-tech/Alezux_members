@@ -25,18 +25,18 @@
   --border-subtle: oklch(25% 0 0);
   --border-strong: oklch(40% 0 0);
   
-  --accent: #a78bff;
-  --accent-strong: #c7b7ff;
-  --accent-subtle: rgb(119 71 255 / .22);
+  --accent: #f59e0b;
+  --accent-strong: #fbbf24;
+  --accent-subtle: rgb(245 158 11 / .22);
   --accent-foreground: #ffffff;
 
-  --control-on: #8a66ff;
+  --control-on: #f59e0b;
   --control-glyph: #ffffff;
   --control-track: oklch(33% 0 0);
   --control-track-hover: oklch(37% 0 0);
   --control-thumb: oklch(97% 0 0);
   --control-thumb-on: oklch(19% 0 0);
-  --control-fill: #8a66ff;
+  --control-fill: #f59e0b;
   --control-thumb-shadow: 0 0 0 .5px oklch(0% 0 0 / .3), 0 1px 2px oklch(0% 0 0 / .35), 0 2px 6px oklch(0% 0 0 / .2);
 
   --focus-ring: transparent;
@@ -101,9 +101,9 @@
   --border: oklch(93.5% 0 0);
   --border-subtle: oklch(96.5% 0 0);
   --border-strong: oklch(82% 0 0);
-  --accent: #7747ff;
-  --accent-strong: #5528ce;
-  --accent-subtle: rgb(119 71 255 / .13);
+  --accent: #f59e0b;
+  --accent-strong: #d97706;
+  --accent-subtle: rgb(245 158 11 / .15);
   --shadow-resting: 0 1px 2px oklch(0% 0 0 / .035);
   --shadow-raised: 0 6px 18px oklch(0% 0 0 / .065), 0 1px 3px oklch(0% 0 0 / .035);
   --shadow-floating: 0 20px 48px oklch(0% 0 0 / .105), 0 3px 10px oklch(0% 0 0 / .045);
@@ -114,19 +114,19 @@
    ======================================================== */
 :root[data-accent="violet"],
 :root:not([data-accent]) {
-  --accent: #a78bff;
-  --accent-strong: #c7b7ff;
-  --accent-subtle: rgb(119 71 255 / .22);
-  --control-on: #8a66ff;
-  --control-fill: #8a66ff;
+  --accent: #f59e0b;
+  --accent-strong: #fbbf24;
+  --accent-subtle: rgb(245 158 11 / .22);
+  --control-on: #f59e0b;
+  --control-fill: #f59e0b;
 }
 :root[data-theme="light"][data-accent="violet"],
 :root[data-theme="light"]:not([data-accent]) {
-  --accent: #7747ff;
-  --accent-strong: #5528ce;
-  --accent-subtle: rgb(119 71 255 / .13);
-  --control-on: #7747ff;
-  --control-fill: #7747ff;
+  --accent: #f59e0b;
+  --accent-strong: #d97706;
+  --accent-subtle: rgb(245 158 11 / .15);
+  --control-on: #f59e0b;
+  --control-fill: #f59e0b;
 }
 
 :root[data-accent="blue"] {

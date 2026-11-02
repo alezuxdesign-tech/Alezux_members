@@ -564,7 +564,7 @@
   background: var(--accent);
   color: var(--accent-foreground, #fff);
   border-color: var(--accent);
-  box-shadow: 0 0 10px rgba(119, 71, 255, 0.35);
+  box-shadow: 0 0 10px var(--accent-border);
 }
 
 .wizardStepDone .wizardStepBadge {

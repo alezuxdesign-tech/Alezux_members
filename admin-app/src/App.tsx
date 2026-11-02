@@ -721,12 +721,12 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
             <button
               type="button"
               className={styles.iconBtn}
-              onClick={toggleFullscreen}
-              title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-              aria-label="Alternar pantalla completa"
+              onClick={toggleSidebar}
+              title={isCollapsed ? "Expandir barra lateral" : "Contraer barra lateral"}
+              aria-label="Alternar barra lateral"
             >
-              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-              {!isCollapsed && <span>{isFullscreen ? "Reducir" : "Pantalla"}</span>}
+              {isCollapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
+              {!isCollapsed && <span>Contraer</span>}
             </button>
           </div>
 
@@ -1491,7 +1491,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 {academyLogo ? (
                   <img src={academyLogo} alt={academyName} style={{ maxHeight: 26, maxWidth: 80, objectFit: "contain" }} />
                 ) : (
-                  <Layers size={18} style={{ color: "var(--accent, #7747ff)" }} />
+                  <Layers size={18} style={{ color: "var(--accent)" }} />
                 )}
                 <span>{academyName || "Crezca"}</span>
               </div>

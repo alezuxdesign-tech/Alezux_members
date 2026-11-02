@@ -1013,7 +1013,7 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                     onClick={() => setContentTab("files")}
                     title={hasFiles ? `¡Esta clase tiene ${filesCount} recurso(s) descargable(s)!` : "Recursos de la clase"}
                   >
-                    <Download size={15} style={hasFiles ? { color: "var(--accent, #7747ff)" } : undefined} />
+                    <Download size={15} style={hasFiles ? { color: "var(--accent)" } : undefined} />
                     <span>Recursos & Descargas</span>
                     {hasFiles ? (
                       <span className={styles.filesHighlightBadge}>

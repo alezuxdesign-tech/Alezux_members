@@ -265,7 +265,7 @@ class Admin_Api {
 			register_rest_route( $namespace, '/media/upload', [
 				'methods'             => 'POST',
 				'callback'            => [ $this, 'upload_generic_media' ],
-				'permission_callback' => [ $this, 'admin_permissions_check' ],
+				'permission_callback' => [ $this, 'admin_or_instructor_permissions_check' ],
 			] );
 
 			register_rest_route( $namespace, '/marketing/upload-logo', [
@@ -836,7 +836,14 @@ class Admin_Api {
 		}
 
 		if ( isset( $params['thumbnail'] ) ) {
-			update_post_meta( $course_id, '_course_thumbnail', esc_url_raw( $params['thumbnail'] ) );
+			$thumb_url = esc_url_raw( $params['thumbnail'] );
+			update_post_meta( $course_id, '_course_thumbnail', $thumb_url );
+			if ( ! empty( $thumb_url ) && function_exists( 'attachment_url_to_postid' ) ) {
+				$attach_id = attachment_url_to_postid( $thumb_url );
+				if ( $attach_id > 0 ) {
+					set_post_thumbnail( $course_id, $attach_id );
+				}
+			}
 		}
 		if ( isset( $params['banner'] ) ) {
 			update_post_meta( $course_id, '_course_banner', esc_url_raw( $params['banner'] ) );
@@ -909,6 +916,16 @@ class Admin_Api {
 		];
 
 		update_post_meta( $course_id, '_alezux_curriculum_structure', $initial_sections );
+
+		if ( ! empty( $thumb ) ) {
+			update_post_meta( $course_id, '_course_thumbnail', $thumb );
+			if ( function_exists( 'attachment_url_to_postid' ) ) {
+				$attach_id = attachment_url_to_postid( $thumb );
+				if ( $attach_id > 0 ) {
+					set_post_thumbnail( $course_id, $attach_id );
+				}
+			}
+		}
 
 		return rest_ensure_response( [
 			'id'           => $course_id,
@@ -3155,6 +3172,36 @@ class Admin_Api {
 		return rest_ensure_response( [
 			'success' => true,
 			'message' => 'Configuración de marketing guardada correctamente.',
+		] );
+	}
+
+	/**
+	 * Subida genérica de medios (portadas de cursos, lecciones, banners, fondo de login)
+	 * Sube el archivo a la biblioteca de medios de WordPress y retorna su URL y ID sin modificar opciones globales
+	 */
+	public function upload_generic_media( $request ) {
+		$files = $request->get_file_params();
+		if ( empty( $files['file'] ) && empty( $_FILES['file'] ) ) {
+			return new \WP_Error( 'no_file', 'No se ha proporcionado ningún archivo para subir', [ 'status' => 400 ] );
+		}
+
+		if ( ! function_exists( 'media_handle_upload' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+		}
+
+		$attachment_id = media_handle_upload( 'file', 0 );
+		if ( is_wp_error( $attachment_id ) ) {
+			return new \WP_Error( 'upload_failed', $attachment_id->get_error_message(), [ 'status' => 500 ] );
+		}
+
+		$url = wp_get_attachment_url( $attachment_id );
+
+		return rest_ensure_response( [
+			'success'       => true,
+			'url'           => $url,
+			'attachment_id' => $attachment_id,
 		] );
 	}
 

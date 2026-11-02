@@ -454,7 +454,7 @@ export function SettingsView({
                       if (files && files.length > 0) {
                         setIsUploadingLogo(true);
                         try {
-                          const uploadedUrl = await api.uploadLogo(files[0]);
+                          const uploadedUrl = await api.uploadMedia(files[0]);
                           if (uploadedUrl) {
                             handleLogoChange(uploadedUrl);
                             showToast("success", "Logotipo subido con éxito", "El nuevo logotipo ya está activo.");
@@ -735,7 +735,7 @@ export function SettingsView({
                   <div className={styles.colorSyncHeader}>
                     <div className={styles.colorSyncTitleWrap}>
                       <div className={styles.colorSyncTitle}>
-                        <Sparkles size={16} style={{ color: "var(--control-on, #7747ff)" }} />
+                        <Sparkles size={16} style={{ color: "var(--control-on, var(--accent))" }} />
                         <span>Sincronizar colores con la Academia automáticamente</span>
                       </div>
                       <p className={styles.colorSyncDesc}>
@@ -866,7 +866,7 @@ export function SettingsView({
                           onFilesChange={async (files) => {
                             if (files && files.length > 0) {
                               try {
-                                const uploadedUrl = await api.uploadLogo(files[0]);
+                                const uploadedUrl = await api.uploadMedia(files[0]);
                                 if (uploadedUrl) {
                                   setAuthSettings((prev) => ({ ...prev, bg_image_url: uploadedUrl }));
                                   showToast("success", "Fondo actualizado", "La imagen de fondo del login fue cargada.");
@@ -942,7 +942,7 @@ export function SettingsView({
                     onFilesChange={async (files) => {
                       if (files && files.length > 0) {
                         try {
-                          const uploadedUrl = await api.uploadLogo(files[0]);
+                          const uploadedUrl = await api.uploadMedia(files[0]);
                           if (uploadedUrl) {
                             setAuthSettings((prev) => ({ ...prev, logo_url: uploadedUrl }));
                             showToast("success", "Logo de login subido", "El logotipo para la pantalla de acceso fue actualizado.");
@@ -1115,7 +1115,7 @@ export function SettingsView({
                           padding: "10px 14px",
                           borderRadius: "var(--radius-panel, 12px)",
                           border: `1.5px solid ${authSettings.form_theme !== "dark" ? "var(--control-on, #7747ff)" : "var(--border)"}`,
-                          background: authSettings.form_theme !== "dark" ? "var(--control-on-subtle, rgba(119, 71, 255, 0.08))" : "var(--surface)",
+                          background: authSettings.form_theme !== "dark" ? "var(--accent-subtle)" : "var(--surface)",
                           cursor: "pointer",
                           transition: "all 0.2s ease",
                         }}
@@ -1138,7 +1138,7 @@ export function SettingsView({
                           padding: "10px 14px",
                           borderRadius: "var(--radius-panel, 12px)",
                           border: `1.5px solid ${authSettings.form_theme === "dark" ? "var(--control-on, #7747ff)" : "var(--border)"}`,
-                          background: authSettings.form_theme === "dark" ? "var(--control-on-subtle, rgba(119, 71, 255, 0.08))" : "var(--surface)",
+                          background: authSettings.form_theme === "dark" ? "var(--accent-subtle)" : "var(--surface)",
                           cursor: "pointer",
                           transition: "all 0.2s ease",
                         }}
