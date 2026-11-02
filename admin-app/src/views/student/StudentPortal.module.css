@@ -1497,80 +1497,120 @@
   transform: translateY(-1px) !important;
 }
 
-/* In-App Checkout Modal / Iframe */
-.inAppCheckoutOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.inAppCheckoutContainer {
+/* Ventana de Checkout dentro de la Plataforma (Estilo Subpágina / Ventana Completa) */
+.checkoutWindowView {
   width: 100%;
-  max-width: 820px;
-  height: 90vh;
-  max-height: 820px;
-  background: var(--surface, #12141a);
-  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.16));
-  border-radius: 16px;
-  overflow: hidden;
+  min-height: 100vh;
+  background: var(--background, #090a0f);
+  color: var(--foreground, #ffffff);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.85);
   position: relative;
+  z-index: 20;
 }
 
-.inAppCheckoutHeader {
-  height: 52px;
-  background: var(--surface-raised, #181b22);
-  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+.checkoutWindowTopBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
-  flex-shrink: 0;
+  padding: 14px 28px;
+  background: var(--surface-raised, #12141a);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  flex-wrap: wrap;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-.inAppCheckoutHeaderTitle {
+.checkoutWindowBreadcrumb {
   display: flex;
   align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.checkoutWindowBackBtn {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
-  font-size: 14px;
+  background: var(--surface-muted, rgba(255, 255, 255, 0.08));
+  color: var(--foreground, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  padding: 8px 16px;
+  border-radius: var(--radius-control, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast, 150ms) ease;
+}
+
+.checkoutWindowBackBtn:hover {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  transform: translateX(-2px);
+}
+
+.checkoutWindowSep {
+  color: var(--text-muted, #64748b);
+  font-size: 12px;
+}
+
+.checkoutWindowCourseTitle {
   font-weight: 600;
   color: var(--foreground, #ffffff);
 }
 
-.inAppCheckoutCloseBtn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--surface-muted, rgba(255, 255, 255, 0.08));
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+.checkoutWindowTag {
   color: var(--text-muted, #94a3b8);
+}
+
+.checkoutWindowMetaRight {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all var(--duration-fast, 150ms);
+  gap: 12px;
 }
 
-.inAppCheckoutCloseBtn:hover {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.16));
-  color: #ffffff;
+.checkoutWindowSecurityBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-weight: 500;
 }
 
-.inAppCheckoutIframe {
-  width: 100%;
+.checkoutWindowPriceBadge {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
+  padding: 6px 16px;
+  border-radius: 9999px;
+}
+
+.checkoutWindowIframeWrap {
   flex: 1;
-  border: none;
+  width: 100%;
+  min-height: calc(100vh - 65px);
+  display: flex;
   background: #ffffff;
+}
+
+.checkoutWindowIframe {
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 65px);
+  border: none;
+  display: block;
 }
 
 /* ==========================================================================

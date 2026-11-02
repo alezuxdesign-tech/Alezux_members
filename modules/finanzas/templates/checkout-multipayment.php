@@ -72,7 +72,7 @@ if ( isset( $accent_presets[ $accent_opt ] ) ) {
 $is_light_theme = ( $theme_opt === 'light' );
 
 // 2. Información del Curso (Estilo Página de Ventas)
-$course_id    = (int) ( $plan->course_id ?? 0 );
+$course_id = (int) ( ! empty( $_GET['course_id'] ) ? $_GET['course_id'] : ( ! empty( $_GET['course'] ) ? $_GET['course'] : ( $plan->course_id ?? 0 ) ) );
 $course_title = 'Membresía All-Access (Todos los Cursos)';
 $course_image = '';
 $course_desc  = 'Acceso completo a todos los cursos, herramientas y contenidos formativos de la academia.';
@@ -105,6 +105,15 @@ if ( $course_id > 0 ) {
 		if ( ! empty( $excerpt ) ) {
 			$course_desc = $excerpt;
 		}
+
+		// Obtener precio real del curso para garantizar que refleje el valor configurado
+		$c_price = get_post_meta( $course_id, '_course_price', true );
+		if ( '' === $c_price || false === $c_price ) {
+			$c_price = get_post_meta( $course_id, '_alezux_course_price', true );
+		}
+		if ( ! empty( $c_price ) && is_numeric( $c_price ) && floatval( $c_price ) > 0 ) {
+			$quota_amount = floatval( $c_price );
+		}
 	}
 }
 
@@ -114,18 +123,18 @@ if ( empty( $course_image ) ) {
 }
 
 // 3. Cálculos y Modalidad del Plan
-$plan_name        = esc_html( $plan->name );
-$quota_amount     = (float) $plan->quota_amount;
+$plan_name        = esc_html( ( $course_id > 0 && ! empty( $course_title ) ) ? $course_title : $plan->name );
+$quota_amount     = isset( $quota_amount ) ? (float) $quota_amount : (float) $plan->quota_amount;
 $amount_formatted = number_format( $quota_amount, 2, '.', ',' );
-$total_quotas     = (int) $plan->total_quotas;
+$total_quotas     = (int) ( $course_id > 0 ? 1 : $plan->total_quotas );
 
 if ( $total_quotas === 0 ) {
 	$plan_type_label = 'Membresía Recurrente';
 	$billing_summary = ( isset( $plan->frequency ) && $plan->frequency === 'year' ) ? 'Facturado anualmente' : 'Facturado mensualmente';
 	$price_badge     = '$' . $amount_formatted . ' USD / mes';
 	$total_pay_today = '$' . $amount_formatted . ' USD';
-} elseif ( $total_quotas === 1 ) {
-	$plan_type_label = 'Acceso Completo (Pago Único)';
+} elseif ( $total_quotas === 1 || $course_id > 0 ) {
+	$plan_type_label = 'Acceso al Curso (Pago Único)';
 	$billing_summary = 'Acceso de por vida · Pago único';
 	$price_badge     = '$' . $amount_formatted . ' USD';
 	$total_pay_today = '$' . $amount_formatted . ' USD';
@@ -414,6 +423,15 @@ $active_method_id = ! empty( $methods ) ? array_key_first( $methods ) : 'pagomov
 		/* ========================================================
 		   CABECERA OFICIAL DE LA ACADEMIA (Sin fugas de navegación)
 		   ======================================================== */
+		<?php if ( ! empty( $_GET['embedded'] ) || ! empty( $_GET['in_app'] ) ) : ?>
+		.checkout-brand-header {
+			display: none !important;
+		}
+		.checkout-page-container {
+			padding-top: 16px !important;
+		}
+		<?php endif; ?>
+
 		.checkout-brand-header {
 			width: 100%;
 			max-width: 1120px;

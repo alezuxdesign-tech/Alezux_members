@@ -162,7 +162,13 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
               {catalogCourses.map((course) => {
               const moduleCount = course.sections?.length || 0;
               return (
-                <div key={course.id} className={[styles.courseCard, styles.courseCardLocked].join(" ")}>
+                <div 
+                  key={course.id} 
+                  className={[styles.courseCard, styles.courseCardLocked].join(" ")}
+                  onClick={() => onSelectCourse(course)}
+                  style={{ cursor: "pointer" }}
+                  title="Haz clic para ver el temario y los módulos"
+                >
                   <div className={styles.courseCoverWrapper}>
                     <img
                       src={course.thumbnail || course.banner || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80"}
@@ -192,7 +198,7 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
 
                     {/* Precio del Curso */}
                     <div className={styles.coursePriceContainer}>
-                      <span className={styles.coursePriceLabel}>Precio del curso:</span>
+                      <span className={styles.coursePriceLabel}>Precio del programa:</span>
                       <span className={styles.coursePriceValue}>
                         ${course.price || 49} USD
                       </span>
@@ -204,15 +210,11 @@ export const StudentCatalogView: React.FC<StudentCatalogViewProps> = ({
                         className={styles.buyCourseBtn}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (course.checkoutUrl) {
-                            window.open(course.checkoutUrl, "_blank");
-                          } else {
-                            onSelectCourse(course);
-                          }
+                          onSelectCourse(course);
                         }}
                       >
-                        <CreditCard size={14} />
-                        <span>Comprar curso</span>
+                        <BookOpen size={14} />
+                        <span>Ver temario y módulos</span>
                       </button>
                     </div>
                   </div>

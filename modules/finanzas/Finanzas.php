@@ -102,59 +102,76 @@ class Finanzas extends Module_Base {
                 $token_col_checked = true;
             }
 
-            // 1. Buscar Plan ID por Token
-            if ( ! empty( $_GET['token'] ) ) {
+            // 1. Si viene course_id o course en la URL, PRIORIZAR SIEMPRE el curso y su precio exacto
+            $c_id = intval( ! empty( $_GET['course_id'] ) ? $_GET['course_id'] : ( ! empty( $_GET['course'] ) ? $_GET['course'] : 0 ) );
+            if ( $c_id > 0 ) {
+                $course_post = get_post( $c_id );
+                if ( $course_post ) {
+                    $c_price = get_post_meta( $c_id, '_course_price', true );
+                    if ( '' === $c_price || false === $c_price ) {
+                        $c_price = get_post_meta( $c_id, '_alezux_course_price', true );
+                    }
+                    $c_price = ( ! empty( $c_price ) && is_numeric( $c_price ) && floatval( $c_price ) > 0 ) ? floatval( $c_price ) : 49.0;
+
+                    // Buscar si ya existe un plan para este curso en la tabla de planes
+                    $course_plan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_plans WHERE course_id = %d ORDER BY id ASC LIMIT 1", $c_id ) );
+
+                    // Si no está por course_id directo, revisar el meta '_course_linked_plan_id' o '_alezux_linked_plan_id'
+                    if ( ! $course_plan ) {
+                        $meta_plan = (int) get_post_meta( $c_id, '_course_linked_plan_id', true );
+                        if ( ! $meta_plan ) {
+                            $meta_plan = (int) get_post_meta( $c_id, '_alezux_linked_plan_id', true );
+                        }
+                        if ( $meta_plan > 0 ) {
+                            $course_plan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_plans WHERE id = %d", $meta_plan ) );
+                        }
+                    }
+
+                    if ( $course_plan ) {
+                        $plan_id = (int) $course_plan->id;
+                        $c_token = ! empty( $course_plan->token ) ? $course_plan->token : wp_generate_password( 32, false );
+                        // Sincronizar precio y título si difieren (para evitar que un curso de $49 cobre $1500)
+                        if ( floatval( $course_plan->quota_amount ) !== $c_price || empty( $course_plan->token ) || (int) $course_plan->course_id !== $c_id ) {
+                            $wpdb->update( $table_plans, [
+                                'name'         => $course_post->post_title,
+                                'course_id'    => $c_id,
+                                'quota_amount' => $c_price,
+                                'token'        => $c_token,
+                            ], [ 'id' => $plan_id ] );
+                        }
+                    } else {
+                        // Crear plan con el precio exacto del curso
+                        $gen_token = wp_generate_password( 32, false );
+                        $wpdb->insert( $table_plans, [
+                            'name'         => $course_post->post_title,
+                            'course_id'    => $c_id,
+                            'total_quotas' => 1,
+                            'quota_amount' => $c_price,
+                            'frequency'    => 'unique',
+                            'token'        => $gen_token,
+                            'created_at'   => current_time( 'mysql' ),
+                        ] );
+                        $plan_id = (int) $wpdb->insert_id;
+                        update_post_meta( $c_id, '_course_linked_plan_id', $plan_id );
+                        update_post_meta( $c_id, '_alezux_linked_plan_id', $plan_id );
+                    }
+                }
+            }
+
+            // 2. Si aún no hay plan_id, buscar por Token
+            if ( ! $plan_id && ! empty( $_GET['token'] ) ) {
                 $token = sanitize_text_field( $_GET['token'] );
                 $plan_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table_plans WHERE token = %s", $token ) );
             }
 
-            // 2. Fallback por plan_id si no se encontró por token o el token era inválido
+            // 3. Fallback por plan_id si no se encontró por token o el token era inválido
             if ( ! $plan_id && ! empty( $_GET['plan_id'] ) ) {
                 $plan_id = intval( $_GET['plan_id'] );
             }
 
-            // 3. Fallback adicional si el token es numérico y coincide con el ID
+            // 4. Fallback adicional si el token es numérico y coincide con el ID
             if ( ! $plan_id && ! empty( $_GET['token'] ) && is_numeric( $_GET['token'] ) ) {
                 $plan_id = intval( $_GET['token'] );
-            }
-
-            // 4. Fallback directo por course_id (si el usuario pulsa adquirir desde el campus o temario)
-            if ( ! $plan_id && ( ! empty( $_GET['course_id'] ) || ! empty( $_GET['course'] ) ) ) {
-                $c_id = intval( ! empty( $_GET['course_id'] ) ? $_GET['course_id'] : $_GET['course'] );
-                if ( $c_id > 0 ) {
-                    // Buscar si ya existe un plan para este curso en la tabla de planes
-                    $plan_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table_plans WHERE course_id = %d ORDER BY id ASC LIMIT 1", $c_id ) );
-
-                    // Si no está por course_id directo, revisar el meta '_alezux_linked_plan_id' del curso
-                    if ( ! $plan_id ) {
-                        $meta_plan = (int) get_post_meta( $c_id, '_alezux_linked_plan_id', true );
-                        if ( $meta_plan > 0 && $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table_plans WHERE id = %d", $meta_plan ) ) ) {
-                            $plan_id = $meta_plan;
-                        }
-                    }
-
-                    // Si aún no existe ningún plan para este curso, auto-crear un plan en $table_plans
-                    if ( ! $plan_id ) {
-                        $course_post = get_post( $c_id );
-                        if ( $course_post ) {
-                            $price = get_post_meta( $c_id, '_course_price', true ) ?: ( get_post_meta( $c_id, '_alezux_course_price', true ) ?: 49 );
-                            $gen_token = wp_generate_password( 32, false );
-                            $wpdb->insert( $table_plans, [
-                                'name'         => $course_post->post_title,
-                                'course_id'    => $c_id,
-                                'total_quotas' => 1,
-                                'quota_amount' => floatval( $price ),
-                                'frequency'    => 'unique',
-                                'token'        => $gen_token,
-                                'created_at'   => current_time( 'mysql' ),
-                            ] );
-                            $plan_id = (int) $wpdb->insert_id;
-                            if ( $plan_id > 0 ) {
-                                update_post_meta( $c_id, '_alezux_linked_plan_id', $plan_id );
-                            }
-                        }
-                    }
-                }
             }
 
             // Asegurar que el plan tenga token asignado

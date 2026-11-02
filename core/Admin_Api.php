@@ -748,24 +748,44 @@ class Admin_Api {
 			}
 			if ( $plans_table_exists ) {
 				$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
-				if ( ! empty( $linked_plan_id ) ) {
-					$token = $wpdb->get_var( $wpdb->prepare( "SELECT token FROM $plans_table WHERE id = %d", $linked_plan_id ) );
-				} else {
-					$plan_row = $wpdb->get_row( $wpdb->prepare( "SELECT id, token FROM $plans_table WHERE course_id = %d ORDER BY id ASC LIMIT 1", $post->ID ) );
-					if ( $plan_row ) {
-						$linked_plan_id = (int) $plan_row->id;
-						$token = $plan_row->token;
-					}
+				$course_price = ! empty( $price ) && is_numeric( $price ) ? floatval( $price ) : 49.0;
+
+				// 1. Buscar plan directamente asignado a este curso por course_id
+				$plan_row = $wpdb->get_row( $wpdb->prepare( "SELECT id, token, quota_amount FROM $plans_table WHERE course_id = %d ORDER BY id ASC LIMIT 1", $post->ID ) );
+				if ( ! $plan_row && ! empty( $linked_plan_id ) ) {
+					$plan_row = $wpdb->get_row( $wpdb->prepare( "SELECT id, token, quota_amount FROM $plans_table WHERE id = %d", $linked_plan_id ) );
 				}
-				if ( ! empty( $linked_plan_id ) ) {
-					if ( empty( $token ) ) {
-						$token = wp_generate_password( 32, false );
-						$wpdb->update( $plans_table, [ 'token' => $token ], [ 'id' => $linked_plan_id ] );
+
+				if ( $plan_row ) {
+					$linked_plan_id = (int) $plan_row->id;
+					$token = $plan_row->token;
+					// Si el precio o nombre difieren, o no tiene token, sincronizarlos
+					if ( empty( $token ) || floatval( $plan_row->quota_amount ) !== $course_price ) {
+						$token = ! empty( $token ) ? $token : wp_generate_password( 32, false );
+						$wpdb->update( $plans_table, [
+							'token'        => $token,
+							'quota_amount' => $course_price,
+							'course_id'    => $post->ID,
+							'name'         => $post->post_title,
+						], [ 'id' => $linked_plan_id ] );
 					}
-					$checkout_url = home_url( "/?alezux_action=checkout&token={$token}&plan_id={$linked_plan_id}&course_id={$post->ID}" );
 				} else {
-					$checkout_url = home_url( "/?alezux_action=checkout&course_id={$post->ID}" );
+					// Crear plan dedicado para este curso con su precio real
+					$token = wp_generate_password( 32, false );
+					$wpdb->insert( $plans_table, [
+						'name'         => $post->post_title,
+						'course_id'    => $post->ID,
+						'total_quotas' => 1,
+						'quota_amount' => $course_price,
+						'frequency'    => 'unique',
+						'token'        => $token,
+						'created_at'   => current_time( 'mysql' ),
+					] );
+					$linked_plan_id = (int) $wpdb->insert_id;
+					update_post_meta( $post->ID, '_course_linked_plan_id', $linked_plan_id );
+					update_post_meta( $post->ID, '_alezux_linked_plan_id', $linked_plan_id );
 				}
+				$checkout_url = home_url( "/?alezux_action=checkout&token={$token}&plan_id={$linked_plan_id}&course_id={$post->ID}" );
 			} else {
 				$checkout_url = home_url( "/?alezux_action=checkout&course_id={$post->ID}" );
 			}

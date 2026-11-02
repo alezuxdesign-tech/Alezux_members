@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from "react";
+import React, { useRef, useState, useMemo, useEffect } from "react";
 import { 
   ArrowLeft, 
   ChevronLeft, 
@@ -6,11 +6,12 @@ import {
   Lock, 
   Play, 
   CheckCircle2, 
-  Sparkles,
-  ExternalLink,
-  ShieldAlert,
-  X,
-  ShoppingBag,
+  Sparkles, 
+  ExternalLink, 
+  ShieldAlert, 
+  ShieldCheck,
+  X, 
+  ShoppingBag, 
 } from "lucide-react";
 import { Course, CourseSection, CourseLesson, CourseTopic } from "../../services/api";
 import styles from "./StudentPortal.module.css";
@@ -47,18 +48,26 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
   const progress = course.progress ?? 0;
   const hasAccess = !!course.hasAccess;
 
-  const effectiveCheckoutUrl = useMemo(() => {
-    if (course.checkoutUrl) {
-      if (!course.checkoutUrl.includes("course_id=") && course.id) {
-        const sep = course.checkoutUrl.includes("?") ? "&" : "?";
-        return `${course.checkoutUrl}${sep}course_id=${course.id}`;
+  useEffect(() => {
+    const handleMsg = (e: MessageEvent) => {
+      if (e.data === "close_checkout" || e.data === "checkout_success") {
+        setInAppCheckoutUrl(null);
       }
-      return course.checkoutUrl;
+    };
+    window.addEventListener("message", handleMsg);
+    return () => window.removeEventListener("message", handleMsg);
+  }, []);
+
+  const effectiveCheckoutUrl = useMemo(() => {
+    let url = course.checkoutUrl;
+    if (!url && course.id) {
+      url = `/?alezux_action=checkout&course_id=${course.id}`;
     }
-    if (course.id) {
-      return `/?alezux_action=checkout&course_id=${course.id}`;
+    if (url && !url.includes("course_id=") && course.id) {
+      const sep = url.includes("?") ? "&" : "?";
+      url = `${url}${sep}course_id=${course.id}`;
     }
-    return null;
+    return url;
   }, [course.checkoutUrl, course.id]);
 
   // Agrupar los módulos del temario en filas de carrusel delimitadas por separadores
@@ -135,6 +144,55 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
       : (firstLesson as unknown as CourseTopic);
     onSelectModule(sec, firstLesson, firstTopic);
   };
+
+  // VISTA DE VENTANA DE CHECKOUT INTEGRADA DENTRO DE LA PLATAFORMA (Sin popup flotante)
+  if (inAppCheckoutUrl) {
+    const checkoutSrc = inAppCheckoutUrl.includes("embedded=1")
+      ? inAppCheckoutUrl
+      : `${inAppCheckoutUrl}${inAppCheckoutUrl.includes("?") ? "&" : "?"}embedded=1`;
+
+    return (
+      <div className={styles.checkoutWindowView}>
+        {/* Barra superior de la ventana dentro de la plataforma */}
+        <div className={styles.checkoutWindowTopBar}>
+          <div className={styles.checkoutWindowBreadcrumb}>
+            <button
+              type="button"
+              className={styles.checkoutWindowBackBtn}
+              onClick={() => setInAppCheckoutUrl(null)}
+              title="Volver al temario del curso"
+            >
+              <ArrowLeft size={16} />
+              <span>Volver al curso</span>
+            </button>
+            <span className={styles.checkoutWindowSep}>/</span>
+            <span className={styles.checkoutWindowCourseTitle}>{course.title}</span>
+            <span className={styles.checkoutWindowSep}>/</span>
+            <span className={styles.checkoutWindowTag}>Inscripción y Pago Seguro</span>
+          </div>
+
+          <div className={styles.checkoutWindowMetaRight}>
+            <div className={styles.checkoutWindowSecurityBadge}>
+              <ShieldCheck size={15} />
+              <span>Pasarela 100% Segura</span>
+            </div>
+            <div className={styles.checkoutWindowPriceBadge}>
+              ${course.price || 49} USD
+            </div>
+          </div>
+        </div>
+
+        {/* Contenedor iframe de pantalla completa como ventana de la plataforma */}
+        <div className={styles.checkoutWindowIframeWrap}>
+          <iframe
+            src={checkoutSrc}
+            title={`Checkout ${course.title}`}
+            className={styles.checkoutWindowIframe}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.netflixContainer}>
@@ -336,7 +394,7 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
             </p>
             <div className={styles.modalPriceBox}>
               <span>Precio del Programa</span>
-              <strong>${course.price || 197} USD</strong>
+              <strong>${course.price || 49} USD</strong>
             </div>
             <div className={styles.modalActions}>
               <button
@@ -353,33 +411,6 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                 <span>Adquirir Formación Ahora</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* CHECKOUT INTEGRADO SIN SALIR DE LA PLATAFORMA */}
-      {inAppCheckoutUrl && (
-        <div className={styles.inAppCheckoutOverlay} onClick={() => setInAppCheckoutUrl(null)}>
-          <div className={styles.inAppCheckoutContainer} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.inAppCheckoutHeader}>
-              <div className={styles.inAppCheckoutHeaderTitle}>
-                <ShoppingBag size={18} style={{ color: "var(--accent)" }} />
-                <span>Inscripción y Pago Seguro — {course.title}</span>
-              </div>
-              <button
-                type="button"
-                className={styles.inAppCheckoutCloseBtn}
-                onClick={() => setInAppCheckoutUrl(null)}
-                aria-label="Cerrar pasarela de checkout"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <iframe
-              src={inAppCheckoutUrl}
-              title={`Checkout ${course.title}`}
-              className={styles.inAppCheckoutIframe}
-            />
           </div>
         </div>
       )}
