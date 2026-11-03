@@ -711,13 +711,15 @@ function crezca_handle_root_login_redirect() {
 	}
 
 	$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
-	if ( empty( $auth_settings['root_login_enabled'] ) ) {
+	$root_enabled  = ! empty( $auth_settings['root_login_enabled'] ) || get_option( 'alezux_root_login_enabled' ) === '1';
+	if ( ! $root_enabled ) {
 		return;
 	}
 
-	// Comprobar si la petición actual es la portada / raíz (dominio.com o dominio.com/)
-	$req_path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
-	$is_root  = is_front_page() || is_home() || empty( $req_path );
+	// Comprobar si la petición actual es la portada o raíz
+	$uri_path  = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+	$home_path = trim( (string) parse_url( home_url(), PHP_URL_PATH ), '/' );
+	$is_root   = ( $uri_path === $home_path ) || empty( $uri_path ) || is_front_page() || is_home();
 
 	if ( ! $is_root ) {
 		return;

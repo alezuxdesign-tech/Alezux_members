@@ -248,6 +248,17 @@ class Config extends Module_Base {
 			}
 		}
 
+		$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+		$root_enabled  = ! empty( $auth_settings['root_login_enabled'] ) || get_option( 'alezux_root_login_enabled' ) === '1';
+
+		if ( ! $is_login_page && $root_enabled ) {
+			$uri_path  = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+			$home_path = trim( (string) parse_url( home_url(), PHP_URL_PATH ), '/' );
+			if ( $uri_path === $home_path || empty( $uri_path ) || is_front_page() || is_home() ) {
+				$is_login_page = true;
+			}
+		}
+
 		if ( $is_login_page ) {
 			// Si el usuario ya está autenticado, no volver a mostrarle el login: redirigir a su panel/campus
 			$action = isset( $_REQUEST['action'] ) ? sanitize_text_field( $_REQUEST['action'] ) : 'login';

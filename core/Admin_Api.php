@@ -3574,6 +3574,12 @@ class Admin_Api {
 		}
 
 		update_option( 'crezca_auth_settings', $current );
+		update_option( 'alezux_root_login_enabled', ! empty( $current['root_login_enabled'] ) ? '1' : '0' );
+
+		// Purgar cachés de LiteSpeed / Hostinger si están activas
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'litespeed_purge_all' );
+		}
 
 		return rest_ensure_response( [
 			'success'  => true,

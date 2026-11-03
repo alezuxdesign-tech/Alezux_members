@@ -284,6 +284,28 @@ export function SettingsView({
     }
   };
 
+  // Guardado instantáneo de la opción de Login en Raíz
+  const handleToggleRootLogin = async (checked: boolean) => {
+    const updated = { ...authSettings, root_login_enabled: checked };
+    setAuthSettings(updated);
+    try {
+      const ok = await api.saveAuthSettings(updated);
+      if (ok) {
+        showToast(
+          "success",
+          checked ? "Login en Raíz Activado" : "Login en Raíz Desactivado",
+          checked
+            ? "Ahora dominio.com cargará de inmediato la pantalla de inicio de sesión."
+            : "Se ha restablecido la portada normal del sitio."
+        );
+      } else {
+        showToast("warning", "Aviso", "No se pudo sincronizar de inmediato. Pulsa 'Guardar cambios' al final.");
+      }
+    } catch {
+      showToast("danger", "Error", "Error al comunicarse con el servidor.");
+    }
+  };
+
   // Configuración de Login y Acceso Personalizable
   const [authSettings, setAuthSettings] = useState<AuthSettings>({
     logo_url: "",
@@ -884,7 +906,7 @@ export function SettingsView({
                     </div>
                     <Switch
                       checked={!!authSettings.root_login_enabled}
-                      onCheckedChange={(checked) => setAuthSettings((prev) => ({ ...prev, root_login_enabled: checked }))}
+                      onCheckedChange={handleToggleRootLogin}
                     />
                   </div>
                   {authSettings.root_login_enabled && (
@@ -1486,7 +1508,7 @@ export function SettingsView({
                       </div>
                       <Switch
                         checked={!!authSettings.root_login_enabled}
-                        onCheckedChange={(checked) => setAuthSettings((prev) => ({ ...prev, root_login_enabled: checked }))}
+                        onCheckedChange={handleToggleRootLogin}
                       />
                     </div>
                   </div>
