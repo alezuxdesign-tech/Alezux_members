@@ -1106,26 +1106,7 @@ class Admin_Api {
 			return new \WP_Error( 'cant_create', $course_id->get_error_message(), [ 'status' => 500 ] );
 		}
 
-		$initial_sections = [
-			[
-				'id'      => 'sec-' . $course_id . '-1',
-				'title'   => 'Módulo 1: Introducción',
-				'lessons' => [
-					[
-						'id'          => 'top-' . $course_id . '-1',
-						'title'       => 'Primera Lección de Bienvenida',
-						'duration'    => '10m',
-						'cover'       => $thumb ?: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80',
-						'description' => 'Bienvenida al curso y objetivos principales de aprendizaje.',
-						'video_url'   => '',
-						'files'       => [],
-						'questions'   => [],
-						'subtopics'   => [],
-					],
-				],
-			],
-		];
-
+		$initial_sections = [];
 		update_post_meta( $course_id, '_alezux_curriculum_structure', $initial_sections );
 
 		if ( ! empty( $thumb ) ) {
@@ -1143,10 +1124,10 @@ class Admin_Api {
 			'title'        => $title,
 			'slug'         => get_post_field( 'post_name', $course_id ),
 			'description'  => $desc,
-			'thumbnail'    => $thumb ?: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80',
+			'thumbnail'    => $thumb ?: '',
 			'status'       => 'publish',
 			'studentCount' => 0,
-			'sections'     => $initial_sections,
+			'sections'     => [],
 			'instructors'  => [],
 		] );
 	}
@@ -1158,10 +1139,17 @@ class Admin_Api {
 		$course_id = (int) $request->get_param( 'id' );
 		$modules = [];
 
-		// 1. Si tiene currículum guardado en Crezca, extraer módulos directamente
+		// 1. Si tiene currículum guardado en Crezca, extraer módulos directamente (excluyendo separadores)
 		$saved_curriculum = get_post_meta( $course_id, '_alezux_curriculum_structure', true );
 		if ( ! empty( $saved_curriculum ) && is_array( $saved_curriculum ) ) {
 			foreach ( $saved_curriculum as $sec ) {
+				// Omitir separadores visuales de carrusel/fila
+				if ( ! empty( $sec['is_separator'] ) || ! empty( $sec['isSeparator'] ) ) {
+					continue;
+				}
+				if ( ! empty( $sec['title'] ) && ( strpos( $sec['title'], '[Separador' ) !== false || strpos( $sec['title'], '---' ) !== false ) ) {
+					continue;
+				}
 				$modules[] = [
 					'id'    => $sec['id'],
 					'title' => $sec['title'],
@@ -3566,11 +3554,12 @@ class Admin_Api {
 			'student_default_view',
 			'admin_default_redirect',
 			'form_theme',
+			'root_login_enabled',
 		];
 
 		foreach ( $allowed_keys as $key ) {
 			if ( isset( $params[ $key ] ) ) {
-				if ( in_array( $key, [ 'hero_badge_enabled', 'steps_enabled', 'allow_registration', 'sync_academy_colors' ], true ) ) {
+				if ( in_array( $key, [ 'hero_badge_enabled', 'steps_enabled', 'allow_registration', 'sync_academy_colors', 'root_login_enabled' ], true ) ) {
 					$current[ $key ] = (bool) $params[ $key ];
 				} elseif ( in_array( $key, [ 'logo_width' ], true ) ) {
 					$current[ $key ] = absint( $params[ $key ] );
@@ -4568,47 +4557,35 @@ class Admin_Api {
 	 * Obtener eventos y clases en vivo de la academia
 	 */
 	public function get_academy_events() {
-		$initialized = get_option( '_alezux_academy_events_initialized', false );
 		$events = get_option( '_alezux_academy_events', null );
 
-		// Solo sembrar valores por defecto en la primera instalación si nunca se han configurado o inicializado
-		if ( ! $initialized && $events === null ) {
-			$events = [
-				[
-					'id'                => 'evt-1',
-					'title'             => 'Mentoría Grupal en Vivo: Q&A y Análisis de Casos',
-					'description'       => 'Sesión en tiempo real con docentes para resolver dudas, revisar avances y dar feedback personalizado.',
-					'instructor'        => 'Equipo Docente Crezca',
-					'instructor_avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-					'date'              => date( 'Y-m-d', strtotime( '+3 days' ) ),
-					'time'              => '19:00',
-					'timezone'          => 'GMT-5',
-					'type'              => 'live',
-					'meeting_url'       => 'https://zoom.us',
-					'badge'             => 'En Vivo',
-					'is_active'         => true,
-				],
-				[
-					'id'                => 'evt-2',
-					'title'             => 'Taller Práctico: Implementación y Proyectos Reales',
-					'description'       => 'Laboratorio intensivo guiado para construir proyectos aplicados de los módulos principales.',
-					'instructor'        => 'Docente Titular',
-					'instructor_avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-					'date'              => date( 'Y-m-d', strtotime( '+6 days' ) ),
-					'time'              => '18:30',
-					'timezone'          => 'GMT-5',
-					'type'              => 'workshop',
-					'meeting_url'       => 'https://zoom.us',
-					'badge'             => 'Taller Práctico',
-					'is_active'         => true,
-				],
-			];
-			update_option( '_alezux_academy_events', $events );
+		// Todo debe comenzar en cero al instalar (sin eventos falsos sembrados)
+		if ( $events === null ) {
+			$events = [];
+			update_option( '_alezux_academy_events', [] );
 			update_option( '_alezux_academy_events_initialized', '1' );
 		}
 
 		if ( ! is_array( $events ) ) {
 			$events = [];
+		}
+
+		// Limpiar eventos falsos residuales si existían previamente
+		$clean_events = array_values( array_filter( $events, function( $ev ) {
+			if ( ! is_array( $ev ) ) {
+				return false;
+			}
+			$evt_id = $ev['id'] ?? '';
+			$url = $ev['meeting_url'] ?? '';
+			if ( in_array( $evt_id, [ 'evt-1', 'evt-2' ], true ) && strpos( $url, 'zoom.us' ) !== false ) {
+				return false;
+			}
+			return true;
+		} ) );
+
+		if ( count( $clean_events ) !== count( $events ) ) {
+			update_option( '_alezux_academy_events', $clean_events );
+			$events = $clean_events;
 		}
 
 		return rest_ensure_response( [

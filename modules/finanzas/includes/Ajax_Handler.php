@@ -36,6 +36,27 @@ class Ajax_Handler {
 			\wp_send_json_error( 'ID de curso inválido.' );
 		}
 
+		// 1. Si el curso tiene currículum Crezca nativo (omitir separadores)
+		$saved_curriculum = \get_post_meta( $course_id, '_alezux_curriculum_structure', true );
+		if ( ! empty( $saved_curriculum ) && \is_array( $saved_curriculum ) ) {
+			$modules = [];
+			foreach ( $saved_curriculum as $sec ) {
+				if ( ! empty( $sec['is_separator'] ) || ! empty( $sec['isSeparator'] ) ) {
+					continue;
+				}
+				if ( ! empty( $sec['title'] ) && ( strpos( $sec['title'], '[Separador' ) !== false || strpos( $sec['title'], '---' ) !== false ) ) {
+					continue;
+				}
+				$modules[] = [
+					'id'    => $sec['id'],
+					'title' => $sec['title'],
+					'type'  => 'section',
+				];
+			}
+			\wp_send_json_success( $modules );
+			return;
+		}
+
 		// Obtener módulos/lecciones del curso usando funciones de LearnDash
         // Nota: Asumimos que LearnDash está activo. Si no, usamos posts normales.
         $modules = [];

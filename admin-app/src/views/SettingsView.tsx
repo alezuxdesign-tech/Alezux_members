@@ -315,6 +315,7 @@ export function SettingsView({
     student_default_view: "courses",
     admin_default_redirect: "academy",
     form_theme: "light",
+    root_login_enabled: false,
   });
 
   useEffect(() => {
@@ -860,6 +861,44 @@ export function SettingsView({
         {/* ============================================================== */}
         {activeTab === "login" && (
           <>
+            {/* FILA 0: LOGIN DIRECTO EN LA RAÍZ (DOMINIO.COM) */}
+            <div className={styles.settingsRow}>
+              <div className={styles.rowInfo}>
+                <h3 className={styles.rowTitle}>Acceso en la Raíz (dominio.com)</h3>
+                <p className={styles.rowDesc}>
+                  Configura si tu dominio principal abre directamente la pantalla de inicio de sesión de la academia, sin rutas de WordPress.
+                </p>
+              </div>
+              <div className={styles.rowContent}>
+                <div className={styles.colorSyncCard}>
+                  <div className={styles.colorSyncHeader}>
+                    <div className={styles.colorSyncTitleWrap}>
+                      <div className={styles.colorSyncTitle}>
+                        <LogIn size={16} style={{ color: "var(--control-on, var(--accent))" }} />
+                        <span>Abrir Login de Alumnos en la Página de Inicio</span>
+                        <span className={styles.recommendedBadge} style={{ marginLeft: 8 }}>Sin rastro de WordPress</span>
+                      </div>
+                      <p className={styles.colorSyncDesc}>
+                        Al ingresar a la raíz de tu dominio (<code>dominio.com</code>), los visitantes verán directamente la pantalla de acceso de tu academia. No necesitarán ir a <code>/wp-admin</code> ni se mostrarán rutas ni avisos de WordPress.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={!!authSettings.root_login_enabled}
+                      onCheckedChange={(checked) => setAuthSettings((prev) => ({ ...prev, root_login_enabled: checked }))}
+                    />
+                  </div>
+                  {authSettings.root_login_enabled && (
+                    <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: "rgba(13,184,121,0.08)", border: "1px solid rgba(13,184,121,0.2)", display: "flex", gap: 10, alignItems: "center", fontSize: 12.5, color: "var(--foreground)" }}>
+                      <CheckCircle2 size={16} style={{ color: "#0db879", flexShrink: 0 }} />
+                      <span>
+                        <strong>Modo Privado / Whitelabel Activo:</strong> Cualquier visita a <code>dominio.com</code> o <code>wp-login.php</code> cargará de forma limpia la pantalla de acceso con tu logotipo y colores de marca.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* FILA 1: SINCRONIZACIÓN Y COLOR DE MARCA ARMÓNICO */}
             <div className={styles.settingsRow}>
               <div className={styles.rowInfo}>
@@ -1439,6 +1478,16 @@ export function SettingsView({
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <CheckCircle2 size={15} style={{ color: "#0db879" }} />
                       <span>Cualquier intento directo de acceder a <code>/wp-admin/</code> por parte de un estudiante es redirigido al campus virtual.</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 10, marginTop: 4, borderTop: "1px solid var(--border-subtle)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <LogIn size={15} style={{ color: "var(--control-on, var(--accent))" }} />
+                        <span><strong>Pantalla de Login en dominio.com:</strong> Abrir directamente el acceso al ingresar al dominio principal (sin wp-admin).</span>
+                      </div>
+                      <Switch
+                        checked={!!authSettings.root_login_enabled}
+                        onCheckedChange={(checked) => setAuthSettings((prev) => ({ ...prev, root_login_enabled: checked }))}
+                      />
                     </div>
                   </div>
                 </div>

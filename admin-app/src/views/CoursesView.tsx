@@ -36,6 +36,7 @@ import {
   Sparkles,
   RefreshCw,
   Rows,
+  Upload,
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Badge } from "../components/arc/badge/badge";
@@ -117,6 +118,23 @@ export function CoursesView({
   const [availablePlans, setAvailablePlans] = useState<FinancePlan[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [academyLogo, setAcademyLogo] = useState<string>(() => {
+    return (
+      (window as any).crezca_app_data?.academy_logo ||
+      (window as any).crezca_student_data?.academy_logo ||
+      localStorage.getItem("crezca_academy_logo") ||
+      ""
+    );
+  });
+
+  useEffect(() => {
+    api.getPlatformSettings().then((s) => {
+      if (s?.academy_logo) {
+        setAcademyLogo(s.academy_logo);
+        localStorage.setItem("crezca_academy_logo", s.academy_logo);
+      }
+    });
+  }, []);
 
   // Alertas Arc tipo Toast
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -2147,6 +2165,31 @@ export function CoursesView({
                                 alt={lesson.title}
                                 className={styles.topicThumb}
                               />
+                            ) : academyLogo ? (
+                              <div
+                                className={styles.topicThumbPlaceholder}
+                                style={{
+                                  background: "rgba(255,255,255,0.03)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  overflow: "hidden",
+                                  padding: 4,
+                                }}
+                                title="Sin portada: usando logo de la academia en blanco y negro"
+                              >
+                                <img
+                                  src={academyLogo}
+                                  alt="Logo academia"
+                                  style={{
+                                    maxWidth: "80%",
+                                    maxHeight: "80%",
+                                    objectFit: "contain",
+                                    filter: "grayscale(100%)",
+                                    opacity: 0.55,
+                                  }}
+                                />
+                              </div>
                             ) : (
                               <div className={styles.topicThumbPlaceholder}>
                                 <Video size={16} />
@@ -2497,6 +2540,131 @@ export function CoursesView({
                   })
                 }
               />
+            </div>
+
+            {/* Portada del Topic / Lección (con Fallback al Logo en B&W) */}
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                Portada de la Lección / Topic (Opcional)
+              </label>
+              <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                <div
+                  style={{
+                    width: "72px",
+                    height: "46px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border)",
+                    backgroundColor: "rgba(0,0,0,0.3)",
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                  title={editingTopicState.topic.cover ? "Portada personalizada" : "Sin portada: usando logo en blanco y negro"}
+                >
+                  {editingTopicState.topic.cover ? (
+                    <img
+                      src={editingTopicState.topic.cover}
+                      alt="Portada topic"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : academyLogo ? (
+                    <img
+                      src={academyLogo}
+                      alt="Logo academia"
+                      style={{
+                        maxWidth: "80%",
+                        maxHeight: "80%",
+                        objectFit: "contain",
+                        filter: "grayscale(100%)",
+                        opacity: 0.55,
+                      }}
+                    />
+                  ) : (
+                    <ImageIcon size={18} style={{ opacity: 0.4 }} />
+                  )}
+                </div>
+
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Input
+                      placeholder="URL de la imagen de portada o sube un archivo..."
+                      value={editingTopicState.topic.cover || ""}
+                      onChange={(e) =>
+                        setEditingTopicState({
+                          ...editingTopicState,
+                          topic: { ...editingTopicState.topic, cover: e.target.value },
+                        })
+                      }
+                      style={{ flex: 1 }}
+                    />
+                    <label
+                      className={styles.uploadBtnLabel}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "0 12px",
+                        height: 36,
+                        fontSize: 12,
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        border: "1px solid var(--border)",
+                        background: "var(--card-subtle)",
+                        color: "var(--foreground)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <Upload size={13} />
+                      <span>Subir</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            if (ev.target?.result) {
+                              setEditingTopicState((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      topic: { ...prev.topic, cover: ev.target!.result as string },
+                                    }
+                                  : null
+                              );
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </label>
+                    {editingTopicState.topic.cover && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setEditingTopicState({
+                            ...editingTopicState,
+                            topic: { ...editingTopicState.topic, cover: "" },
+                          })
+                        }
+                        title="Quitar portada personalizada y usar logo en blanco y negro"
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    )}
+                  </div>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    {editingTopicState.topic.cover
+                      ? "Portada personalizada activa."
+                      : "Si no asignas una imagen, se mostrará automáticamente el logo de la academia en blanco y negro."}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Link del Video y Duración */}

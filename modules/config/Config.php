@@ -145,11 +145,8 @@ class Config extends Module_Base {
 		// Reemplazar completamente la plantilla de la página de login por la interfaz moderna standalone (Imagen 2)
 		add_filter( 'template_include', [ $this, 'override_login_page_template' ], 999 );
 
-		$login_page_id = get_option( 'alezux_login_page_id' );
-		if ( $login_page_id && get_post_status( $login_page_id ) === 'publish' ) {
-			// Redirección de /wp-login.php a la página personalizada si aplica
-			add_action( 'template_redirect', [ $this, 'redirect_to_custom_login' ] );
-		}
+		// Redirección de /wp-login.php a la página personalizada o a la raíz
+		add_action( 'template_redirect', [ $this, 'redirect_to_custom_login' ] );
 
 		// Redirección automática por roles tras iniciar sesión (Admin a Academia, Estudiantes a Cursos/Dashboard)
 		add_filter( 'login_redirect', [ $this, 'custom_role_login_redirect' ], 99, 3 );
@@ -267,6 +264,10 @@ class Config extends Module_Base {
 	}
 
 	public function custom_login_url( $login_url, $redirect, $force_reauth ) {
+		$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+		if ( ! empty( $auth_settings['root_login_enabled'] ) ) {
+			return home_url( '/' );
+		}
 		$login_page_id = get_option( 'alezux_login_page_id' );
 		if ( $login_page_id ) {
 			$url = get_permalink( $login_page_id );
@@ -412,6 +413,11 @@ class Config extends Module_Base {
 		// Si es la página de login nativa y no es un POST (login real) ni acciones especiales
 		if ( 'wp-login.php' == $pagenow && $_SERVER['REQUEST_METHOD'] == 'GET' ) {
 			if ( ! isset( $_REQUEST['action'] ) || in_array( $_REQUEST['action'], [ 'login' ] ) ) {
+				$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+				if ( ! empty( $auth_settings['root_login_enabled'] ) ) {
+					wp_redirect( home_url( '/' ) );
+					exit;
+				}
 				$login_page_id = get_option( 'alezux_login_page_id' );
 				if ( $login_page_id && get_post_status( $login_page_id ) === 'publish' ) {
 					wp_redirect( get_permalink( $login_page_id ) );

@@ -586,6 +586,7 @@ export interface AuthSettings {
   student_default_view: "courses" | "dashboard";
   admin_default_redirect: "academy" | "wp";
   form_theme?: "light" | "dark";
+  root_login_enabled?: boolean;
 }
 
 export interface EmailLogItem {
@@ -1411,30 +1412,13 @@ class ApiService {
       title,
       slug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       description,
-      thumbnail: thumbnail || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
-      banner: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80",
-      price: 97,
+      thumbnail: thumbnail || "",
+      banner: "",
+      price: 0,
       linkedPlanId: null,
       status: "publish",
       studentCount: 0,
-      sections: [
-        {
-          id: `sec-${Date.now()}`,
-          title: "Módulo 1: Introducción",
-          cover: thumbnail || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80",
-          lessons: [
-            { 
-              id: `les-${Date.now()}`, 
-              title: "Primera Lección de Bienvenida", 
-              duration: "10m",
-              cover: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80",
-              description: "Bienvenida al curso y objetivos principales de aprendizaje.",
-              video_url: "",
-              files: []
-            },
-          ],
-        },
-      ],
+      sections: [],
     };
     return newCourse;
   }
@@ -1462,6 +1446,7 @@ class ApiService {
       const list: { id: number; title: string }[] = [];
       let counter = 100;
       found.sections.forEach((sec) => {
+        if (sec.is_separator) return;
         sec.lessons.forEach((l) => {
           list.push({
             id: Number(l.id.replace(/\D/g, "")) || ++counter,

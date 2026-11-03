@@ -370,7 +370,10 @@ export function FinanceView() {
       return;
     }
     setLoadingCreateModules(true);
-    const mods = await api.getCourseModules(courseId);
+    const rawMods = await api.getCourseModules(courseId);
+    const mods = (rawMods || []).filter(
+      (m: any) => !m.is_separator && !m.isSeparator && !m.title.includes("[Separador") && !m.title.includes("---")
+    );
     setCreateModules(mods);
 
     // Inicializar reglas por defecto (todas en cuota 1 si no existen)
@@ -390,7 +393,10 @@ export function FinanceView() {
       return;
     }
     setLoadingEditModules(true);
-    const mods = await api.getCourseModules(courseId);
+    const rawEditMods = await api.getCourseModules(courseId);
+    const mods = (rawEditMods || []).filter(
+      (m: any) => !m.is_separator && !m.isSeparator && !m.title.includes("[Separador") && !m.title.includes("---")
+    );
     setEditModules(mods);
 
     // Parsear reglas existentes
