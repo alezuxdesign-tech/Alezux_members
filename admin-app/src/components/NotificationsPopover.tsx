@@ -7,24 +7,16 @@ import {
   MessageSquare, 
   Check,
   CheckCheck, 
-  Trash2,
+  Trash2, 
   Info, 
-  Clock, 
-  ExternalLink,
-  X
+  X,
+  Award,
+  Loader2
 } from "lucide-react";
+import { api, NotificationItem } from "../services/api";
 import styles from "./NotificationsPopover.module.css";
 
-export interface NotificationItem {
-  id: string;
-  title: string;
-  message: string;
-  type: "event" | "course" | "community" | "system";
-  time: string;
-  read: boolean;
-  targetTab?: string;
-  targetId?: string;
-}
+export type { NotificationItem };
 
 interface NotificationsPopoverProps {
   isOpen: boolean;
@@ -34,44 +26,6 @@ interface NotificationsPopoverProps {
   onUpdateCount?: (count: number) => void;
 }
 
-const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "notif-1",
-    title: "Masterclass en Vivo por Zoom",
-    message: "Q&A en Vivo: Estrategias de Crecimiento inicia pronto. ¡Únete a la sala!",
-    type: "event",
-    time: "Hoy 7:00 PM",
-    read: false,
-    targetTab: "events",
-  },
-  {
-    id: "notif-2",
-    title: "Nuevo Taller Práctico",
-    message: "Workshop Intensivo: De Cero a Escala ha sido programado en el calendario.",
-    type: "event",
-    time: "Ayer",
-    read: false,
-    targetTab: "events",
-  },
-  {
-    id: "notif-3",
-    title: "Comunidad Crezca",
-    message: "Hay 5 nuevos aportes en el canal de debate y networking.",
-    type: "community",
-    time: "Hace 2 horas",
-    read: false,
-    targetTab: "community",
-  },
-  {
-    id: "notif-4",
-    title: "Sistema Actualizado",
-    message: "El campus virtual ahora cuenta con sincronización en tiempo real y modo pomodoro.",
-    type: "system",
-    time: "Hace 1 día",
-    read: true,
-  },
-];
-
 export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
   isOpen,
   onClose,
@@ -80,26 +34,60 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
   onUpdateCount,
 }) => {
   const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
       const stored = localStorage.getItem("crezca_notifications");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (e) {
       // fallback
     }
-    return DEFAULT_NOTIFICATIONS;
+    return [];
   });
 
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
-  // Guardar cambios en localStorage y notificar al padre
+  // Cargar notificaciones reales del servidor al montar o al abrir
   useEffect(() => {
-    localStorage.setItem("crezca_notifications", JSON.stringify(notifications));
-    const unread = notifications.filter((n) => !n.read).length;
+    let isMounted = true;
+    const fetchFresh = async () => {
+      if (notifications.length === 0) setLoading(true);
+      try {
+        const res = await api.getNotifications();
+        if (isMounted && res && Array.isArray(res.notifications)) {
+          setNotifications(res.notifications);
+          localStorage.setItem("crezca_notifications", JSON.stringify(res.notifications));
+          if (onUpdateCount) {
+            onUpdateCount(res.unread_count);
+          }
+        }
+      } catch (err) {
+        console.error("Error al obtener notificaciones:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      fetchFresh();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
+  // Actualizar count y localStorage cada vez que cambia notifications
+  const syncState = (next: NotificationItem[]) => {
+    setNotifications(next);
+    localStorage.setItem("crezca_notifications", JSON.stringify(next));
+    const unread = next.filter((n) => !n.read).length;
     if (onUpdateCount) {
       onUpdateCount(unread);
     }
-  }, [notifications, onUpdateCount]);
+  };
 
   // Cerrar al presionar Escape
   useEffect(() => {
@@ -122,38 +110,55 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
     ? notifications.filter((n) => !n.read) 
     : notifications;
 
-  const handleMarkAllAsRead = (e: React.MouseEvent) => {
+  const handleMarkAllAsRead = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    const next = notifications.map((n) => ({ ...n, read: true }));
+    syncState(next);
+    await api.markNotificationRead("all");
   };
 
-  const handleToggleRead = (e: React.MouseEvent, id: string) => {
+  const handleToggleRead = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
+    const item = notifications.find((n) => n.id === id);
+    const willBeRead = item ? !item.read : true;
+    const next = notifications.map((n) =>
+      n.id === id ? { ...n, read: willBeRead } : n
     );
+    syncState(next);
+
+    if (willBeRead) {
+      await api.markNotificationRead(id);
+    }
   };
 
-  const handleDeleteItem = (e: React.MouseEvent, id: string) => {
+  const handleDeleteItem = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    const next = notifications.filter((n) => n.id !== id);
+    syncState(next);
+    await api.deleteNotification(id);
   };
 
-  const handleClearAll = (e: React.MouseEvent) => {
+  const handleClearAll = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications([]);
+    syncState([]);
+    await api.clearNotifications(false);
   };
 
-  const handleClearRead = (e: React.MouseEvent) => {
+  const handleClearRead = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => !n.read));
+    const next = notifications.filter((n) => !n.read);
+    syncState(next);
+    await api.clearNotifications(true);
   };
 
-  const handleClickItem = (item: NotificationItem) => {
-    // Marcar como leída
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
-    );
+  const handleClickItem = async (item: NotificationItem) => {
+    if (!item.read) {
+      const next = notifications.map((n) =>
+        n.id === item.id ? { ...n, read: true } : n
+      );
+      syncState(next);
+      api.markNotificationRead(item.id).catch(() => {});
+    }
     if (item.targetTab && onNavigate) {
       onNavigate(item.targetTab, item.targetId);
     }
@@ -169,6 +174,7 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
       case "community":
         return <MessageSquare size={17} />;
       case "system":
+        return <Award size={17} />;
       default:
         return <Info size={17} />;
     }
@@ -248,7 +254,12 @@ export const NotificationsPopover: React.FC<NotificationsPopoverProps> = ({
         </div>
 
         <div className={styles.list}>
-          {filteredList.length === 0 ? (
+          {loading && notifications.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Loader2 size={24} className="spin" style={{ opacity: 0.5, animation: "spin 1s linear infinite" }} />
+              <p>Cargando notificaciones...</p>
+            </div>
+          ) : filteredList.length === 0 ? (
             <div className={styles.emptyState}>
               <Bell size={24} style={{ opacity: 0.3 }} />
               <p>No tienes notificaciones {filter === "unread" ? "sin leer" : ""}</p>

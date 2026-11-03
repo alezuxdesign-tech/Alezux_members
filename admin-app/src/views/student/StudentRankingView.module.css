@@ -19,7 +19,7 @@
 .headerInfo h1 {
   font-size: 26px;
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--foreground, #f8fafc);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -28,25 +28,26 @@
 
 .headerInfo p {
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--text-secondary, #94a3b8);
   margin: 0;
 }
 
-/* Selector de Periodo */
+/* Selector de Periodo (Pestañas de alto contraste) */
 .periodSelector {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-raised, #181b26);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
   border-radius: 12px;
   padding: 4px;
   gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .periodBtn {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--text-secondary, #cbd5e1);
   font-size: 13px;
   font-weight: 600;
   padding: 8px 16px;
@@ -56,14 +57,15 @@
 }
 
 .periodBtn:hover {
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--foreground, #ffffff);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
 }
 
 .periodBtnActive {
-  background: var(--accent, #7747ff) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(119, 71, 255, 0.35);
+  background: var(--accent) !important;
+  color: var(--accent-foreground, #ffffff) !important;
+  font-weight: 700;
+  box-shadow: 0 2px 10px var(--accent-subtle) !important;
 }
 
 /* PODIO TOP 3 */
@@ -73,10 +75,11 @@
   justify-content: center;
   gap: 16px;
   padding: 40px 20px 20px 20px;
-  background: radial-gradient(circle at 50% 30%, rgba(119, 71, 255, 0.08) 0%, rgba(15, 17, 26, 0.6) 80%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: radial-gradient(circle at 50% 30%, var(--accent-subtle) 0%, var(--surface-ground, #0f111a) 85%);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
   border-radius: 24px;
   min-height: 380px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
 }
 
 .podiumStep {
@@ -144,25 +147,26 @@
   bottom: -4px;
   left: 50%;
   transform: translateX(-50%);
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
-  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--surface-card, #12141d);
 }
 
-.rank1Badge { background: #facc15; }
-.rank2Badge { background: #cbd5e1; }
-.rank3Badge { background: #f59e0b; }
+.rank1Badge { background: #facc15; color: #1e1b4b; }
+.rank2Badge { background: #e2e8f0; color: #0f172a; }
+.rank3Badge { background: #fb923c; color: #431407; }
 
 .podiumName {
   font-size: 15px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--foreground, #ffffff);
   margin-bottom: 4px;
   text-align: center;
   max-width: 180px;
@@ -179,15 +183,16 @@
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #cbd5e1;
+  background: var(--surface-raised, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary, #cbd5e1);
   margin-bottom: 6px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
 }
 
 .podiumXp {
   font-size: 14px;
   font-weight: 800;
-  color: #a78bfa;
+  color: var(--accent);
   margin-bottom: 12px;
 }
 
@@ -220,10 +225,10 @@
   border-top: 2px solid #f59e0b;
 }
 
-/* CARD DE TU POSICIÓN ACTUAL */
+/* CARD DE TU POSICIÓN ACTUAL (Alto contraste y colores de marca) */
 .currentUserCard {
-  background: linear-gradient(135deg, rgba(119, 71, 255, 0.15) 0%, rgba(18, 20, 29, 0.9) 100%);
-  border: 1px solid rgba(119, 71, 255, 0.4);
+  background: linear-gradient(135deg, var(--accent-subtle) 0%, var(--surface-raised, #181b26) 100%);
+  border: 1px solid var(--accent);
   border-radius: 18px;
   padding: 20px 24px;
   display: flex;
@@ -231,7 +236,7 @@
   justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 .userCardLeft {
@@ -240,24 +245,27 @@
   gap: 16px;
 }
 
+/* # del posicionamiento en la tarjeta de usuario con alto contraste */
 .userRankBadge {
   font-size: 20px;
   font-weight: 900;
-  color: #ffffff;
-  background: var(--accent, #7747ff);
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  color: var(--accent-foreground, #ffffff) !important;
+  background: var(--accent) !important;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(119, 71, 255, 0.3);
+  box-shadow: 0 4px 14px var(--accent-subtle);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
 .userCardInfo h3 {
   font-size: 16px;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--foreground, #f8fafc);
   margin: 0 0 4px 0;
 }
 
@@ -266,15 +274,16 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--text-secondary, #94a3b8);
 }
 
 .levelTag {
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
   color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .userProgressWrapper {
@@ -288,43 +297,46 @@
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-secondary, #cbd5e1);
+  font-weight: 500;
 }
 
 .progressBarBg {
   width: 100%;
   height: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
   overflow: hidden;
 }
 
 .progressBarFill {
   height: 100%;
-  background: linear-gradient(90deg, #a855f7 0%, #ec4899 100%);
+  background: var(--accent);
   border-radius: 9999px;
   transition: width 0.4s ease;
+  box-shadow: 0 0 10px var(--accent-subtle);
 }
 
 /* TABLA CLASIFICACIÓN GENERAL (PUESTOS 4+) */
 .tableContainer {
-  background: rgba(18, 20, 29, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-card, #12141d);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
   border-radius: 18px;
   overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .tableHeader {
   display: grid;
   grid-template-columns: 80px 1fr 140px 120px;
   padding: 14px 20px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-raised, rgba(255, 255, 255, 0.03));
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--text-tertiary, #94a3b8);
 }
 
 .tableRow {
@@ -332,7 +344,7 @@
   grid-template-columns: 80px 1fr 140px 120px;
   align-items: center;
   padding: 14px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
   transition: background 0.15s ease;
 }
 
@@ -341,18 +353,36 @@
 }
 
 .tableRow:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.04));
 }
 
 .tableRowCurrent {
-  background: rgba(119, 71, 255, 0.08) !important;
-  border-left: 3px solid var(--accent, #7747ff);
+  background: var(--accent-subtle) !important;
+  border-left: 3px solid var(--accent);
 }
 
+/* # del posicionamiento en cada fila: Insignia con fondo y borde de alto contraste */
 .rowRank {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--surface-raised, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+  font-size: 13px;
   font-weight: 800;
-  color: #94a3b8;
+  color: var(--foreground, #ffffff);
+  letter-spacing: 0.5px;
+}
+
+.tableRowCurrent .rowRank {
+  background: var(--accent) !important;
+  color: var(--accent-foreground, #ffffff) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 2px 8px var(--accent-subtle);
 }
 
 .rowStudent {
@@ -367,12 +397,13 @@
   border-radius: 50%;
   object-fit: cover;
   background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
 }
 
 .studentName {
   font-size: 14px;
   font-weight: 600;
-  color: #f8fafc;
+  color: var(--foreground, #f8fafc);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -381,10 +412,10 @@
 .youBadge {
   font-size: 10px;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
-  background: var(--accent, #7747ff);
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--accent-foreground, #ffffff);
 }
 
 .rowLevel {
@@ -393,13 +424,13 @@
   gap: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: #cbd5e1;
+  color: var(--text-secondary, #cbd5e1);
 }
 
 .rowXp {
   font-size: 14px;
   font-weight: 800;
-  color: #a78bfa;
+  color: var(--accent);
   text-align: right;
 }
 

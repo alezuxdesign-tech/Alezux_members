@@ -171,7 +171,7 @@ export const StudentRankingView: React.FC<StudentRankingViewProps> = ({ currentU
                   {currentUser.badge} Nivel {currentUser.level}: {currentUser.level_name}
                 </span>
                 <span>•</span>
-                <strong style={{ color: "#f8fafc" }}>{currentUser.xp.toLocaleString()} XP acumulados</strong>
+                <strong style={{ color: "var(--foreground, #f8fafc)" }}>{currentUser.xp.toLocaleString()} XP acumulados</strong>
               </div>
             </div>
           </div>
@@ -188,7 +188,7 @@ export const StudentRankingView: React.FC<StudentRankingViewProps> = ({ currentU
               />
             </div>
             {currentUser.points_to_higher > 0 && (
-              <span style={{ fontSize: "11px", color: "#a78bfa" }}>
+              <span style={{ fontSize: "12px", color: "var(--accent)", fontWeight: 600 }}>
                 ⚡ A solo <strong>{currentUser.points_to_higher} XP</strong> de subir un puesto en la tabla.
               </span>
             )}
@@ -231,7 +231,7 @@ export const StudentRankingView: React.FC<StudentRankingViewProps> = ({ currentU
         ))}
 
         {restItems.length === 0 && !loading && (
-          <div style={{ padding: "32px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>
+          <div style={{ padding: "32px", textAlign: "center", color: "var(--text-secondary, #94a3b8)", fontSize: "14px" }}>
             El top 3 lidera la tabla en este periodo. ¡Completa lecciones para entrar en la lista!
           </div>
         )}

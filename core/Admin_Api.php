@@ -503,6 +503,34 @@ class Admin_Api {
 				'callback'            => [ $this, 'handle_incoming_webhook' ],
 				'permission_callback' => '__return_true',
 			] );
+
+			// ==========================================
+			// NOTIFICACIONES EN TIEMPO REAL
+			// ==========================================
+			register_rest_route( $namespace, '/notifications', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_notifications' ],
+					'permission_callback' => [ $this, 'student_permissions_check' ],
+				],
+				[
+					'methods'             => 'DELETE',
+					'callback'            => [ $this, 'clear_notifications' ],
+					'permission_callback' => [ $this, 'student_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/notifications/read', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'mark_notification_read' ],
+				'permission_callback' => [ $this, 'student_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/notifications/(?P<id>[a-zA-Z0-9_\-]+)', [
+				'methods'             => 'DELETE',
+				'callback'            => [ $this, 'delete_notification' ],
+				'permission_callback' => [ $this, 'student_permissions_check' ],
+			] );
 		}
 	}
 
@@ -4875,6 +4903,125 @@ class Admin_Api {
 			return \Alezux_Members\Core\Webhook_Engine::process_incoming( $request );
 		}
 		return new \WP_Error( 'not_available', 'Webhook_Engine no disponible.', [ 'status' => 500 ] );
+	}
+
+	// =========================================================================
+	// NOTIFICACIONES EN TIEMPO REAL
+	// =========================================================================
+
+	public function get_notifications( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return rest_ensure_response( [
+				'notifications' => [],
+				'unread_count'  => 0,
+			] );
+		}
+
+		if ( ! class_exists( '\\Alezux_Members\\Modules\\Notifications\\Includes\\Notifications_DB' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/notifications/includes/Notifications_DB.php';
+		}
+
+		\Alezux_Members\Modules\Notifications\Includes\Notifications_DB::create_table();
+
+		$raw = \Alezux_Members\Modules\Notifications\Includes\Notifications_DB::get_user_notifications( $user_id, 50, 0, false );
+
+		// Si no tiene ninguna notificación y es un usuario activo, sembrar bienvenida
+		if ( empty( $raw ) && ! get_user_meta( $user_id, '_crezca_notifs_seeded', true ) ) {
+			\Alezux_Members\Modules\Notifications\Includes\Notifications_DB::insert(
+				$user_id,
+				'¡Bienvenido al Campus Virtual!',
+				'Explora tus formaciones, avanza a tu propio ritmo y acumula puntos XP para subir en el ranking.',
+				'#',
+				'',
+				'system'
+			);
+			update_user_meta( $user_id, '_crezca_notifs_seeded', '1' );
+			$raw = \Alezux_Members\Modules\Notifications\Includes\Notifications_DB::get_user_notifications( $user_id, 50, 0, false );
+		}
+
+		$formatted = [];
+		if ( is_array( $raw ) ) {
+			foreach ( $raw as $n ) {
+				$time_ago = human_time_diff( strtotime( $n->created_at ), current_time( 'timestamp' ) );
+				$type = ! empty( $n->type ) ? $n->type : 'system';
+				$target_tab = 'dashboard';
+				if ( 'event' === $type ) $target_tab = 'events';
+				elseif ( 'course' === $type ) $target_tab = 'courses';
+				elseif ( 'community' === $type ) $target_tab = 'community';
+
+				$formatted[] = [
+					'id'        => (string) $n->id,
+					'title'     => $n->title,
+					'message'   => $n->message,
+					'type'      => $type,
+					'time'      => "Hace {$time_ago}",
+					'read'      => (bool) $n->is_read,
+					'targetTab' => $target_tab,
+				];
+			}
+		}
+
+		$unread_count = \Alezux_Members\Modules\Notifications\Includes\Notifications_DB::get_unread_count( $user_id );
+
+		return rest_ensure_response( [
+			'notifications' => $formatted,
+			'unread_count'  => (int) $unread_count,
+		] );
+	}
+
+	public function mark_notification_read( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new \WP_Error( 'unauthorized', 'No autorizado', [ 'status' => 401 ] );
+		}
+
+		if ( ! class_exists( '\\Alezux_Members\\Modules\\Notifications\\Includes\\Notifications_DB' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/notifications/includes/Notifications_DB.php';
+		}
+
+		$params = $request->get_json_params();
+		$id     = isset( $params['id'] ) ? $params['id'] : null;
+
+		if ( ! empty( $id ) && 'all' !== $id ) {
+			\Alezux_Members\Modules\Notifications\Includes\Notifications_DB::mark_as_read( (int) $id, $user_id );
+		} else {
+			\Alezux_Members\Modules\Notifications\Includes\Notifications_DB::mark_all_as_read( $user_id );
+		}
+
+		return rest_ensure_response( [ 'success' => true ] );
+	}
+
+	public function delete_notification( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new \WP_Error( 'unauthorized', 'No autorizado', [ 'status' => 401 ] );
+		}
+
+		if ( ! class_exists( '\\Alezux_Members\\Modules\\Notifications\\Includes\\Notifications_DB' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/notifications/includes/Notifications_DB.php';
+		}
+
+		$id = (int) $request->get_param( 'id' );
+		\Alezux_Members\Modules\Notifications\Includes\Notifications_DB::delete( $id, $user_id );
+
+		return rest_ensure_response( [ 'success' => true, 'id' => (string) $id ] );
+	}
+
+	public function clear_notifications( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new \WP_Error( 'unauthorized', 'No autorizado', [ 'status' => 401 ] );
+		}
+
+		if ( ! class_exists( '\\Alezux_Members\\Modules\\Notifications\\Includes\\Notifications_DB' ) ) {
+			require_once ALEZUX_MEMBERS_PATH . 'modules/notifications/includes/Notifications_DB.php';
+		}
+
+		$only_read = (bool) $request->get_param( 'only_read' );
+		\Alezux_Members\Modules\Notifications\Includes\Notifications_DB::delete_all( $user_id, $only_read );
+
+		return rest_ensure_response( [ 'success' => true ] );
 	}
 }
 

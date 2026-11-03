@@ -222,8 +222,17 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
         }
       }
     } catch (e) {}
-    return 3;
+    return 0;
   });
+
+  // Sincronizar badge de notificaciones con backend
+  useEffect(() => {
+    api.getNotifications().then((res) => {
+      if (res && typeof res.unread_count === "number") {
+        setUnreadNotificationsCount(res.unread_count);
+      }
+    }).catch(() => {});
+  }, []);
 
   // Navegación para el Administrador
   const adminNavItems: NavItemConfig<AdminTabId>[] = [

@@ -42,7 +42,7 @@ class Notifications_DB {
 		return $wpdb->insert(
 			$table_name,
 			[
-				'user_id'    => $user_id,
+				'user_id'    => (int) $user_id,
 				'title'      => $title,
 				'message'    => $message,
 				'link'       => $link,
@@ -58,10 +58,10 @@ class Notifications_DB {
 	public static function get_unread_count( $user_id ) {
 		global $wpdb;
 		$table_name = self::get_table_name();
-		return $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_name WHERE user_id = %d AND is_read = 0", $user_id ) );
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_name WHERE user_id = %d AND is_read = 0", (int) $user_id ) );
 	}
 
-	public static function get_user_notifications( $user_id, $limit = 20, $offset = 0, $only_unread = true ) {
+	public static function get_user_notifications( $user_id, $limit = 50, $offset = 0, $only_unread = false ) {
 		global $wpdb;
 		$table_name = self::get_table_name();
 		
@@ -72,7 +72,7 @@ class Notifications_DB {
 		
 		return $wpdb->get_results( $wpdb->prepare( 
 			"SELECT * FROM $table_name $where_clause ORDER BY created_at DESC LIMIT %d OFFSET %d", 
-			$user_id, $limit, $offset 
+			(int) $user_id, (int) $limit, (int) $offset 
 		) );
 	}
 
@@ -82,7 +82,7 @@ class Notifications_DB {
 		return $wpdb->update( 
 			$table_name, 
 			[ 'is_read' => 1 ], 
-			[ 'id' => $notification_id, 'user_id' => $user_id ], 
+			[ 'id' => (int) $notification_id, 'user_id' => (int) $user_id ], 
 			[ '%d' ], 
 			[ '%d', '%d' ] 
 		);
@@ -94,9 +94,31 @@ class Notifications_DB {
 		return $wpdb->update( 
 			$table_name, 
 			[ 'is_read' => 1 ], 
-			[ 'user_id' => $user_id, 'is_read' => 0 ], 
+			[ 'user_id' => (int) $user_id, 'is_read' => 0 ], 
 			[ '%d' ], 
 			[ '%d', '%d' ] 
 		);
+	}
+
+	public static function delete( $notification_id, $user_id ) {
+		global $wpdb;
+		$table_name = self::get_table_name();
+		return $wpdb->delete(
+			$table_name,
+			[ 'id' => (int) $notification_id, 'user_id' => (int) $user_id ],
+			[ '%d', '%d' ]
+		);
+	}
+
+	public static function delete_all( $user_id, $only_read = false ) {
+		global $wpdb;
+		$table_name = self::get_table_name();
+		$where = [ 'user_id' => (int) $user_id ];
+		$format = [ '%d' ];
+		if ( $only_read ) {
+			$where['is_read'] = 1;
+			$format[] = '%d';
+		}
+		return $wpdb->delete( $table_name, $where, $format );
 	}
 }

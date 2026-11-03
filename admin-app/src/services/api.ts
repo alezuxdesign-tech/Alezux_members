@@ -400,6 +400,17 @@ export interface WebhooksResponse {
   }>;
 }
 
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  type: "event" | "course" | "community" | "system";
+  time: string;
+  read: boolean;
+  targetTab?: string;
+  targetId?: string;
+}
+
 export type PlanType = "one_time" | "installments" | "subscription";
 
 export interface FinancePlan {
@@ -3489,6 +3500,101 @@ class ApiService {
     }
     const newKey = "crz_sec_" + Math.random().toString(36).substring(2, 14) + Math.random().toString(36).substring(2, 14);
     return { success: true, incoming_key: newKey };
+  }
+
+  // =========================================================================
+  // NOTIFICACIONES EN TIEMPO REAL
+  // =========================================================================
+
+  async getNotifications(): Promise<{ notifications: NotificationItem[]; unread_count: number }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}notifications`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.notifications)) {
+            localStorage.setItem("crezca_notifications", JSON.stringify(data.notifications));
+            return data;
+          }
+        }
+      }
+    } catch (e) {
+      console.error("API Error getNotifications:", e);
+    }
+    const stored = localStorage.getItem("crezca_notifications");
+    if (stored) {
+      try {
+        const list = JSON.parse(stored);
+        if (Array.isArray(list)) {
+          return { notifications: list, unread_count: list.filter((n: any) => !n.read).length };
+        }
+      } catch (e) {}
+    }
+    return {
+      notifications: [
+        {
+          id: "notif-welcome",
+          title: "¡Bienvenido a Crezca!",
+          message: "Tu plataforma de formación y membresías está activa. Completa clases y escala en el ranking.",
+          type: "system",
+          time: "Hace 5 minutos",
+          read: false,
+          targetTab: "dashboard",
+        },
+      ],
+      unread_count: 1,
+    };
+  }
+
+  async markNotificationRead(id?: string): Promise<{ success: boolean }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}notifications/read`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ id: id || "all" }),
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error markNotificationRead:", e);
+    }
+    return { success: true };
+  }
+
+  async deleteNotification(id: string): Promise<{ success: boolean }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}notifications/${id}`, {
+          method: "DELETE",
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error deleteNotification:", e);
+    }
+    return { success: true };
+  }
+
+  async clearNotifications(onlyRead = false): Promise<{ success: boolean }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}notifications?only_read=${onlyRead ? 1 : 0}`, {
+          method: "DELETE",
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error clearNotifications:", e);
+    }
+    return { success: true };
   }
 }
 
