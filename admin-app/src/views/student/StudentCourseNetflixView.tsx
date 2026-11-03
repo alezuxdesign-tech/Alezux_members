@@ -11,9 +11,11 @@ import {
   ShieldAlert, 
   ShieldCheck,
   X, 
-  ShoppingBag, 
+  ShoppingBag,
+  Award 
 } from "lucide-react";
-import { Course, CourseSection, CourseLesson, CourseTopic } from "../../services/api";
+import { Course, CourseSection, CourseLesson, CourseTopic, Certificate, api } from "../../services/api";
+import { CertificateModal } from "../../components/CertificateModal";
 import styles from "./StudentPortal.module.css";
 
 interface CarouselRow {
@@ -43,6 +45,22 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [lockedItemName, setLockedItemName] = useState("");
   const [inAppCheckoutUrl, setInAppCheckoutUrl] = useState<string | null>(null);
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const [loadingCert, setLoadingCert] = useState(false);
+
+  const handleOpenCertificate = async () => {
+    setLoadingCert(true);
+    try {
+      const res = await api.issueCertificate(1, course.id);
+      setCertificate(res.certificate);
+      setCertModalOpen(true);
+    } catch (e) {
+      console.error("Error al cargar certificado:", e);
+    } finally {
+      setLoadingCert(false);
+    }
+  };
 
   const sections = course.sections || [];
   const progress = course.progress ?? 0;
@@ -218,8 +236,8 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
           </div>
         </div>
 
-        {/* Botón de Regresar al aula */}
-        <div className={styles.heroBackButtonRow}>
+        {/* Botón de Regresar al aula y Certificado */}
+        <div className={styles.heroBackButtonRow} style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <button 
             type="button" 
             className={styles.backToHallBtn}
@@ -228,6 +246,31 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
             <ArrowLeft size={16} />
             <span>Regresar al aula</span>
           </button>
+
+          {progress >= 100 && (
+            <button
+              type="button"
+              onClick={handleOpenCertificate}
+              disabled={loadingCert}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 18px",
+                borderRadius: "9999px",
+                background: "linear-gradient(135deg, #facc15 0%, #ca8a04 100%)",
+                color: "#0f172a",
+                fontWeight: 700,
+                fontSize: "13px",
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(250, 204, 21, 0.4)",
+              }}
+            >
+              <Award size={16} />
+              <span>{loadingCert ? "Cargando..." : "Ver Certificado Oficial"}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -413,6 +456,15 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Certificado Oficial (Fase 1) */}
+      {certModalOpen && certificate && (
+        <CertificateModal
+          isOpen={true}
+          onClose={() => setCertModalOpen(false)}
+          certificate={certificate}
+        />
       )}
     </div>
   );

@@ -1,0 +1,384 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal {
+  position: relative;
+  background: #11131c;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  max-width: 900px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.headerTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  overflow-y: auto;
+  max-height: calc(90vh - 140px);
+}
+
+/* Contenedor Diploma Apaisado */
+.certificateSheet {
+  width: 100%;
+  max-width: 820px;
+  background: linear-gradient(135deg, #0d0f17 0%, #151825 100%);
+  border: 2px solid #d4af37;
+  border-radius: 12px;
+  padding: 40px 48px;
+  position: relative;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), inset 0 0 40px rgba(212, 175, 55, 0.08);
+  text-align: center;
+  color: #f8fafc;
+  box-sizing: border-box;
+}
+
+.innerBorder {
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.certHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.academyBadge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #d4af37;
+}
+
+.certIdBadge {
+  font-family: monospace;
+  font-size: 12px;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.certMainTitle {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin-bottom: 8px;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.certSubtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 20px;
+}
+
+.studentName {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 34px;
+  font-weight: 700;
+  color: #facc15;
+  margin: 12px 0 16px 0;
+  text-shadow: 0 2px 10px rgba(250, 204, 21, 0.2);
+}
+
+.certText {
+  font-size: 14px;
+  color: #cbd5e1;
+  max-width: 600px;
+  margin: 0 auto 12px auto;
+  line-height: 1.5;
+}
+
+.courseTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 24px;
+}
+
+.certFooter {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.signatureBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 180px;
+}
+
+.signatureImage {
+  max-height: 48px;
+  margin-bottom: 6px;
+  filter: brightness(0.9) contrast(1.2);
+}
+
+.signaturePlaceholder {
+  font-family: 'Brush Script MT', cursive, sans-serif;
+  font-size: 26px;
+  color: #cbd5e1;
+  margin-bottom: 4px;
+}
+
+.signatureLine {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin-bottom: 6px;
+}
+
+.signerName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.signerRole {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.sealBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.goldSeal {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fde047 0%, #ca8a04 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e1b4b;
+  box-shadow: 0 4px 14px rgba(202, 138, 4, 0.4);
+}
+
+.sealText {
+  font-size: 10px;
+  font-weight: 800;
+  color: #d4af37;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.qrBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 140px;
+}
+
+.qrCodeContainer {
+  background: #ffffff;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.verificationCaption {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Barra de Botones Inferiores */
+.actionFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.actionGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--accent, #7747ff);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btnLinkedIn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: #0a66c2;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btnLinkedIn:hover {
+  background: #084e96;
+  transform: translateY(-1px);
+}
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnSecondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Modo Impresión */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    padding: 0;
+    overflow: visible;
+  }
+  .modal {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    max-width: 100%;
+  }
+  .header, .actionFooter {
+    display: none !important;
+  }
+  .content {
+    padding: 0;
+    overflow: visible;
+  }
+  .certificateSheet, .certificateSheet * {
+    visibility: visible;
+  }
+  .certificateSheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    border: 3px solid #d4af37 !important;
+    background: #0d0f17 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

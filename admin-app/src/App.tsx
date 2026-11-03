@@ -20,6 +20,7 @@ import {
   Lock,
   MessageCircle,
   Award,
+  Trophy,
   LogOut,
   MessageSquare,
   UserCheck,
@@ -44,6 +45,7 @@ import { StudentCatalogView } from "./views/student/StudentCatalogView";
 import { StudentCourseNetflixView } from "./views/student/StudentCourseNetflixView";
 import { StudentLessonClassroomView } from "./views/student/StudentLessonClassroomView";
 import { StudentProfileView } from "./views/student/StudentProfileView";
+import { StudentRankingView } from "./views/student/StudentRankingView";
 import { NotificationsPopover } from "./components/NotificationsPopover";
 import { api, Course, CourseSection, CourseLesson, CourseTopic, StudentProfile } from "./services/api";
 import { hexToRgb, getContrastForeground } from "./components/arc/color-picker/color-utils";
@@ -53,7 +55,7 @@ import studentStyles from "./views/student/StudentPortal.module.css";
 export type AppMode = "admin" | "student" | "instructor";
 export type InstructorTabId = "courses" | "students" | "community" | "events";
 type AdminTabId = "overview" | "courses" | "students" | "instructors" | "events" | "finance" | "marketing" | "community" | "settings";
-type StudentTabId = "dashboard" | "courses" | "community" | "profile";
+type StudentTabId = "dashboard" | "courses" | "ranking" | "community" | "profile";
 
 interface NavItemConfig<T extends string = string> {
   id: T;
@@ -143,7 +145,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get("tab") || urlParams.get("view");
-      if (tabParam === "courses" || tabParam === "dashboard" || tabParam === "community" || tabParam === "profile") {
+      if (tabParam === "courses" || tabParam === "dashboard" || tabParam === "ranking" || tabParam === "community" || tabParam === "profile") {
         return tabParam as StudentTabId;
       }
     }
@@ -236,10 +238,11 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
     { id: "settings", label: "Configuración", icon: <Sliders size={18} /> },
   ];
 
-  // Navegación para el Estudiante (Dashboard, Cursos, Comunidad)
+  // Navegación para el Estudiante (Dashboard, Cursos, Ranking, Comunidad)
   const studentNavItems: NavItemConfig<StudentTabId>[] = [
     { id: "dashboard", label: "Dashboard", icon: <BarChart3 size={18} /> },
     { id: "courses", label: "Cursos", icon: <GraduationCap size={18} /> },
+    { id: "ranking", label: "Ranking", icon: <Trophy size={18} /> },
     { id: "community", label: "Comunidad", icon: <Users size={18} /> },
   ];
 
@@ -1129,7 +1132,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                         setActiveInstructorTab(tab as InstructorTabId);
                       }
                     } else {
-                      if (tab === "dashboard" || tab === "courses" || tab === "community" || tab === "profile") {
+                      if (tab === "dashboard" || tab === "courses" || tab === "ranking" || tab === "community" || tab === "profile") {
                         setActiveStudentTab(tab as StudentTabId);
                       }
                     }
@@ -1312,7 +1315,12 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 </>
               )}
 
-              {/* 3. Comunidad del Estudiante */}
+              {/* 3. Ranking y Gamificación del Estudiante */}
+              {activeStudentTab === "ranking" && (
+                <StudentRankingView currentUserId={studentProfile?.id} />
+              )}
+
+              {/* 4. Comunidad del Estudiante */}
               {activeStudentTab === "community" && (
                 <StudentCommunityView
                   courses={studentCourses}
@@ -1441,6 +1449,17 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 <GraduationCap size={18} />
               </div>
               <span className={styles.mobileBottomLabel}>Cursos</span>
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.mobileBottomItem} ${activeStudentTab === "ranking" ? styles.active : ""}`}
+              onClick={() => setActiveStudentTab("ranking")}
+            >
+              <div className={styles.mobileBottomIconWrap}>
+                <Trophy size={18} />
+              </div>
+              <span className={styles.mobileBottomLabel}>Ranking</span>
             </button>
 
             <button
@@ -1817,7 +1836,7 @@ export function App({ initialMode = "admin", isStandaloneStudent = false }: AppP
                 setActiveInstructorTab(tab as InstructorTabId);
               }
             } else {
-              if (tab === "dashboard" || tab === "courses" || tab === "community" || tab === "profile") {
+              if (tab === "dashboard" || tab === "courses" || tab === "ranking" || tab === "community" || tab === "profile") {
                 setActiveStudentTab(tab as StudentTabId);
               }
             }

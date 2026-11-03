@@ -449,6 +449,34 @@ class LMS_Engine {
 			}
 		}
 
+		// 4. Gamificación: Sumar o restar XP
+		if ( class_exists( '\\Alezux_Members\\Core\\Ranking_Engine' ) ) {
+			if ( $new_state ) {
+				\Alezux_Members\Core\Ranking_Engine::add_xp( $user_id, 10, 'lesson_completed', "Completó lección #{$topic_id}" );
+			} else {
+				\Alezux_Members\Core\Ranking_Engine::add_xp( $user_id, -10, 'lesson_uncompleted', "Desmarcó lección #{$topic_id}" );
+			}
+		}
+
+		// 5. Webhooks y Verificación de Certificado
+		if ( $new_state ) {
+			if ( class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+				$u = get_userdata( $user_id );
+				\Alezux_Members\Core\Webhook_Engine::dispatch( 'lesson.completed', [
+					'user_id'      => (int) $user_id,
+					'email'        => $u ? $u->user_email : '',
+					'course_id'    => (int) $course_id,
+					'topic_id'     => (string) $topic_id,
+					'completed_at' => current_time( 'mysql' ),
+				] );
+			}
+
+			// Comprobar si el curso se completó al 100% y emitir certificado
+			if ( $course_id > 0 && class_exists( '\\Alezux_Members\\Core\\Certificate_Engine' ) ) {
+				\Alezux_Members\Core\Certificate_Engine::check_and_process_course_completion( $user_id, $course_id );
+			}
+		}
+
 		return [
 			'is_completed' => $new_state,
 			'completed_at' => current_time( 'mysql' ),

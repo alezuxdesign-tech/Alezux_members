@@ -9,11 +9,17 @@ import {
   Sparkles, 
   LogIn, 
   Eye,
+  EyeOff,
   Sliders,
   Layers,
   Trash2,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Webhook,
+  Award,
+  Plus,
+  Play,
+  Key
 } from "lucide-react";
 import { Button } from "../components/arc/button/button";
 import { Input } from "../components/arc/input/input";
@@ -24,7 +30,17 @@ import { ColorPicker } from "../components/arc/color-picker/color-picker";
 import { SegmentedControl, SegmentOption } from "../components/arc/segmented-control/segmented-control";
 import { Select } from "../components/arc/select/select";
 import { FileDropzone } from "../components/arc/file-dropzone/file-dropzone";
-import { api, LMSSettingsResponse, LMSMigrationResponse, AuthSettings } from "../services/api";
+import { CertificateModal } from "../components/CertificateModal";
+import { 
+  api, 
+  LMSSettingsResponse, 
+  LMSMigrationResponse, 
+  AuthSettings,
+  Certificate,
+  CertificateSettings,
+  WebhookItem,
+  WebhooksResponse 
+} from "../services/api";
 import styles from "./SettingsView.module.css";
 
 interface SettingsViewProps {
@@ -45,13 +61,15 @@ interface ToastState {
   description?: string;
 }
 
-type SettingsTabId = "general" | "login" | "access" | "lms";
+type SettingsTabId = "general" | "login" | "access" | "lms" | "webhooks" | "certificates";
 
 const SETTINGS_TABS: SegmentOption<SettingsTabId>[] = [
   { value: "general", label: "General & Marca", icon: <Sliders size={14} /> },
   { value: "login", label: "Pantalla de Login", icon: <LogIn size={14} /> },
   { value: "access", label: "Flujos & Roles", icon: <ShieldCheck size={14} /> },
   { value: "lms", label: "Motor LMS", icon: <Layers size={14} /> },
+  { value: "webhooks", label: "Webhooks & API", icon: <Webhook size={14} /> },
+  { value: "certificates", label: "Certificados", icon: <Award size={14} /> },
 ];
 
 // Preset de colores idéntico a la paleta de la referencia visual + Crezca
@@ -145,6 +163,126 @@ export function SettingsView({
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationResult, setMigrationResult] = useState<LMSMigrationResponse | null>(null);
   const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
+
+  // --- ESTADO PARA WEBHOOKS (FASE 3) ---
+  const [webhooksData, setWebhooksData] = useState<WebhooksResponse | null>(null);
+  const [loadingWebhooks, setLoadingWebhooks] = useState(false);
+  const [isCreateWebhookModalOpen, setIsCreateWebhookModalOpen] = useState(false);
+  const [testingWebhookId, setTestingWebhookId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ id: string; success: boolean; status_code: number; response: string; duration_ms: number } | null>(null);
+  const [newWhName, setNewWhName] = useState("");
+  const [newWhUrl, setNewWhUrl] = useState("");
+  const [newWhSecret, setNewWhSecret] = useState("");
+  const [newWhEvents, setNewWhEvents] = useState<string[]>([
+    "course.completed",
+    "lesson.completed",
+    "certificate.issued",
+    "student.registered",
+  ]);
+  const [showIncomingKey, setShowIncomingKey] = useState(false);
+
+  // --- ESTADO PARA CERTIFICADOS (FASE 1) ---
+  const [certSettings, setCertSettings] = useState<CertificateSettings | null>(null);
+  const [isSavingCert, setIsSavingCert] = useState(false);
+  const [isCertPreviewOpen, setIsCertPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "webhooks") {
+      setLoadingWebhooks(true);
+      api.getWebhooks().then((res) => {
+        setWebhooksData(res);
+        setLoadingWebhooks(false);
+      }).catch(() => setLoadingWebhooks(false));
+    } else if (activeTab === "certificates") {
+      api.getCertificateSettings().then((res) => {
+        setCertSettings(res);
+      });
+    }
+  }, [activeTab]);
+
+  const handleSaveWebhook = async () => {
+    if (!newWhUrl.trim()) {
+      showToast("danger", "URL Requerida", "Debes ingresar la URL de destino del webhook.");
+      return;
+    }
+    try {
+      await api.saveWebhook({
+        name: newWhName.trim() || "Webhook Externo",
+        url: newWhUrl.trim(),
+        secret: newWhSecret.trim(),
+        events: newWhEvents.length > 0 ? newWhEvents : ["*"],
+        status: "active",
+      });
+      setIsCreateWebhookModalOpen(false);
+      setNewWhName("");
+      setNewWhUrl("");
+      setNewWhSecret("");
+      const updated = await api.getWebhooks();
+      setWebhooksData(updated);
+      showToast("success", "Webhook Guardado", "El webhook está activo y listo para disparar eventos.");
+    } catch (e: any) {
+      showToast("danger", "Error", e.message || "No se pudo guardar el webhook.");
+    }
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este webhook?")) return;
+    try {
+      await api.deleteWebhook(id);
+      const updated = await api.getWebhooks();
+      setWebhooksData(updated);
+      showToast("info", "Webhook Eliminado", "El webhook fue removido correctamente.");
+    } catch (e: any) {
+      showToast("danger", "Error", "No se pudo eliminar el webhook.");
+    }
+  };
+
+  const handleTestWebhook = async (id: string) => {
+    setTestingWebhookId(id);
+    setTestResult(null);
+    try {
+      const res = await api.testWebhook(id);
+      setTestResult({ id, ...res });
+      showToast(
+        res.success ? "success" : "warning",
+        res.success ? "Ping de Prueba Exitoso" : "Respuesta No Exitosa",
+        `HTTP ${res.status_code} (${res.duration_ms} ms)`
+      );
+      const updated = await api.getWebhooks();
+      setWebhooksData(updated);
+    } catch (e: any) {
+      showToast("danger", "Error", "Fallo al enviar ping de prueba.");
+    } finally {
+      setTestingWebhookId(null);
+    }
+  };
+
+  const handleRegenerateIncomingKey = async () => {
+    if (!window.confirm("¿Regenerar la clave de Webhooks Entrantes? Las conexiones externas previas deberán actualizar su clave.")) return;
+    try {
+      const res = await api.regenerateIncomingWebhookKey();
+      if (webhooksData) {
+        setWebhooksData({ ...webhooksData, incoming_key: res.incoming_key });
+      }
+      showToast("success", "Clave Regenerada", "Nueva clave API generada exitosamente.");
+    } catch (e: any) {
+      showToast("danger", "Error", "No se pudo regenerar la clave.");
+    }
+  };
+
+  const handleSaveCertSettings = async () => {
+    if (!certSettings) return;
+    setIsSavingCert(true);
+    try {
+      const res = await api.saveCertificateSettings(certSettings);
+      setCertSettings(res.settings);
+      showToast("success", "Certificados Guardados", "Los parámetros del diploma oficial fueron actualizados.");
+    } catch (e: any) {
+      showToast("danger", "Error", "No se pudo guardar la configuración.");
+    } finally {
+      setIsSavingCert(false);
+    }
+  };
 
   // Configuración de Login y Acceso Personalizable
   const [authSettings, setAuthSettings] = useState<AuthSettings>({
@@ -1430,6 +1568,300 @@ export function SettingsView({
             </div>
           </div>
         )}
+
+        {/* ============================================================== */}
+        {/* TAB 5: WEBHOOKS & API (FASE 3) */}
+        {/* ============================================================== */}
+        {activeTab === "webhooks" && (
+          <>
+            {/* FILA 1: WEBHOOKS SALIENTES (OUTGOING) */}
+            <div className={styles.settingsRow}>
+              <div className={styles.rowInfo}>
+                <h3 className={styles.rowTitle}>Webhooks Salientes</h3>
+                <p className={styles.rowDesc}>
+                  Notifica en tiempo real a Zapier, Make, n8n, Meta CAPI o tus CRMs cuando sucedan eventos clave.
+                </p>
+                <div style={{ marginTop: "12px" }}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setNewWhName("");
+                      setNewWhUrl("");
+                      setNewWhSecret("whsec_" + Math.random().toString(36).substring(2, 10));
+                      setNewWhEvents(["course.completed", "student.registered", "lesson.completed"]);
+                      setIsCreateWebhookModalOpen(true);
+                    }}
+                  >
+                    <Plus size={14} /> Añadir Webhook
+                  </Button>
+                </div>
+              </div>
+
+              <div className={styles.rowContent}>
+                {loadingWebhooks ? (
+                  <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>Cargando webhooks...</p>
+                ) : (webhooksData?.webhooks.length ?? 0) === 0 ? (
+                  <div style={{ padding: "24px", textAlign: "center", background: "rgba(255,255,255,0.02)", borderRadius: "10px", border: "1px dashed var(--border-subtle)" }}>
+                    <p style={{ margin: "0 0 8px 0", color: "var(--foreground)", fontWeight: 600 }}>No hay webhooks configurados</p>
+                    <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "12.5px" }}>Haz clic en "Añadir Webhook" para empezar a conectar Crezca con tus automatizaciones.</p>
+                  </div>
+                ) : (
+                  <div className={styles.webhookCardList}>
+                    {webhooksData?.webhooks.map((wh) => (
+                      <div key={wh.id} className={styles.webhookItemCard}>
+                        <div className={styles.webhookItemLeft}>
+                          <div className={styles.webhookItemName}>
+                            <Webhook size={16} color="var(--accent)" />
+                            <span>{wh.name}</span>
+                          </div>
+                          <div className={styles.webhookItemUrl}>{wh.url}</div>
+                          <div className={styles.webhookEventsList}>
+                            {wh.events.map((ev) => (
+                              <span key={ev} className={styles.eventBadge}>{ev}</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className={styles.webhookItemActions}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleTestWebhook(wh.id)}
+                            disabled={testingWebhookId === wh.id}
+                          >
+                            {testingWebhookId === wh.id ? <RefreshCw size={13} className={styles.spinIcon} /> : <Play size={13} />}
+                            {testingWebhookId === wh.id ? "Probando..." : "Probar"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteWebhook(wh.id)}
+                            style={{ color: "#f87171" }}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Registro de Auditoría de Envíos */}
+                {(webhooksData?.logs.length ?? 0) > 0 && (
+                  <div style={{ marginTop: "16px" }}>
+                    <h4 style={{ margin: "0 0 8px 0", fontSize: "13px", fontWeight: 700, color: "var(--foreground)" }}>
+                      Historial de Envíos Recientes
+                    </h4>
+                    <div className={styles.logTableWrap}>
+                      <div className={styles.logHeader}>
+                        <span>Evento</span>
+                        <span>Destino</span>
+                        <span>Estado</span>
+                        <span>Duración</span>
+                        <span>Fecha</span>
+                      </div>
+                      {webhooksData?.logs.slice(0, 10).map((log) => (
+                        <div key={log.id} className={styles.logRow}>
+                          <span style={{ fontWeight: 600, color: "#a78bfa" }}>{log.event}</span>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={log.url}>
+                            {log.webhook_name}
+                          </span>
+                          <span className={log.status_code >= 200 && log.status_code < 300 ? styles.statusSuccess : styles.statusError}>
+                            {log.status_code >= 200 && log.status_code < 300 ? <Check size={12} /> : "✕"}
+                            {log.status_code}
+                          </span>
+                          <span style={{ color: "var(--text-muted)" }}>{log.duration_ms} ms</span>
+                          <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>{log.created_at}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* FILA 2: WEBHOOKS ENTRANTES (INCOMING API) */}
+            <div className={styles.settingsRow}>
+              <div className={styles.rowInfo}>
+                <h3 className={styles.rowTitle}>Webhooks Entrantes (API)</h3>
+                <p className={styles.rowDesc}>
+                  Usa este endpoint y tu clave secreta para dar o revocar acceso desde pasarelas externas (Hotmart, Stripe, ThriveCart, ClickFunnels).
+                </p>
+              </div>
+
+              <div className={styles.rowContent}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                    URL del Endpoint Receptor (POST)
+                  </label>
+                  <div className={styles.codeBox}>
+                    <span>{webhooksData?.incoming_url || `${window.location.origin}/wp-json/crezca/v1/webhooks/incoming`}</span>
+                    <button
+                      type="button"
+                      className={styles.copyInlineBtn}
+                      onClick={() => {
+                        navigator.clipboard.writeText(webhooksData?.incoming_url || "");
+                        showToast("info", "Copiado", "URL de endpoint copiada al portapapeles.");
+                      }}
+                    >
+                      <Copy size={12} /> Copiar
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                    Clave Secreta API (X-Crezca-Api-Key)
+                  </label>
+                  <div className={styles.codeBox}>
+                    <span>
+                      {showIncomingKey ? webhooksData?.incoming_key : "••••••••••••••••••••••••••••••••"}
+                    </span>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button
+                        type="button"
+                        className={styles.copyInlineBtn}
+                        onClick={() => setShowIncomingKey(!showIncomingKey)}
+                      >
+                        {showIncomingKey ? <EyeOff size={12} /> : <Eye size={12} />}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.copyInlineBtn}
+                        onClick={() => {
+                          navigator.clipboard.writeText(webhooksData?.incoming_key || "");
+                          showToast("info", "Copiada", "Clave API copiada al portapapeles.");
+                        }}
+                      >
+                        <Copy size={12} /> Copiar
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.copyInlineBtn}
+                        onClick={handleRegenerateIncomingKey}
+                        title="Regenerar clave"
+                      >
+                        <RefreshCw size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ background: "rgba(255,255,255,0.02)", padding: "14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--foreground)" }}>
+                    Ejemplo de Carga JSON para Zapier / Make:
+                  </span>
+                  <pre style={{ margin: "8px 0 0 0", fontSize: "11.5px", color: "#94a3b8", fontFamily: "monospace" }}>
+{`{
+  "action": "enroll_student",
+  "email": "estudiante@ejemplo.com",
+  "name": "Juan Pérez",
+  "course_id": 1
+}`}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB 6: CERTIFICADOS OFICIALES (FASE 1) */}
+        {/* ============================================================== */}
+        {activeTab === "certificates" && (
+          <>
+            <div className={styles.settingsRow}>
+              <div className={styles.rowInfo}>
+                <h3 className={styles.rowTitle}>Identidad del Diploma</h3>
+                <p className={styles.rowDesc}>
+                  Personaliza los textos, firmante y emisor que aparecerán en los certificados emitidos a los alumnos.
+                </p>
+                <div style={{ marginTop: "16px" }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setIsCertPreviewOpen(true)}
+                  >
+                    <Award size={14} /> Ver Vista Previa del Diploma
+                  </Button>
+                </div>
+              </div>
+
+              <div className={styles.rowContent}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                    Nombre Oficial de la Academia
+                  </label>
+                  <Input
+                    value={certSettings?.academy_title || ""}
+                    onChange={(e) => setCertSettings((prev) => prev ? { ...prev, academy_title: e.target.value } : null)}
+                    placeholder="Ej: Crezca Academy"
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                      Nombre del Instructor / Firmante
+                    </label>
+                    <Input
+                      value={certSettings?.issuer_name || ""}
+                      onChange={(e) => setCertSettings((prev) => prev ? { ...prev, issuer_name: e.target.value } : null)}
+                      placeholder="Ej: Alejandro Zúñiga"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                      Cargo o Título del Firmante
+                    </label>
+                    <Input
+                      value={certSettings?.issuer_role || ""}
+                      onChange={(e) => setCertSettings((prev) => prev ? { ...prev, issuer_role: e.target.value } : null)}
+                      placeholder="Ej: Director Académico"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+                    URL de la Firma Digital (PNG Transparente)
+                  </label>
+                  <Input
+                    value={certSettings?.signature_image_url || ""}
+                    onChange={(e) => setCertSettings((prev) => prev ? { ...prev, signature_image_url: e.target.value } : null)}
+                    placeholder="https://.../firma.png"
+                  />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "8px" }}>
+                  <div>
+                    <div style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--foreground)" }}>
+                      Emisión Automática al 100%
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                      Generar y desbloquear el certificado automáticamente cuando el alumno complete todas las clases.
+                    </div>
+                  </div>
+                  <Switch
+                    checked={certSettings?.auto_issue_on_finish ?? true}
+                    onCheckedChange={(checked) => setCertSettings((prev) => prev ? { ...prev, auto_issue_on_finish: checked } : null)}
+                  />
+                </div>
+
+                <div style={{ paddingTop: "12px" }}>
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveCertSettings}
+                    disabled={isSavingCert}
+                  >
+                    {isSavingCert ? "Guardando..." : "Guardar Ajustes de Certificados"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ============================================================== */}
@@ -1518,6 +1950,134 @@ export function SettingsView({
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Modal para Crear Webhook (Fase 3) */}
+      {isCreateWebhookModalOpen && (
+        <Modal
+          isOpen={true}
+          onClose={() => setIsCreateWebhookModalOpen(false)}
+          title="Añadir Webhook Saliente"
+          maxWidth="560px"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsCreateWebhookModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button variant="primary" onClick={handleSaveWebhook}>
+                Guardar y Activar
+              </Button>
+            </>
+          }
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "4px" }}>
+                Nombre del Webhook
+              </label>
+              <Input
+                value={newWhName}
+                onChange={(e) => setNewWhName(e.target.value)}
+                placeholder="Ej: Sincronización Zapier Ventas"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "4px" }}>
+                URL de Destino (Endpoint HTTP POST) *
+              </label>
+              <Input
+                value={newWhUrl}
+                onChange={(e) => setNewWhUrl(e.target.value)}
+                placeholder="https://hooks.zapier.com/... o https://tu-crm.com/api/webhook"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "4px" }}>
+                Clave Secreta HMAC (Para verificar la firma X-Crezca-Signature)
+              </label>
+              <Input
+                value={newWhSecret}
+                onChange={(e) => setNewWhSecret(e.target.value)}
+                placeholder="whsec_..."
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "8px" }}>
+                Eventos a Escuchar
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {(webhooksData?.available_events || [
+                  { id: "course.completed", name: "Curso Finalizado (100%)", desc: "Al completar todas las clases" },
+                  { id: "lesson.completed", name: "Lección / Tema Completado", desc: "Al marcar una clase como hecha" },
+                  { id: "certificate.issued", name: "Certificado Oficial Emitido", desc: "Al generarse el diploma con QR" },
+                  { id: "student.registered", name: "Nuevo Estudiante Registrado", desc: "Al crearse una cuenta" },
+                  { id: "course.enrolled", name: "Matriculado en Curso", desc: "Al otorgar acceso a formación" },
+                  { id: "payment.approved", name: "Pago / Cuota Aprobada", desc: "Al aprobarse una venta" },
+                ]).map((ev) => {
+                  const isChecked = newWhEvents.includes(ev.id);
+                  return (
+                    <label
+                      key={ev.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "10px",
+                        padding: "8px 12px",
+                        background: isChecked ? "rgba(119, 71, 255, 0.08)" : "rgba(255, 255, 255, 0.02)",
+                        border: "1px solid " + (isChecked ? "var(--accent)" : "rgba(255, 255, 255, 0.06)"),
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setNewWhEvents([...newWhEvents, ev.id]);
+                          } else {
+                            setNewWhEvents(newWhEvents.filter((x) => x !== ev.id));
+                          }
+                        }}
+                        style={{ marginTop: "3px" }}
+                      />
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--foreground)" }}>{ev.name}</div>
+                        <div style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>{ev.desc}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal para Vista Previa de Certificado (Fase 1) */}
+      {isCertPreviewOpen && (
+        <CertificateModal
+          isOpen={true}
+          onClose={() => setIsCertPreviewOpen(false)}
+          certificate={{
+            id: 999,
+            cert_code: "CRZ-CERT-DEMO-2026",
+            user_id: 1,
+            course_id: 1,
+            student_name: "Estudiante Ejemplo",
+            course_title: "Master en Negocios y Membresías Digitales",
+            instructor_name: certSettings?.issuer_name || "Dirección Académica",
+            instructor_signature: certSettings?.signature_image_url || "",
+            academy_name: certSettings?.academy_title || "Crezca Academy",
+            issued_at: new Date().toISOString(),
+            formatted_date: new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }),
+            verification_url: `${window.location.origin}/?crezca_verify_cert=CRZ-CERT-DEMO-2026`,
+            linkedin_url: "https://www.linkedin.com/profile/add",
+          }}
+        />
       )}
     </div>
   );

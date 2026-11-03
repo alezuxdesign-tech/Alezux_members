@@ -123,8 +123,47 @@ function crezca_init() {
 	} elseif ( class_exists( 'Alezux_Members\\Core\\LMS_Engine' ) ) {
 		\Alezux_Members\Core\LMS_Engine::get_instance()->init();
 	}
+
+	// 5. Inicializar Motor de Webhooks
+	if ( class_exists( 'Crezca\\Core\\Webhook_Engine' ) ) {
+		\Crezca\Core\Webhook_Engine::get_instance()->init();
+	} elseif ( class_exists( 'Alezux_Members\\Core\\Webhook_Engine' ) ) {
+		\Alezux_Members\Core\Webhook_Engine::get_instance()->init();
+	}
+
+	// 6. Inicializar Motor de Ranking & Gamificación (XP)
+	if ( class_exists( 'Crezca\\Core\\Ranking_Engine' ) ) {
+		\Crezca\Core\Ranking_Engine::get_instance()->init();
+	} elseif ( class_exists( 'Alezux_Members\\Core\\Ranking_Engine' ) ) {
+		\Alezux_Members\Core\Ranking_Engine::get_instance()->init();
+	}
+
+	// 7. Inicializar Motor de Certificados Oficiales
+	if ( class_exists( 'Crezca\\Core\\Certificate_Engine' ) ) {
+		\Crezca\Core\Certificate_Engine::get_instance()->init();
+	} elseif ( class_exists( 'Alezux_Members\\Core\\Certificate_Engine' ) ) {
+		\Alezux_Members\Core\Certificate_Engine::get_instance()->init();
+	}
 }
 add_action( 'plugins_loaded', 'crezca_init' );
+
+/**
+ * Disparar evento de webhook al registrar un nuevo usuario en WordPress
+ */
+add_action( 'user_register', function( $user_id ) {
+	if ( class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+		$u = get_userdata( $user_id );
+		if ( $u ) {
+			\Alezux_Members\Core\Webhook_Engine::dispatch( 'student.registered', [
+				'user_id'       => (int) $user_id,
+				'email'         => $u->user_email,
+				'username'      => $u->user_login,
+				'student_name'  => $u->display_name ?: ( $u->first_name . ' ' . $u->last_name ),
+				'registered_at' => current_time( 'mysql' ),
+			] );
+		}
+	}
+} );
 
 /**
  * Registrar el rol nativo de Docente / Profesor en WordPress

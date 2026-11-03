@@ -293,6 +293,113 @@ export interface AcademyEvent {
   is_active?: boolean;
 }
 
+// ==========================================
+// FASE 1: CERTIFICADOS OFICIALES
+// ==========================================
+export interface Certificate {
+  id: number;
+  cert_code: string;
+  user_id: number;
+  course_id: number;
+  student_name: string;
+  course_title: string;
+  instructor_name: string;
+  instructor_signature?: string;
+  academy_name: string;
+  issued_at: string;
+  formatted_date: string;
+  verification_url: string;
+  linkedin_url: string;
+}
+
+export interface CertificateSettings {
+  academy_title: string;
+  issuer_name: string;
+  issuer_role: string;
+  signature_image_url: string;
+  seal_image_url: string;
+  primary_color: string;
+  auto_issue_on_finish: boolean;
+}
+
+// ==========================================
+// FASE 2: RANKING & GAMIFICACIÓN (XP)
+// ==========================================
+export interface LeaderboardItem {
+  rank: number;
+  user_id: number;
+  name: string;
+  username: string;
+  avatar: string;
+  xp: number;
+  level: number;
+  level_name: string;
+  badge: string;
+  badge_color: string;
+  is_current?: boolean;
+}
+
+export interface CurrentUserRankSummary {
+  rank: number;
+  xp: number;
+  level: number;
+  level_name: string;
+  badge: string;
+  badge_color: string;
+  progress_pct: number;
+  points_to_next: number;
+  points_to_higher: number;
+}
+
+export interface LeaderboardResponse {
+  period: "all" | "month" | "week";
+  leaderboard: LeaderboardItem[];
+  currentUser?: CurrentUserRankSummary | null;
+  stats?: {
+    total_ranked_students: number;
+    total_xp_awarded: number;
+  };
+}
+
+// ==========================================
+// FASE 3: MOTOR DE WEBHOOKS
+// ==========================================
+export interface WebhookItem {
+  id: string;
+  name: string;
+  url: string;
+  secret: string;
+  status: "active" | "paused";
+  events: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WebhookLogItem {
+  id: string;
+  webhook_id: string;
+  webhook_name: string;
+  event: string;
+  url: string;
+  status_code: number;
+  response: string;
+  duration_ms: number;
+  payload?: any;
+  created_at: string;
+}
+
+export interface WebhooksResponse {
+  webhooks: WebhookItem[];
+  logs: WebhookLogItem[];
+  incoming_key: string;
+  incoming_url: string;
+  available_events: Array<{
+    id: string;
+    name: string;
+    desc: string;
+  }>;
+}
+
 export type PlanType = "one_time" | "installments" | "subscription";
 
 export interface FinancePlan {
@@ -2945,6 +3052,443 @@ class ApiService {
     const updated = current.filter((e) => e.id !== id);
     localStorage.setItem("crezca_academy_events", JSON.stringify(updated));
     return { success: true, events: updated };
+  }
+
+  // =========================================================================
+  // FASE 1: MÉTODOS DE CERTIFICADOS OFICIALES
+  // =========================================================================
+
+  async getCertificates(search = "", limit = 50): Promise<Certificate[]> {
+    try {
+      if (this.wpData) {
+        const query = new URLSearchParams({ search, limit: String(limit) });
+        const res = await fetch(`${this.rootUrl}certificates?${query.toString()}`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) return data;
+        }
+      }
+    } catch (e) {
+      console.error("API Error getCertificates:", e);
+    }
+    const mock = localStorage.getItem("crezca_mock_certificates");
+    if (mock) {
+      try {
+        return JSON.parse(mock);
+      } catch (e) {}
+    }
+    return [
+      {
+        id: 1,
+        cert_code: "CRZ-CERT-8849-2026",
+        user_id: 1,
+        course_id: 1,
+        student_name: "Estudiante Demostración",
+        course_title: "Master en Desarrollo Web FullStack",
+        instructor_name: "Dirección Académica",
+        instructor_signature: "",
+        academy_name: "Crezca Academy",
+        issued_at: new Date().toISOString(),
+        formatted_date: "03 de Noviembre de 2026",
+        verification_url: `${window.location.origin}/?crezca_verify_cert=CRZ-CERT-8849-2026`,
+        linkedin_url: "https://www.linkedin.com/profile/add",
+      },
+    ];
+  }
+
+  async issueCertificate(userId: number, courseId: number, force = false): Promise<{ success: boolean; certificate: Certificate }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}certificates/issue`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ userId, courseId, force }),
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      }
+    } catch (e) {
+      console.error("API Error issueCertificate:", e);
+    }
+    const certCode = "CRZ-CERT-" + Math.random().toString(36).substring(2, 6).toUpperCase() + "-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const cert: Certificate = {
+      id: Date.now(),
+      cert_code: certCode,
+      user_id: userId,
+      course_id: courseId,
+      student_name: "Estudiante",
+      course_title: "Curso Certificado",
+      instructor_name: "Dirección Académica",
+      academy_name: "Crezca Academy",
+      issued_at: new Date().toISOString(),
+      formatted_date: new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }),
+      verification_url: `${window.location.origin}/?crezca_verify_cert=${certCode}`,
+      linkedin_url: "https://www.linkedin.com/profile/add",
+    };
+    return { success: true, certificate: cert };
+  }
+
+  async getCertificateSettings(): Promise<CertificateSettings> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}certificates/settings`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error getCertificateSettings:", e);
+    }
+    const saved = localStorage.getItem("crezca_cert_settings");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      academy_title: "Crezca Academy",
+      issuer_name: "Dirección Académica",
+      issuer_role: "Instructor Principal & Fundador",
+      signature_image_url: "",
+      seal_image_url: "",
+      primary_color: "#7747ff",
+      auto_issue_on_finish: true,
+    };
+  }
+
+  async saveCertificateSettings(settings: Partial<CertificateSettings>): Promise<{ success: boolean; settings: CertificateSettings }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}certificates/settings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(settings),
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error saveCertificateSettings:", e);
+    }
+    const current = await this.getCertificateSettings();
+    const updated = { ...current, ...settings };
+    localStorage.setItem("crezca_cert_settings", JSON.stringify(updated));
+    return { success: true, settings: updated };
+  }
+
+  async getStudentCertificates(): Promise<Certificate[]> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}student/certificates`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) return data;
+        }
+      }
+    } catch (e) {
+      console.error("API Error getStudentCertificates:", e);
+    }
+    return await this.getCertificates();
+  }
+
+  async verifyCertificate(code: string): Promise<{ valid: boolean; certificate: Certificate }> {
+    try {
+      const res = await fetch(`${this.rootUrl}certificates/verify/${encodeURIComponent(code)}`);
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.error("API Error verifyCertificate:", e);
+    }
+    throw new Error("Certificado no encontrado.");
+  }
+
+  // =========================================================================
+  // FASE 2: MÉTODOS DE RANKING & GAMIFICACIÓN (XP)
+  // =========================================================================
+
+  async getRanking(period: "all" | "month" | "week" = "all"): Promise<LeaderboardResponse> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}ranking?period=${period}`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.leaderboard)) return data;
+        }
+      }
+    } catch (e) {
+      console.error("API Error getRanking:", e);
+    }
+    // Mock local de respaldo con podio visual realista
+    return {
+      period,
+      leaderboard: [
+        {
+          rank: 1,
+          user_id: 101,
+          name: "Alejandro Zúñiga",
+          username: "alezux",
+          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+          xp: 2450,
+          level: 6,
+          level_name: "Leyenda",
+          badge: "👑",
+          badge_color: "#ec4899",
+          is_current: false,
+        },
+        {
+          rank: 2,
+          user_id: 102,
+          name: "Camila Navarro",
+          username: "camila_nav",
+          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+          xp: 1820,
+          level: 5,
+          level_name: "Maestro",
+          badge: "⚔️",
+          badge_color: "#f59e0b",
+          is_current: false,
+        },
+        {
+          rank: 3,
+          user_id: 103,
+          name: "Mateo Fernández",
+          username: "mateo_f",
+          avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+          xp: 1390,
+          level: 5,
+          level_name: "Maestro",
+          badge: "⚔️",
+          badge_color: "#f59e0b",
+          is_current: false,
+        },
+        {
+          rank: 4,
+          user_id: 104,
+          name: "Valentina Gómez",
+          username: "val_gomez",
+          avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80",
+          xp: 940,
+          level: 4,
+          level_name: "Especialista",
+          badge: "🛡️",
+          badge_color: "#3b82f6",
+          is_current: false,
+        },
+        {
+          rank: 5,
+          user_id: 105,
+          name: "Sebastián Castro",
+          username: "seb_castro",
+          avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+          xp: 720,
+          level: 4,
+          level_name: "Especialista",
+          badge: "🛡️",
+          badge_color: "#3b82f6",
+          is_current: false,
+        },
+        {
+          rank: 6,
+          user_id: 1,
+          name: "Tú (Estudiante)",
+          username: "estudiante",
+          avatar: "",
+          xp: 490,
+          level: 3,
+          level_name: "Aprendiz",
+          badge: "⚡",
+          badge_color: "#a855f7",
+          is_current: true,
+        },
+      ],
+      currentUser: {
+        rank: 6,
+        xp: 490,
+        level: 3,
+        level_name: "Aprendiz",
+        badge: "⚡",
+        badge_color: "#a855f7",
+        progress_pct: 63,
+        points_to_next: 110,
+        points_to_higher: 235,
+      },
+      stats: {
+        total_ranked_students: 42,
+        total_xp_awarded: 18450,
+      },
+    };
+  }
+
+  async adjustStudentXp(userId: number, points: number, reason = "Ajuste del Administrador"): Promise<{ success: boolean; total_xp: number }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}ranking/adjust-xp`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify({ userId, points, reason }),
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error adjustStudentXp:", e);
+    }
+    return { success: true, total_xp: points };
+  }
+
+  // =========================================================================
+  // FASE 3: MÉTODOS DEL MOTOR DE WEBHOOKS
+  // =========================================================================
+
+  async getWebhooks(): Promise<WebhooksResponse> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}webhooks`, {
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error getWebhooks:", e);
+    }
+    const saved = localStorage.getItem("crezca_mock_webhooks");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      webhooks: [
+        {
+          id: "wh_zapier_crm",
+          name: "Zapier / Make CRM Sincronización",
+          url: "https://hooks.zapier.com/hooks/catch/123456/abcdef/",
+          secret: "whsec_9938fbc923a10e82",
+          status: "active",
+          events: ["course.completed", "student.registered", "payment.approved"],
+          created_at: "2026-11-01 10:00:00",
+        },
+      ],
+      logs: [
+        {
+          id: "log_1",
+          webhook_id: "wh_zapier_crm",
+          webhook_name: "Zapier / Make CRM Sincronización",
+          event: "course.completed",
+          url: "https://hooks.zapier.com/hooks/catch/123456/abcdef/",
+          status_code: 200,
+          response: '{"status": "success", "attempt": 1}',
+          duration_ms: 142,
+          payload: { user_id: 1, course_id: 1, email: "alumno@ejemplo.com" },
+          created_at: "Hace 15 minutos",
+        },
+      ],
+      incoming_key: "crz_sec_89df712a4b890912cb84910",
+      incoming_url: `${window.location.origin}/wp-json/crezca/v1/webhooks/incoming`,
+      available_events: [
+        { id: "course.completed", name: "Curso Finalizado (100%)", desc: "Se dispara cuando un alumno completa todas las clases" },
+        { id: "lesson.completed", name: "Lección / Tema Completado", desc: "Se dispara cuando un alumno marca una lección como hecha" },
+        { id: "certificate.issued", name: "Certificado Oficial Emitido", desc: "Se dispara al emitirse un certificado con su enlace de verificación" },
+        { id: "student.registered", name: "Nuevo Estudiante Registrado", desc: "Se dispara cuando se crea una cuenta de alumno" },
+        { id: "course.enrolled", name: "Matriculado en Curso", desc: "Se dispara al otorgar acceso a un curso" },
+        { id: "payment.approved", name: "Pago / Cuota Aprobada", desc: "Se dispara cuando un pago o link de compra es aprobado" },
+      ],
+    };
+  }
+
+  async saveWebhook(data: Partial<WebhookItem>): Promise<{ success: boolean; webhook: WebhookItem }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}webhooks`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-WP-Nonce": this.nonce,
+          },
+          body: JSON.stringify(data),
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error saveWebhook:", e);
+    }
+    const current = await this.getWebhooks();
+    const id = data.id || "wh_" + Math.random().toString(36).substring(2, 9);
+    const item: WebhookItem = {
+      id,
+      name: data.name || "Nuevo Webhook",
+      url: data.url || "",
+      secret: data.secret || "whsec_" + Math.random().toString(36).substring(2, 10),
+      status: data.status || "active",
+      events: data.events || ["*"],
+      created_at: new Date().toISOString(),
+    };
+    const updatedList = current.webhooks.filter((w) => w.id !== id).concat(item);
+    localStorage.setItem("crezca_mock_webhooks", JSON.stringify({ ...current, webhooks: updatedList }));
+    return { success: true, webhook: item };
+  }
+
+  async deleteWebhook(id: string): Promise<{ success: boolean }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}webhooks/${id}`, {
+          method: "DELETE",
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error deleteWebhook:", e);
+    }
+    const current = await this.getWebhooks();
+    const updatedList = current.webhooks.filter((w) => w.id !== id);
+    localStorage.setItem("crezca_mock_webhooks", JSON.stringify({ ...current, webhooks: updatedList }));
+    return { success: true };
+  }
+
+  async testWebhook(id: string): Promise<{ success: boolean; status_code: number; response: string; duration_ms: number }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}webhooks/${id}/test`, {
+          method: "POST",
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error testWebhook:", e);
+    }
+    return {
+      success: true,
+      status_code: 200,
+      response: '{"status":"ok","message":"Ping de prueba recibido exitosamente"}',
+      duration_ms: 118,
+    };
+  }
+
+  async regenerateIncomingWebhookKey(): Promise<{ success: boolean; incoming_key: string }> {
+    try {
+      if (this.wpData) {
+        const res = await fetch(`${this.rootUrl}webhooks/regenerate-incoming-key`, {
+          method: "POST",
+          headers: { "X-WP-Nonce": this.nonce },
+        });
+        if (res.ok) return await res.json();
+      }
+    } catch (e) {
+      console.error("API Error regenerateIncomingWebhookKey:", e);
+    }
+    const newKey = "crz_sec_" + Math.random().toString(36).substring(2, 14) + Math.random().toString(36).substring(2, 14);
+    return { success: true, incoming_key: newKey };
   }
 }
 

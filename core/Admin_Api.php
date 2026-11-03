@@ -408,6 +408,101 @@ class Admin_Api {
 				'callback'            => [ $this, 'delete_community_message' ],
 				'permission_callback' => [ $this, 'student_permissions_check' ],
 			] );
+
+			// ==========================================
+			// FASE 1: CERTIFICADOS OFICIALES
+			// ==========================================
+			register_rest_route( $namespace, '/certificates', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_certificates' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/certificates/issue', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'issue_certificate' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/certificates/settings', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_certificate_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'save_certificate_settings' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/student/certificates', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_student_certificates' ],
+				'permission_callback' => [ $this, 'student_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/certificates/verify/(?P<code>[a-zA-Z0-9_\-]+)', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'verify_certificate' ],
+				'permission_callback' => '__return_true',
+			] );
+
+			// ==========================================
+			// FASE 2: RANKING & GAMIFICACIÓN (XP)
+			// ==========================================
+			register_rest_route( $namespace, '/ranking', [
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_ranking' ],
+				'permission_callback' => '__return_true',
+			] );
+
+			register_rest_route( $namespace, '/ranking/adjust-xp', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'adjust_student_xp' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			// ==========================================
+			// FASE 3: MOTOR DE WEBHOOKS
+			// ==========================================
+			register_rest_route( $namespace, '/webhooks', [
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_webhooks' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'save_webhook' ],
+					'permission_callback' => [ $this, 'admin_permissions_check' ],
+				],
+			] );
+
+			register_rest_route( $namespace, '/webhooks/(?P<id>[a-zA-Z0-9_\-]+)', [
+				'methods'             => 'DELETE',
+				'callback'            => [ $this, 'delete_webhook' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/webhooks/(?P<id>[a-zA-Z0-9_\-]+)/test', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'test_webhook' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/webhooks/regenerate-incoming-key', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'regenerate_incoming_webhook_key' ],
+				'permission_callback' => [ $this, 'admin_permissions_check' ],
+			] );
+
+			register_rest_route( $namespace, '/webhooks/incoming', [
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'handle_incoming_webhook' ],
+				'permission_callback' => '__return_true',
+			] );
 		}
 	}
 
@@ -1228,6 +1323,19 @@ class Admin_Api {
 			}
 
 			update_user_meta( $student_id, '_alezux_enabled_courses', $current );
+		}
+
+		if ( $enable && class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+			$u = get_userdata( $student_id );
+			$course_post = get_post( $course_id );
+			\Alezux_Members\Core\Webhook_Engine::dispatch( 'course.enrolled', [
+				'user_id'      => $student_id,
+				'email'        => $u ? $u->user_email : '',
+				'student_name' => $u ? ( $u->display_name ?: $u->user_login ) : '',
+				'course_id'    => $course_id,
+				'course_title' => $course_post ? $course_post->post_title : '',
+				'enrolled_at'  => current_time( 'mysql' ),
+			] );
 		}
 
 		return rest_ensure_response( [
@@ -2408,6 +2516,19 @@ class Admin_Api {
 					],
 					[ 'id' => $sale_id ]
 				);
+
+				if ( class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+					\Alezux_Members\Core\Webhook_Engine::dispatch( 'payment.approved', [
+						'sale_id'     => $sale_id,
+						'user_id'     => $user_id,
+						'email'       => $email,
+						'name'        => $name,
+						'amount'      => $amount,
+						'plan_id'     => $plan_id,
+						'reference'   => $ref,
+						'approved_at' => current_time( 'mysql' ),
+					] );
+				}
 
 				return rest_ensure_response( [
 					'success' => true,
@@ -4527,6 +4648,233 @@ class Admin_Api {
 			'events'  => $filtered,
 			'message' => 'Evento eliminado correctamente de la academia.',
 		] );
+	}
+
+	// =========================================================================
+	// FASE 1: CONTROLADORES DE CERTIFICADOS OFICIALES
+	// =========================================================================
+
+	public function get_certificates( $request ) {
+		$search = $request->get_param( 'search' ) ?: '';
+		$limit  = (int) ( $request->get_param( 'limit' ) ?: 50 );
+
+		if ( class_exists( '\\Alezux_Members\\Core\\Certificate_Engine' ) ) {
+			$certs = \Alezux_Members\Core\Certificate_Engine::get_all_certificates( $limit, $search );
+			return rest_ensure_response( $certs );
+		}
+
+		return rest_ensure_response( [] );
+	}
+
+	public function issue_certificate( $request ) {
+		$params    = $request->get_json_params();
+		$user_id   = isset( $params['userId'] ) ? (int) $params['userId'] : 0;
+		$course_id = isset( $params['courseId'] ) ? (int) $params['courseId'] : 0;
+		$force     = ! empty( $params['force'] );
+
+		if ( ! $user_id || ! $course_id ) {
+			return new \WP_Error( 'invalid_data', 'Usuario y Curso son requeridos.', [ 'status' => 400 ] );
+		}
+
+		if ( class_exists( '\\Alezux_Members\\Core\\Certificate_Engine' ) ) {
+			$res = \Alezux_Members\Core\Certificate_Engine::issue_certificate( $user_id, $course_id, $force );
+			if ( is_wp_error( $res ) ) {
+				return $res;
+			}
+			return rest_ensure_response( [
+				'success'     => true,
+				'message'     => 'Certificado emitido exitosamente.',
+				'certificate' => $res,
+			] );
+		}
+
+		return new \WP_Error( 'not_available', 'Certificate_Engine no disponible.', [ 'status' => 500 ] );
+	}
+
+	public function get_certificate_settings() {
+		if ( class_exists( '\\Alezux_Members\\Core\\Certificate_Engine' ) ) {
+			return rest_ensure_response( \Alezux_Members\Core\Certificate_Engine::get_settings() );
+		}
+		return rest_ensure_response( [] );
+	}
+
+	public function save_certificate_settings( $request ) {
+		$params = $request->get_json_params();
+		if ( class_exists( '\\Alezux_Members\\Core\\Certificate_Engine' ) ) {
+			$saved = \Alezux_Members\Core\Certificate_Engine::save_settings( $params );
+			return rest_ensure_response( [
+				'success'  => true,
+				'message'  => 'Configuración de certificados guardada correctamente.',
+				'settings' => $saved,
+			] );
+		}
+		return new \WP_Error( 'not_available', 'Certificate_Engine no disponible.', [ 'status' => 500 ] );
+	}
+
+	public function get_student_certificates() {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return rest_ensure_response( [] );
+		}
+
+		if ( class_exists( '\\Alezux_Members\\Core\\Certificate_Engine' ) ) {
+			$certs = \Alezux_Members\Core\Certificate_Engine::get_student_certificates( $user_id );
+			return rest_ensure_response( $certs );
+		}
+
+		return rest_ensure_response( [] );
+	}
+
+	public function verify_certificate( $request ) {
+		$code = $request->get_param( 'code' );
+		if ( class_exists( '\\Alezux_Members\\Core\\Certificate_Engine' ) ) {
+			$cert = \Alezux_Members\Core\Certificate_Engine::get_certificate_by_code( $code );
+			if ( ! $cert ) {
+				return new \WP_Error( 'not_found', 'Certificado no encontrado o inválido.', [ 'status' => 404 ] );
+			}
+			return rest_ensure_response( [
+				'valid'       => true,
+				'certificate' => $cert,
+			] );
+		}
+		return new \WP_Error( 'not_available', 'Certificate_Engine no disponible.', [ 'status' => 500 ] );
+	}
+
+	// =========================================================================
+	// FASE 2: CONTROLADORES DE RANKING & GAMIFICACIÓN (XP)
+	// =========================================================================
+
+	public function get_ranking( $request ) {
+		$period = $request->get_param( 'period' ) ?: 'all';
+		$limit  = (int) ( $request->get_param( 'limit' ) ?: 20 );
+		$user_id = get_current_user_id();
+
+		if ( class_exists( '\\Alezux_Members\\Core\\Ranking_Engine' ) ) {
+			$data = \Alezux_Members\Core\Ranking_Engine::get_leaderboard( $period, $limit, $user_id );
+			return rest_ensure_response( $data );
+		}
+
+		return rest_ensure_response( [
+			'period'      => $period,
+			'leaderboard' => [],
+			'currentUser' => null,
+		] );
+	}
+
+	public function adjust_student_xp( $request ) {
+		$params  = $request->get_json_params();
+		$user_id = isset( $params['userId'] ) ? (int) $params['userId'] : 0;
+		$points  = isset( $params['points'] ) ? (int) $params['points'] : 0;
+		$reason  = isset( $params['reason'] ) ? sanitize_text_field( $params['reason'] ) : 'Ajuste manual del administrador';
+
+		if ( ! $user_id || 0 === $points ) {
+			return new \WP_Error( 'invalid_data', 'Usuario y Puntos distintos de 0 requeridos.', [ 'status' => 400 ] );
+		}
+
+		if ( class_exists( '\\Alezux_Members\\Core\\Ranking_Engine' ) ) {
+			$total = \Alezux_Members\Core\Ranking_Engine::add_xp( $user_id, $points, 'admin_adjustment', $reason );
+			return rest_ensure_response( [
+				'success'  => true,
+				'message'  => "Se han ajustado {$points} XP al alumno correctamente.",
+				'total_xp' => $total,
+			] );
+		}
+
+		return new \WP_Error( 'not_available', 'Ranking_Engine no disponible.', [ 'status' => 500 ] );
+	}
+
+	// =========================================================================
+	// FASE 3: CONTROLADORES DEL MOTOR DE WEBHOOKS
+	// =========================================================================
+
+	public function get_webhooks() {
+		if ( class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+			$webhooks     = \Alezux_Members\Core\Webhook_Engine::get_webhooks();
+			$logs         = \Alezux_Members\Core\Webhook_Engine::get_logs( 50 );
+			$incoming_key = \Alezux_Members\Core\Webhook_Engine::get_incoming_key();
+			$incoming_url = esc_url_raw( rest_url( 'crezca/v1/webhooks/incoming' ) );
+
+			return rest_ensure_response( [
+				'webhooks'         => $webhooks,
+				'logs'             => $logs,
+				'incoming_key'     => $incoming_key,
+				'incoming_url'     => $incoming_url,
+				'available_events' => [
+					[ 'id' => 'course.completed',    'name' => 'Curso Finalizado (100%)',          'desc' => 'Se dispara cuando un alumno completa todas las clases' ],
+					[ 'id' => 'lesson.completed',    'name' => 'Lección / Tema Completado',       'desc' => 'Se dispara cuando un alumno marca una lección como hecha' ],
+					[ 'id' => 'certificate.issued',  'name' => 'Certificado Oficial Emitido',      'desc' => 'Se dispara al emitirse un certificado con su enlace de verificación' ],
+					[ 'id' => 'student.registered',  'name' => 'Nuevo Estudiante Registrado',     'desc' => 'Se dispara cuando se crea una cuenta de alumno' ],
+					[ 'id' => 'course.enrolled',      'name' => 'Matriculado en Curso',             'desc' => 'Se dispara al otorgar acceso a un curso' ],
+					[ 'id' => 'payment.approved',    'name' => 'Pago / Cuota Aprobada',           'desc' => 'Se dispara cuando un pago o link de compra es aprobado' ],
+				],
+			] );
+		}
+
+		return rest_ensure_response( [
+			'webhooks'     => [],
+			'logs'         => [],
+			'incoming_key' => '',
+			'incoming_url' => '',
+		] );
+	}
+
+	public function save_webhook( $request ) {
+		$params = $request->get_json_params();
+		if ( class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+			$saved = \Alezux_Members\Core\Webhook_Engine::save_webhook( $params );
+			if ( is_wp_error( $saved ) ) {
+				return $saved;
+			}
+			return rest_ensure_response( [
+				'success' => true,
+				'message' => 'Webhook guardado correctamente.',
+				'webhook' => $saved,
+			] );
+		}
+		return new \WP_Error( 'not_available', 'Webhook_Engine no disponible.', [ 'status' => 500 ] );
+	}
+
+	public function delete_webhook( $request ) {
+		$id = $request->get_param( 'id' );
+		if ( class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+			\Alezux_Members\Core\Webhook_Engine::delete_webhook( $id );
+			return rest_ensure_response( [
+				'success' => true,
+				'message' => 'Webhook eliminado correctamente.',
+			] );
+		}
+		return new \WP_Error( 'not_available', 'Webhook_Engine no disponible.', [ 'status' => 500 ] );
+	}
+
+	public function test_webhook( $request ) {
+		$id = $request->get_param( 'id' );
+		if ( class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+			$res = \Alezux_Members\Core\Webhook_Engine::test_webhook( $id );
+			if ( is_wp_error( $res ) ) {
+				return $res;
+			}
+			return rest_ensure_response( $res );
+		}
+		return new \WP_Error( 'not_available', 'Webhook_Engine no disponible.', [ 'status' => 500 ] );
+	}
+
+	public function regenerate_incoming_webhook_key() {
+		if ( class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+			$new_key = \Alezux_Members\Core\Webhook_Engine::regenerate_incoming_key();
+			return rest_ensure_response( [
+				'success'      => true,
+				'incoming_key' => $new_key,
+				'message'      => 'Nueva clave API generada exitosamente.',
+			] );
+		}
+		return new \WP_Error( 'not_available', 'Webhook_Engine no disponible.', [ 'status' => 500 ] );
+	}
+
+	public function handle_incoming_webhook( $request ) {
+		if ( class_exists( '\\Alezux_Members\\Core\\Webhook_Engine' ) ) {
+			return \Alezux_Members\Core\Webhook_Engine::process_incoming( $request );
+		}
+		return new \WP_Error( 'not_available', 'Webhook_Engine no disponible.', [ 'status' => 500 ] );
 	}
 }
 
