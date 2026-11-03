@@ -9,6 +9,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Config extends Module_Base {
 
+	private static $instance = null;
+
+	public static function get_instance() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	public function __construct() {
+		parent::__construct();
+		self::$instance = $this;
+	}
+
 	public function init() {
         $log_file = ALEZUX_MEMBERS_PATH . 'debug_status.txt';
         // USAMOS UNA MARCA DE VERSIÓN ÚNICA PARA CONFIRMAR LA CARGA

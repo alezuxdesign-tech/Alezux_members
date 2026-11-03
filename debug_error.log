@@ -1,0 +1,25 @@
+2026-11-03T18:10:49+01:00 - Array
+(
+    [type] => 1
+    [message] => Uncaught Error: Call to undefined function is_ssl() in C:\Users\alezu\Documents\GitHub\Alezux_members\crezca.php:40
+Stack trace:
+#0 C:\Users\alezu\Documents\GitHub\Alezux_members\crezca.php(59): crezca_is_ssl()
+#1 Command line code(1): require('C:\\Users\\alezu\\...')
+#2 {main}
+  thrown
+    [file] => C:\Users\alezu\Documents\GitHub\Alezux_members\crezca.php
+    [line] => 40
+)
+
+2026-11-03T18:10:57+01:00 - Array
+(
+    [type] => 1
+    [message] => Uncaught Error: Call to undefined function add_shortcode() in C:\Users\alezu\Documents\GitHub\Alezux_members\crezca.php:657
+Stack trace:
+#0 Command line code(1): require()
+#1 {main}
+  thrown
+    [file] => C:\Users\alezu\Documents\GitHub\Alezux_members\crezca.php
+    [line] => 657
+)
+

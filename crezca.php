@@ -686,6 +686,20 @@ function crezca_intercept_wp_logout_prompt() {
 }
 
 /**
+ * Renderiza la pantalla de autenticación y login personalizada de Crezca de forma autónoma
+ */
+function crezca_render_custom_auth_page() {
+	$template_path = CREZCA_PATH . 'modules/config/templates/auth-page.php';
+	if ( file_exists( $template_path ) ) {
+		$standalone = true;
+		$css_url    = CREZCA_URL . 'modules/config/assets/css/custom-auth.css';
+		$js_url     = CREZCA_URL . 'modules/config/assets/js/custom-auth.js';
+		include $template_path;
+		exit;
+	}
+}
+
+/**
  * Redirige o renderiza directamente la pantalla de inicio de sesión de Crezca en la raíz (dominio.com)
  * para visitantes no autenticados cuando la opción 'root_login_enabled' está activa.
  * Oculta cualquier rastro de WordPress, /wp-admin o /wp-login.php.
@@ -727,10 +741,8 @@ function crezca_handle_root_login_redirect() {
 		}
 
 		if ( ! $has_auth_cookie ) {
-			if ( class_exists( '\\Alezux_Members\\Modules\\Config\\Config' ) ) {
-				\Alezux_Members\Modules\Config\Config::get_instance()->render_auth_page( true );
-				exit;
-			}
+			crezca_render_custom_auth_page();
+			exit;
 		}
 	} else {
 		// Usuario ya autenticado en la raíz
