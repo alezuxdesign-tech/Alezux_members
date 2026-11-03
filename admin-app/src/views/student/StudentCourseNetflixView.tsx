@@ -214,11 +214,13 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
 
   return (
     <div className={styles.netflixContainer}>
-      {/* 1. HERO BANNER PRINCIPAL DEL CURSO (ESTILO NETFLIX) */}
+      {/* 1. HERO BANNER PRINCIPAL DEL CURSO (490px de alto estilo Netflix) */}
       <div 
         className={styles.netflixHeroBanner}
         style={{
-          backgroundImage: `url(${course.banner || course.thumbnail || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80"})`
+          backgroundImage: `url(${course.banner || course.thumbnail || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80"})`,
+          height: "490px",
+          minHeight: "490px",
         }}
       >
         {/* Degradado cinematográfico oscuro */}
@@ -352,12 +354,24 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
                       onClick={() => handleCardClick(moduleSection, moduleNumber)}
                       title={moduleSection.title || `Módulo ${moduleNumber}`}
                     >
-                      {/* Fondo de Portada con Imagen o Fallback */}
+                      {/* Fondo de Portada con Imagen o Fallback (237x392 PX ajustada al tamaño) */}
                       {cover ? (
                         <img 
                           src={cover} 
                           alt={moduleSection.title || `Módulo ${moduleNumber}`} 
                           className={styles.posterBgImage}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            minWidth: "100%",
+                            minHeight: "100%",
+                            objectFit: "cover",
+                            objectPosition: "center center",
+                            display: "block",
+                          }}
                           loading="lazy"
                         />
                       ) : (

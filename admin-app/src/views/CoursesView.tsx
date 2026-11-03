@@ -1666,7 +1666,7 @@ export function CoursesView({
                 <div className={styles.imageCard}>
                   <div className={styles.imageCardHeader}>
                     <label className={styles.label}>Imagen de Banner (Cabecera Panorámica)</label>
-                    <span className={styles.miniLabel}>Recomendado: 3:1 (1200x400 px)</span>
+                    <span className={styles.miniLabel}>Recomendado: 1200x490 px (Alto: 490px)</span>
                   </div>
 
                   {courseBanner ? (
@@ -2407,7 +2407,7 @@ export function CoursesView({
                   }}
                 />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginTop: "6px" }}>
-                  <span className={styles.pageSubtitle}>Previsualización (16:9)</span>
+                  <span className={styles.pageSubtitle}>Previsualización (237x392 px)</span>
                   <Button
                     variant="danger"
                     size="sm"
@@ -2427,7 +2427,7 @@ export function CoursesView({
                 showList={false}
                 label={editingModuleCover.cover ? "Arrastra otra imagen para reemplazarla" : "Arrastra la imagen de portada aquí"}
                 description="o haz clic para buscar en tu equipo"
-                note="Recomendado: 1280x720 (16:9) - PNG, JPG, JPEG, WebP"
+                note="Recomendado: 237x392 px (proporción vertical para el campus) - PNG, JPG, JPEG, WebP"
                 onFilesChange={(files: File[]) => {
                   if (files && files.length > 0) {
                     const file = files[0];

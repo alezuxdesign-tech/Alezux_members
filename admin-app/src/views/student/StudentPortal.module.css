@@ -765,14 +765,16 @@
   padding-bottom: 80px;
 }
 
-/* Hero Banner Gigante con Portada del Curso (450px) */
+/* Hero Banner Gigante con Portada del Curso (490px de alto) */
 .netflixHeroBanner {
   position: relative;
   width: 100%;
-  height: 450px !important;
-  min-height: 450px !important;
-  background-size: cover;
-  background-position: center top;
+  height: 490px !important;
+  min-height: 490px !important;
+  max-height: 490px !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1175,15 +1177,17 @@
   display: none; /* Chrome, Safari */
 }
 
-/* Tarjetas Portadas Verticales (Poster 2:3 - exactamente proporción 600x900) */
+/* Tarjetas Portadas Verticales de Módulos (Dimensiones exactas: 237 X 392 PX) */
 .netflixPosterCard {
   position: relative;
-  width: 220px;
-  min-width: 220px;
-  max-width: 220px;
-  aspect-ratio: 2 / 3 !important;
-  height: auto !important;
-  flex: 0 0 220px;
+  width: 237px !important;
+  min-width: 237px !important;
+  max-width: 237px !important;
+  height: 392px !important;
+  min-height: 392px !important;
+  max-height: 392px !important;
+  flex: 0 0 237px !important;
+  aspect-ratio: 237 / 392 !important;
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
@@ -1207,20 +1211,28 @@
   opacity: 0.88;
 }
 
+/* Ajuste absoluto total para que la imagen cubra 100% de los 237x392 px sin quedarse corta */
 .posterBgImage {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-  background-size: cover;
-  background-position: center top;
-  background-repeat: no-repeat;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
   background-color: #161922;
   z-index: 1;
   transition: transform 0.4s ease;
-  display: block;
+  display: block !important;
 }
 
 .netflixPosterCard:hover .posterBgImage {
@@ -1229,10 +1241,15 @@
 
 /* Fallback con logo de la academia si el módulo no tiene portada */
 .posterBgFallback {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5729,12 +5746,14 @@
   }
 
   .netflixPosterCard {
-    width: 165px;
-    min-width: 165px;
-    max-width: 165px;
-    aspect-ratio: 2 / 3 !important;
-    height: auto !important;
-    flex: 0 0 165px;
+    width: 175px !important;
+    min-width: 175px !important;
+    max-width: 175px !important;
+    height: 289px !important;
+    min-height: 289px !important;
+    max-height: 289px !important;
+    aspect-ratio: 237 / 392 !important;
+    flex: 0 0 175px !important;
     padding: 12px;
     border-radius: 12px;
     scroll-snap-align: start;
@@ -5813,12 +5832,14 @@
   }
 
   .netflixPosterCard {
-    width: 140px;
-    min-width: 140px;
-    max-width: 140px;
-    aspect-ratio: 2 / 3 !important;
-    height: auto !important;
-    flex: 0 0 140px;
+    width: 145px !important;
+    min-width: 145px !important;
+    max-width: 145px !important;
+    height: 240px !important;
+    min-height: 240px !important;
+    max-height: 240px !important;
+    aspect-ratio: 237 / 392 !important;
+    flex: 0 0 145px !important;
   }
 }
 

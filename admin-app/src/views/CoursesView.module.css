@@ -690,7 +690,8 @@
 .coverPreviewContainer {
   width: 100%;
   aspect-ratio: 16 / 11;
-  max-height: 220px;
+  height: 281px;
+  width: 170px;
   background: var(--surface);
   border: 1px dashed var(--border);
   border-radius: var(--radius-control);
@@ -1854,11 +1855,11 @@
 }
 
 .coverModalPreviewImg {
-  width: 100%;
-  max-height: 220px;
+  width: 170px;
+  height: 281px;
   object-fit: cover;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
 .coverModalPlaceholderWrapper {
