@@ -116,9 +116,9 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
         />
         <MetricCard
           label="Vistas Lección Popular"
-          value={stats.topClass.views}
-          change={stats.topClass.completionRate}
-          context={`"${stats.topClass.title.slice(0, 32)}..."`}
+          value={stats.topClass?.views ?? 0}
+          change={stats.topClass?.completionRate ?? "0%"}
+          context={stats.topClass?.title ? `"${stats.topClass.title.slice(0, 32)}..."` : "Sin lecciones aún"}
           icon={<Award size={16} />}
         />
       </div>
@@ -210,17 +210,17 @@ export function OverviewView({ onNavigate }: OverviewViewProps) {
               </div>
 
               <div className={styles.topClassInfo}>
-                <span className={styles.topCourseTitle}>{stats.topClass.courseTitle}</span>
-                <h3 className={styles.topClassTitle}>{stats.topClass.title}</h3>
+                <span className={styles.topCourseTitle}>{stats.topClass?.courseTitle || "Academia"}</span>
+                <h3 className={styles.topClassTitle}>{stats.topClass?.title || "Sin lecciones creadas"}</h3>
 
                 <div className={styles.topClassMetrics}>
                   <div className={styles.classStat}>
                     <Eye size={14} />
-                    <span>{stats.topClass.views.toLocaleString()} Reproducciones</span>
+                    <span>{(stats.topClass?.views ?? 0).toLocaleString()} Reproducciones</span>
                   </div>
                   <div className={styles.classStat}>
                     <CheckCircle2 size={14} />
-                    <span>{stats.topClass.completions.toLocaleString()} Finalizados ({stats.topClass.completionRate})</span>
+                    <span>{(stats.topClass?.completions ?? 0).toLocaleString()} Finalizados ({stats.topClass?.completionRate ?? "0%"})</span>
                   </div>
                 </div>
               </div>

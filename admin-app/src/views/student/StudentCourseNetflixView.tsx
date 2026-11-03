@@ -214,13 +214,11 @@ export const StudentCourseNetflixView: React.FC<StudentCourseNetflixViewProps> =
 
   return (
     <div className={styles.netflixContainer}>
-      {/* 1. HERO BANNER PRINCIPAL DEL CURSO (490px de alto estilo Netflix) */}
+      {/* 1. HERO BANNER PRINCIPAL DEL CURSO (490px en desktop, adaptable y responsivo en móviles) */}
       <div 
         className={styles.netflixHeroBanner}
         style={{
           backgroundImage: `url(${course.banner || course.thumbnail || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80"})`,
-          height: "490px",
-          minHeight: "490px",
         }}
       >
         {/* Degradado cinematográfico oscuro */}

@@ -781,23 +781,23 @@ export function FinanceView() {
       <div className={styles.metricsRow}>
         <MetricCard
           label="Volumen Proyectado"
-          value={totalRevenueProjected > 0 ? totalRevenueProjected : 14850}
+          value={totalRevenueProjected}
           prefix="$"
           suffix="USD"
           decimals={2}
-          change="+18%"
+          change={totalRevenueProjected > 0 ? "+18%" : undefined}
           context="Planes vigentes"
         />
         <MetricCard
           label="Alumnos en Financiación"
-          value={totalSubscribers > 0 ? totalSubscribers : 142}
+          value={totalSubscribers}
           suffix="activos"
-          change="+12%"
+          change={totalSubscribers > 0 ? "+12%" : undefined}
           context="Suscripciones y cuotas"
         />
         <MetricCard
           label="Transacciones de Venta"
-          value={salesTotal > 0 ? salesTotal : 58}
+          value={salesTotal}
           suffix="registradas"
           context="Historial de pagos"
         />

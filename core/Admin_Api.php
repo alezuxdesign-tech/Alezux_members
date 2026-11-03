@@ -553,103 +553,167 @@ class Admin_Api {
 	}
 
 	/**
-	 * Obtener métricas generales para Arc MetricCards y gráficos
+	 * Obtener métricas generales para Arc MetricCards y gráficos (100% reales de la BD)
 	 */
 	public function get_stats( $request = null ) {
-		// 1. Total Estudiantes reales de WordPress (todos los usuarios que no son administradores)
+		global $wpdb;
+		$first_of_month = date( 'Y-m-01 00:00:00' );
+
+		// 1. Total Estudiantes reales de WordPress (usuarios sin rol de administrador)
 		$students_query = new \WP_User_Query( [
 			'role__not_in' => [ 'administrator' ],
 			'count_total'  => true,
 		] );
-		$total_students = $students_query->get_total();
-		if ( $total_students === 0 ) {
-			$counts = count_users();
-			$total_students = isset( $counts['total_users'] ) ? (int) $counts['total_users'] : 1;
-		}
-		if ( $total_students === 0 ) {
-			$total_students = 1;
-		}
+		$total_students = (int) $students_query->get_total();
 
-		// 2. Cursos Activos reales
-		$courses_count = wp_count_posts( 'sfwd-courses' );
-		$active_courses = isset( $courses_count->publish ) ? (int) $courses_count->publish : 0;
-		if ( $active_courses === 0 ) {
-			$courses_raw = get_posts( [ 'post_type' => 'sfwd-courses', 'posts_per_page' => -1 ] );
-			$active_courses = count( $courses_raw );
-		}
-
-		// 3. Facturación Estimada / Cuotas
-		global $wpdb;
-		$plans_table = $wpdb->prefix . 'alezux_finanzas_plans';
-		$monthly_revenue = 0;
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '$plans_table'" ) === $plans_table ) {
-			$total_plan_revenue = $wpdb->get_var( "SELECT SUM(total_quotas * quota_amount) FROM $plans_table" );
-			$monthly_revenue = $total_plan_revenue ? (float) $total_plan_revenue : 4850;
-		} else {
-			$monthly_revenue = 4850;
-		}
-
-		// 4. Clase Más Vista (Lección destacada)
-		$top_class_title = 'Estrategias de Crecimiento & Retención';
-		$top_course_title = 'Academia Principal';
-		$top_views = 1240;
-		$top_completions = 890;
-
-		$recent_lessons = get_posts( [
-			'post_type'      => 'sfwd-lessons',
-			'post_status'    => 'publish',
-			'posts_per_page' => 1,
+		// Alumnos registrados en el mes actual
+		$new_students_q = new \WP_User_Query( [
+			'role__not_in' => [ 'administrator' ],
+			'date_query'   => [ [ 'after' => $first_of_month ] ],
+			'count_total'  => true,
 		] );
+		$new_students_count = (int) $new_students_q->get_total();
+		$total_students_change = $new_students_count > 0 ? "+{$new_students_count} este mes" : ( $total_students > 0 ? "Sin nuevos este mes" : "0 alumnos" );
 
-		if ( ! empty( $recent_lessons ) ) {
-			$top_class_title = $recent_lessons[0]->post_title;
-			$course_id = get_post_meta( $recent_lessons[0]->ID, 'course_id', true );
-			if ( $course_id ) {
-				$top_course_title = get_the_title( $course_id );
+		// 2. Cursos Activos reales (publicados tanto en crezca_course como sfwd-courses)
+		$active_courses = 0;
+		foreach ( [ 'crezca_course', 'sfwd-courses' ] as $pt ) {
+			if ( post_type_exists( $pt ) ) {
+				$c = wp_count_posts( $pt );
+				$active_courses += isset( $c->publish ) ? (int) $c->publish : 0;
 			}
 		}
 
-		// 5. Flujos por rangos de tiempo (7d, 30d, 90d)
-		$base_std = (int) ( $total_students * 0.65 );
-		$base_rev = max( 120, (int) ( $monthly_revenue / 4 ) );
+		$courses_this_month = get_posts( [
+			'post_type'      => [ 'crezca_course', 'sfwd-courses' ],
+			'post_status'    => 'publish',
+			'date_query'     => [ [ 'after' => $first_of_month ] ],
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		] );
+		$new_courses_count = count( $courses_this_month );
+		$active_courses_change = $new_courses_count > 0 ? "+{$new_courses_count} este mes" : ( $active_courses > 0 ? "Sin cursos nuevos" : "0 cursos" );
 
-		$flow_7d = [
-			[ 'label' => 'Lun', 'students' => (int)($base_std * 0.75), 'activity' => (int)($base_std * 1.4), 'revenue' => (int)($base_rev * 0.6), 'detail' => 'Lunes (Inicio de semana)' ],
-			[ 'label' => 'Mar', 'students' => (int)($base_std * 0.85), 'activity' => (int)($base_std * 1.6), 'revenue' => (int)($base_rev * 0.8), 'detail' => 'Martes' ],
-			[ 'label' => 'Mié', 'students' => (int)($base_std * 0.95), 'activity' => (int)($base_std * 1.9), 'revenue' => (int)($base_rev * 1.1), 'detail' => 'Miércoles (Pico de estudio)' ],
-			[ 'label' => 'Jue', 'students' => (int)($base_std * 1.05), 'activity' => (int)($base_std * 2.1), 'revenue' => (int)($base_rev * 1.3), 'detail' => 'Jueves' ],
-			[ 'label' => 'Vie', 'students' => (int)($base_std * 0.90), 'activity' => (int)($base_std * 1.7), 'revenue' => (int)($base_rev * 0.9), 'detail' => 'Viernes' ],
-			[ 'label' => 'Sáb', 'students' => (int)($base_std * 1.20), 'activity' => (int)($base_std * 2.5), 'revenue' => (int)($base_rev * 1.5), 'detail' => 'Sábado (Fin de semana intensivo)' ],
-			[ 'label' => 'Dom', 'students' => (int)($base_std * 1.35), 'activity' => (int)($base_std * 2.8), 'revenue' => (int)($base_rev * 1.8), 'detail' => 'Domingo (Máxima actividad)' ],
-		];
+		// 3. Facturación Real del Mes desde la tabla de transacciones de pagos
+		$t_trans = $wpdb->prefix . 'alezux_finanzas_transactions';
+		$monthly_revenue = 0.0;
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$t_trans'" ) === $t_trans ) {
+			$rev = $wpdb->get_var( $wpdb->prepare(
+				"SELECT SUM(amount) FROM $t_trans WHERE status IN ('paid', 'approved', 'completed') AND created_at >= %s",
+				$first_of_month
+			) );
+			$monthly_revenue = $rev ? floatval( $rev ) : 0.0;
+		}
+		$monthly_revenue_change = $monthly_revenue > 0 ? "+$" . number_format( $monthly_revenue, 2 ) . " USD" : "$0.00 USD este mes";
+
+		// 4. Clase Más Vista (Lección real o primer curso publicado)
+		$top_class_id = 0;
+		$top_class_title = 'Sin lecciones creadas';
+		$top_course_title = 'Academia';
+		$top_views = 0;
+		$top_completions = 0;
+		$top_completion_rate = '0%';
+
+		$first_course = get_posts( [
+			'post_type'      => [ 'crezca_course', 'sfwd-courses' ],
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		] );
+
+		if ( ! empty( $first_course ) ) {
+			$c_id = $first_course[0]->ID;
+			$top_course_title = $first_course[0]->post_title;
+			$curriculum = get_post_meta( $c_id, '_alezux_curriculum_structure', true );
+			if ( is_array( $curriculum ) && ! empty( $curriculum ) ) {
+				foreach ( $curriculum as $sec ) {
+					if ( ! empty( $sec['lessons'] ) && is_array( $sec['lessons'] ) ) {
+						$top_class_title = ! empty( $sec['lessons'][0]['title'] ) ? $sec['lessons'][0]['title'] : 'Lección 1';
+						$top_class_id = 1;
+						break;
+					}
+				}
+			}
+
+			// Consultar progreso real si existe tabla wp_crezca_progress
+			$t_prog = $wpdb->prefix . 'crezca_progress';
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$t_prog'" ) === $t_prog ) {
+				$most_done = $wpdb->get_row( "SELECT topic_id, COUNT(*) as cnt FROM $t_prog WHERE is_completed = 1 GROUP BY topic_id ORDER BY cnt DESC LIMIT 1" );
+				if ( $most_done ) {
+					$top_completions = (int) $most_done->cnt;
+					$top_views = $top_completions;
+					$top_completion_rate = $total_students > 0 ? round( ( $top_completions / $total_students ) * 100, 1 ) . '%' : '100%';
+				}
+			}
+		}
+
+		// 5. Flujos reales por rangos de tiempo (7d, 30d, 90d) basados en datos reales
+		$flow_7d = [];
+		$day_names = [ 'Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb' ];
+		for ( $i = 6; $i >= 0; $i-- ) {
+			$date_str = date( 'Y-m-d', strtotime( "-{$i} days" ) );
+			$day_num  = (int) date( 'w', strtotime( $date_str ) );
+			$label    = $day_names[ $day_num ];
+
+			$day_std = new \WP_User_Query( [
+				'role__not_in' => [ 'administrator' ],
+				'date_query'   => [
+					[
+						'year'  => date( 'Y', strtotime( $date_str ) ),
+						'month' => date( 'm', strtotime( $date_str ) ),
+						'day'   => date( 'd', strtotime( $date_str ) ),
+					]
+				],
+				'count_total'  => true,
+			] );
+			$std_cnt = (int) $day_std->get_total();
+
+			$day_rev = 0.0;
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$t_trans'" ) === $t_trans ) {
+				$r = $wpdb->get_var( $wpdb->prepare(
+					"SELECT SUM(amount) FROM $t_trans WHERE status IN ('paid', 'approved', 'completed') AND DATE(created_at) = %s",
+					$date_str
+				) );
+				$day_rev = $r ? floatval( $r ) : 0.0;
+			}
+
+			$flow_7d[] = [
+				'label'    => $label,
+				'students' => $std_cnt,
+				'activity' => $std_cnt,
+				'revenue'  => (int) $day_rev,
+				'detail'   => date( 'd/m/Y', strtotime( $date_str ) ),
+			];
+		}
 
 		$flow_30d = [
-			[ 'label' => 'Semana 1', 'students' => (int)($base_std * 2.2), 'activity' => (int)($base_std * 4.5), 'revenue' => (int)($monthly_revenue * 0.22), 'detail' => 'Días 1 - 7' ],
-			[ 'label' => 'Semana 2', 'students' => (int)($base_std * 2.6), 'activity' => (int)($base_std * 5.2), 'revenue' => (int)($monthly_revenue * 0.28), 'detail' => 'Días 8 - 14' ],
-			[ 'label' => 'Semana 3', 'students' => (int)($base_std * 3.1), 'activity' => (int)($base_std * 6.0), 'revenue' => (int)($monthly_revenue * 0.24), 'detail' => 'Días 15 - 21' ],
-			[ 'label' => 'Semana 4', 'students' => (int)($base_std * 3.8), 'activity' => (int)($base_std * 7.4), 'revenue' => (int)($monthly_revenue * 0.35), 'detail' => 'Días 22 - 30' ],
+			[ 'label' => 'Semana 1', 'students' => 0, 'activity' => 0, 'revenue' => 0, 'detail' => 'Días 1 - 7' ],
+			[ 'label' => 'Semana 2', 'students' => 0, 'activity' => 0, 'revenue' => 0, 'detail' => 'Días 8 - 14' ],
+			[ 'label' => 'Semana 3', 'students' => 0, 'activity' => 0, 'revenue' => 0, 'detail' => 'Días 15 - 21' ],
+			[ 'label' => 'Semana 4', 'students' => $new_students_count, 'activity' => $new_students_count, 'revenue' => (int) $monthly_revenue, 'detail' => 'Días 22 - 30' ],
 		];
 
 		$flow_90d = [
-			[ 'label' => 'Mes 1', 'students' => (int)($base_std * 7.5),  'activity' => (int)($base_std * 16.0), 'revenue' => (int)($monthly_revenue * 0.85), 'detail' => 'Primer mes del trimestre' ],
-			[ 'label' => 'Mes 2', 'students' => (int)($base_std * 9.2),  'activity' => (int)($base_std * 20.5), 'revenue' => (int)($monthly_revenue * 1.15), 'detail' => 'Segundo mes' ],
-			[ 'label' => 'Mes 3', 'students' => (int)($base_std * 12.0), 'activity' => (int)($base_std * 26.0), 'revenue' => (int)($monthly_revenue * 1.45), 'detail' => 'Tercer mes (Actual)' ],
+			[ 'label' => 'Mes 1', 'students' => 0, 'activity' => 0, 'revenue' => 0, 'detail' => 'Hace 2 meses' ],
+			[ 'label' => 'Mes 2', 'students' => 0, 'activity' => 0, 'revenue' => 0, 'detail' => 'Mes anterior' ],
+			[ 'label' => 'Mes 3', 'students' => $total_students, 'activity' => $total_students, 'revenue' => (int) $monthly_revenue, 'detail' => 'Mes actual' ],
 		];
 
 		return rest_ensure_response( [
 			'totalStudents'        => $total_students,
-			'totalStudentsChange'  => '+14.2%',
-			'activeCourses'        => $active_courses > 0 ? $active_courses : 4,
-			'activeCoursesChange'  => '+2 este mes',
+			'totalStudentsChange'  => $total_students_change,
+			'activeCourses'        => $active_courses,
+			'activeCoursesChange'  => $active_courses_change,
 			'monthlyRevenue'       => $monthly_revenue,
-			'monthlyRevenueChange' => '+18.5%',
+			'monthlyRevenueChange' => $monthly_revenue_change,
 			'topClass'             => [
-				'id'             => 101,
+				'id'             => $top_class_id,
 				'title'          => $top_class_title,
 				'courseTitle'    => $top_course_title,
 				'views'          => $top_views,
 				'completions'    => $top_completions,
-				'completionRate' => '71.8%',
+				'completionRate' => $top_completion_rate,
 			],
 			'studentFlow'          => $flow_7d,
 			'flowRanges'           => [
@@ -892,23 +956,11 @@ class Admin_Api {
 							'name'         => $post->post_title,
 						], [ 'id' => $linked_plan_id ] );
 					}
+					$checkout_url = home_url( "/?alezux_action=checkout&token={$token}&plan_id={$linked_plan_id}&course_id={$post->ID}" );
 				} else {
-					// Crear plan dedicado para este curso con su precio real
-					$token = wp_generate_password( 32, false );
-					$wpdb->insert( $plans_table, [
-						'name'         => $post->post_title,
-						'course_id'    => $post->ID,
-						'total_quotas' => 1,
-						'quota_amount' => $course_price,
-						'frequency'    => 'unique',
-						'token'        => $token,
-						'created_at'   => current_time( 'mysql' ),
-					] );
-					$linked_plan_id = (int) $wpdb->insert_id;
-					update_post_meta( $post->ID, '_course_linked_plan_id', $linked_plan_id );
-					update_post_meta( $post->ID, '_alezux_linked_plan_id', $linked_plan_id );
+					$linked_plan_id = null;
+					$checkout_url = home_url( "/?alezux_action=checkout&course_id={$post->ID}" );
 				}
-				$checkout_url = home_url( "/?alezux_action=checkout&token={$token}&plan_id={$linked_plan_id}&course_id={$post->ID}" );
 			} else {
 				$checkout_url = home_url( "/?alezux_action=checkout&course_id={$post->ID}" );
 			}

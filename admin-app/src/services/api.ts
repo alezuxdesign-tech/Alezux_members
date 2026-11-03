@@ -621,26 +621,26 @@ const MOCK_FLOW_90D: FlowDataPoint[] = [
   { label: "Mes 3", students: 13900, activity: 28900, revenue: 21800, detail: "Tercer mes (Actual)" },
 ];
 
-const MOCK_STATS: DashboardStats = {
-  totalStudents: 1420,
-  totalStudentsChange: "+12.4%",
-  activeCourses: 18,
-  activeCoursesChange: "+2 este mes",
-  monthlyRevenue: 18450,
-  monthlyRevenueChange: "+18.2%",
+const EMPTY_STATS: DashboardStats = {
+  totalStudents: 0,
+  totalStudentsChange: "0 alumnos",
+  activeCourses: 0,
+  activeCoursesChange: "0 cursos",
+  monthlyRevenue: 0,
+  monthlyRevenueChange: "$0.00 USD",
   topClass: {
-    id: 101,
-    title: "Estrategias de Escalamiento con Meta Ads 2026",
-    courseTitle: "Master en Marketing Digital & Performance",
-    views: 4892,
-    completions: 3410,
-    completionRate: "69.7%",
+    id: 0,
+    title: "Sin lecciones creadas",
+    courseTitle: "Comienza creando un curso",
+    views: 0,
+    completions: 0,
+    completionRate: "0%",
   },
-  studentFlow: MOCK_FLOW_7D,
+  studentFlow: [],
   flowRanges: {
-    "7d": MOCK_FLOW_7D,
-    "30d": MOCK_FLOW_30D,
-    "90d": MOCK_FLOW_90D,
+    "7d": [],
+    "30d": [],
+    "90d": [],
   },
 };
 
@@ -1311,18 +1311,19 @@ class ApiService {
   async getDashboardStats(): Promise<DashboardStats> {
     try {
       if (this.wpData) {
-        const res = await fetch(`${this.rootUrl}stats`, {
+        const res = await fetch(`${this.rootUrl}stats?_t=${Date.now()}`, {
           headers: { "X-WP-Nonce": this.nonce },
+          cache: "no-store",
         });
         if (res.ok) {
           const data = await res.json();
-          return { ...MOCK_STATS, ...data };
+          return { ...EMPTY_STATS, ...data };
         }
       }
     } catch (e) {
-      console.warn("API Error, using mock stats fallback:", e);
+      console.warn("API Error getDashboardStats:", e);
     }
-    return MOCK_STATS;
+    return EMPTY_STATS;
   }
 
   // --- COURSES ---
