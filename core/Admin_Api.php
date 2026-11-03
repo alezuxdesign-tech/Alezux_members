@@ -3581,6 +3581,11 @@ class Admin_Api {
 		// Purgar cachés de LiteSpeed / Hostinger si están activas
 		if ( function_exists( 'do_action' ) ) {
 			do_action( 'litespeed_purge_all' );
+			do_action( 'litespeed_purge_url', home_url( '/' ) );
+			do_action( 'litespeed_purge_url', home_url() );
+		}
+		if ( class_exists( '\LiteSpeed\Purge' ) ) {
+			\LiteSpeed\Purge::purge_all();
 		}
 
 		return rest_ensure_response( [

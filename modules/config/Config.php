@@ -252,9 +252,14 @@ class Config extends Module_Base {
 		$root_enabled  = ! empty( $auth_settings['root_login_enabled'] ) || get_option( 'alezux_root_login_enabled' ) === '1';
 
 		if ( ! $is_login_page && $root_enabled ) {
-			$uri_path  = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+			$req_uri   = $_SERVER['REQUEST_URI'] ?? '/';
+			$uri_path  = trim( (string) parse_url( $req_uri, PHP_URL_PATH ), '/' );
 			$home_path = trim( (string) parse_url( home_url(), PHP_URL_PATH ), '/' );
-			if ( $uri_path === $home_path || empty( $uri_path ) || is_front_page() || is_home() ) {
+			$relative_path = $uri_path;
+			if ( ! empty( $home_path ) && str_starts_with( $uri_path, $home_path ) ) {
+				$relative_path = trim( substr( $uri_path, strlen( $home_path ) ), '/' );
+			}
+			if ( empty( $relative_path ) || $relative_path === 'index.php' || $uri_path === $home_path || is_front_page() || is_home() ) {
 				$is_login_page = true;
 			}
 		}
@@ -395,6 +400,16 @@ class Config extends Module_Base {
 	 * @param bool $standalone Define si renderiza el documento HTML completo o embebido
 	 */
 	public function render_auth_page( $standalone = true ) {
+		nocache_headers();
+		if ( ! headers_sent() ) {
+			header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+			header( 'Pragma: no-cache' );
+			header( 'Expires: 0' );
+			header( 'X-LiteSpeed-Cache-Control: no-cache' );
+		}
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'litespeed_control_set_nocache', 'Crezca auth page' );
+		}
 		$css_url = $this->get_asset_url( 'assets/css/custom-auth.css' );
 		$js_url  = $this->get_asset_url( 'assets/js/custom-auth.js' );
 		

@@ -691,6 +691,17 @@ function crezca_intercept_wp_logout_prompt() {
  * Renderiza la pantalla de autenticación y login personalizada de Crezca de forma autónoma
  */
 function crezca_render_custom_auth_page() {
+	nocache_headers();
+	if ( ! headers_sent() ) {
+		header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+		header( 'X-LiteSpeed-Cache-Control: no-cache' );
+	}
+	if ( function_exists( 'do_action' ) ) {
+		do_action( 'litespeed_control_set_nocache', 'Crezca auth page' );
+	}
+
 	$template_path = CREZCA_PATH . 'modules/config/templates/auth-page.php';
 	if ( file_exists( $template_path ) ) {
 		$standalone = true;
@@ -706,8 +717,14 @@ function crezca_render_custom_auth_page() {
  * para visitantes no autenticados cuando la opción 'root_login_enabled' está activa.
  * Oculta cualquier rastro de WordPress, /wp-admin o /wp-login.php.
  */
+add_action( 'wp', 'crezca_handle_root_login_redirect', 1 );
 add_action( 'template_redirect', 'crezca_handle_root_login_redirect', 1 );
 function crezca_handle_root_login_redirect() {
+	static $already_run = false;
+	if ( $already_run ) {
+		return;
+	}
+
 	if ( is_admin() || wp_doing_ajax() || wp_doing_cron() ) {
 		return;
 	}
@@ -719,39 +736,52 @@ function crezca_handle_root_login_redirect() {
 	}
 
 	// Comprobar si la petición actual es la portada o raíz
-	$uri_path  = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+	$req_uri   = $_SERVER['REQUEST_URI'] ?? '/';
+	$uri_path  = trim( (string) parse_url( $req_uri, PHP_URL_PATH ), '/' );
 	$home_path = trim( (string) parse_url( home_url(), PHP_URL_PATH ), '/' );
-	$is_root   = ( $uri_path === $home_path ) || empty( $uri_path ) || is_front_page() || is_home();
+
+	// Si home_url tiene un path relativo (ej: /app o /portal), extraerlo
+	$relative_path = $uri_path;
+	if ( ! empty( $home_path ) && str_starts_with( $uri_path, $home_path ) ) {
+		$relative_path = trim( substr( $uri_path, strlen( $home_path ) ), '/' );
+	}
+
+	$is_root = empty( $relative_path ) 
+		|| ( $relative_path === 'index.php' ) 
+		|| ( $uri_path === $home_path ) 
+		|| ( function_exists( 'is_front_page' ) && is_front_page() ) 
+		|| ( function_exists( 'is_home' ) && is_home() );
 
 	if ( ! $is_root ) {
 		return;
 	}
 
 	// Bypasear si es Elementor editor o vista previa
-	if ( ( class_exists( '\\Elementor\\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) || isset( $_GET['elementor-preview'] ) ) {
+	if ( ( class_exists( '\Elementor\Plugin' ) && \Elementor\Plugin::$instance->editor->is_edit_mode() ) || isset( $_GET['elementor-preview'] ) ) {
 		return;
 	}
 
+	$already_run = true;
+
+	// Enviar encabezados estrictos anti-caché para LiteSpeed, Nginx y Cloudflare
 	nocache_headers();
+	if ( ! headers_sent() ) {
+		header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+		header( 'X-LiteSpeed-Cache-Control: no-cache' );
+	}
+	if ( function_exists( 'do_action' ) ) {
+		do_action( 'litespeed_control_set_nocache', 'Crezca root login' );
+	}
 
 	if ( ! is_user_logged_in() ) {
-		// Comprobar si existe cookie de sesión de WordPress antes de mostrar login
-		$has_auth_cookie = false;
-		foreach ( $_COOKIE as $c_name => $c_val ) {
-			if ( str_starts_with( (string) $c_name, 'wordpress_logged_in_' ) ) {
-				$has_auth_cookie = true;
-				break;
-			}
-		}
-
-		if ( ! $has_auth_cookie ) {
-			crezca_render_custom_auth_page();
-			exit;
-		}
+		crezca_render_custom_auth_page();
+		exit;
 	} else {
 		// Usuario ya autenticado en la raíz
 		if ( current_user_can( 'administrator' ) || current_user_can( 'manage_options' ) ) {
-			if ( ! isset( $_GET['view'] ) ) {
+			if ( ! isset( $_GET['view'] ) && ! isset( $_GET['preview_auth'] ) ) {
 				wp_safe_redirect( admin_url( 'admin.php?page=crezca' ) );
 				exit;
 			}
@@ -766,6 +796,50 @@ function crezca_handle_root_login_redirect() {
 }
 
 /**
+ * Previene que LiteSpeed Cache almacene en caché la página principal o de login con el modo Whitelabel activo
+ */
+add_filter( 'litespeed_can_cache', function( $can_cache ) {
+	$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+	if ( ! empty( $auth_settings['root_login_enabled'] ) || get_option( 'alezux_root_login_enabled' ) === '1' ) {
+		$req_uri   = $_SERVER['REQUEST_URI'] ?? '/';
+		$uri_path  = trim( (string) parse_url( $req_uri, PHP_URL_PATH ), '/' );
+		$home_path = trim( (string) parse_url( home_url(), PHP_URL_PATH ), '/' );
+		$relative_path = $uri_path;
+		if ( ! empty( $home_path ) && str_starts_with( $uri_path, $home_path ) ) {
+			$relative_path = trim( substr( $uri_path, strlen( $home_path ) ), '/' );
+		}
+		if ( empty( $relative_path ) || $relative_path === 'index.php' || $uri_path === $home_path ) {
+			return false;
+		}
+	}
+	return $can_cache;
+}, 999 );
+
+/**
+ * Enviar encabezados anti-caché en la fase temprana send_headers
+ */
+add_action( 'send_headers', function() {
+	$auth_settings = function_exists( 'crezca_get_auth_settings' ) ? crezca_get_auth_settings() : [];
+	if ( ! empty( $auth_settings['root_login_enabled'] ) || get_option( 'alezux_root_login_enabled' ) === '1' ) {
+		$req_uri   = $_SERVER['REQUEST_URI'] ?? '/';
+		$uri_path  = trim( (string) parse_url( $req_uri, PHP_URL_PATH ), '/' );
+		$home_path = trim( (string) parse_url( home_url(), PHP_URL_PATH ), '/' );
+		$relative_path = $uri_path;
+		if ( ! empty( $home_path ) && str_starts_with( $uri_path, $home_path ) ) {
+			$relative_path = trim( substr( $uri_path, strlen( $home_path ) ), '/' );
+		}
+		if ( empty( $relative_path ) || $relative_path === 'index.php' || $uri_path === $home_path ) {
+			if ( ! headers_sent() ) {
+				header( 'X-LiteSpeed-Cache-Control: no-cache' );
+				header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+				header( 'Pragma: no-cache' );
+				header( 'Expires: 0' );
+			}
+		}
+	}
+} );
+
+/**
  * Intercepta accesos a ?tab=courses en la raíz o páginas del tema para redirigir al Campus Virtual
  */
 add_action( 'template_redirect', 'crezca_redirect_student_tabs_to_campus', 5 );
@@ -777,19 +851,8 @@ function crezca_redirect_student_tabs_to_campus() {
 	if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], [ 'courses', 'dashboard', 'community', 'profile' ], true ) ) {
 		nocache_headers();
 
-		// Si no está autenticado, comprobar si existe cookie de sesión de WordPress antes de redirigir (evita loops)
+		// Si no está autenticado, redirigir al login
 		if ( ! is_user_logged_in() ) {
-			$has_auth_cookie = false;
-			foreach ( $_COOKIE as $c_name => $c_val ) {
-				if ( str_starts_with( (string) $c_name, 'wordpress_logged_in_' ) ) {
-					$has_auth_cookie = true;
-					break;
-				}
-			}
-			if ( $has_auth_cookie ) {
-				return;
-			}
-
 			$login_url   = crezca_get_login_page_url();
 			$is_secure   = crezca_is_ssl();
 			$current_req = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
@@ -853,25 +916,16 @@ function crezca_student_portal_canvas_template( $template ) {
 	if ( $is_portal ) {
 		// Si es acceso no autenticado al aula, redirigir al login personalizado
 		if ( ! is_user_logged_in() ) {
-			$has_auth_cookie = false;
-			foreach ( $_COOKIE as $c_name => $c_val ) {
-				if ( str_starts_with( (string) $c_name, 'wordpress_logged_in_' ) ) {
-					$has_auth_cookie = true;
-					break;
-				}
-			}
-			if ( ! $has_auth_cookie ) {
-				nocache_headers();
-				$login_url   = crezca_get_login_page_url();
-				$is_secure   = crezca_is_ssl();
-				$current_url = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
-				
-				$current_path = trim( (string) parse_url( $current_url, PHP_URL_PATH ), '/' );
-				$login_path   = trim( (string) parse_url( $login_url, PHP_URL_PATH ), '/' );
-				if ( $current_path !== $login_path && untrailingslashit( $current_url ) !== untrailingslashit( $login_url ) ) {
-					wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
-					exit;
-				}
+			nocache_headers();
+			$login_url   = crezca_get_login_page_url();
+			$is_secure   = crezca_is_ssl();
+			$current_url = ( $is_secure ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '' );
+			
+			$current_path = trim( (string) parse_url( $current_url, PHP_URL_PATH ), '/' );
+			$login_path   = trim( (string) parse_url( $login_url, PHP_URL_PATH ), '/' );
+			if ( $current_path !== $login_path && untrailingslashit( $current_url ) !== untrailingslashit( $login_url ) ) {
+				wp_safe_redirect( add_query_arg( 'redirect_to', urlencode( $current_url ), $login_url ) );
+				exit;
 			}
 		}
 		add_filter( 'show_admin_bar', '__return_false' );
