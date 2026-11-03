@@ -3555,15 +3555,17 @@ class Admin_Api {
 			'admin_default_redirect',
 			'form_theme',
 			'root_login_enabled',
+			'logo_mobile_url',
+			'logo_mobile_width',
 		];
 
 		foreach ( $allowed_keys as $key ) {
 			if ( isset( $params[ $key ] ) ) {
 				if ( in_array( $key, [ 'hero_badge_enabled', 'steps_enabled', 'allow_registration', 'sync_academy_colors', 'root_login_enabled' ], true ) ) {
 					$current[ $key ] = (bool) $params[ $key ];
-				} elseif ( in_array( $key, [ 'logo_width' ], true ) ) {
+				} elseif ( in_array( $key, [ 'logo_width', 'logo_mobile_width' ], true ) ) {
 					$current[ $key ] = absint( $params[ $key ] );
-				} elseif ( in_array( $key, [ 'terms_url', 'privacy_url', 'logo_url', 'bg_image_url' ], true ) ) {
+				} elseif ( in_array( $key, [ 'terms_url', 'privacy_url', 'logo_url', 'logo_mobile_url', 'bg_image_url' ], true ) ) {
 					$current[ $key ] = esc_url_raw( $params[ $key ] );
 				} elseif ( $key === 'custom_css' ) {
 					$current[ $key ] = wp_strip_all_tags( $params[ $key ] );

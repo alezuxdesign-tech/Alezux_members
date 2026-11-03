@@ -338,6 +338,8 @@ export function SettingsView({
     admin_default_redirect: "academy",
     form_theme: "light",
     root_login_enabled: false,
+    logo_mobile_url: "",
+    logo_mobile_width: 140,
   });
 
   useEffect(() => {
@@ -1163,6 +1165,75 @@ export function SettingsView({
                       onChange={(e) => setAuthSettings((prev) => ({ ...prev, logo_width: Number(e.target.value) || 160 }))}
                     />
                     <span className={styles.fieldHint}>Recomendado: 140px a 200px para nitidez.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FILA 2B: LOGOTIPO PARA VERSIÓN MÓVIL */}
+            <div className={styles.settingsRow}>
+              <div className={styles.rowInfo}>
+                <h3 className={styles.rowTitle}>Logotipo para Versión Móvil</h3>
+                <p className={styles.rowDesc}>
+                  Logo específico que se muestra en smartphones y pantallas pequeñas en lugar del logo principal.
+                </p>
+              </div>
+              <div className={styles.rowContent}>
+                <div className={styles.dropzoneContainer}>
+                  {authSettings.logo_mobile_url ? (
+                    <div className={styles.imagePreviewBox}>
+                      <img src={authSettings.logo_mobile_url} alt="Logo Móvil" className={styles.imagePreviewThumbnail} />
+                      <div className={styles.imagePreviewDetails}>
+                        <span className={styles.imagePreviewName}>Logotipo Móvil Activo</span>
+                        <span className={styles.imagePreviewSub}>Ancho móvil: {authSettings.logo_mobile_width || 140}px</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAuthSettings((prev) => ({ ...prev, logo_mobile_url: "" }))}
+                      >
+                        <Trash2 size={13} /> Usar logo principal
+                      </Button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", padding: "2px 0" }}>
+                      Actualmente los teléfonos usan el logotipo principal del login o academia. Sube uno aquí si deseas un isotipo o versión especial para móviles.
+                    </div>
+                  )}
+
+                  <FileDropzone
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
+                    multiple={false}
+                    maxFiles={1}
+                    showList={false}
+                    label={authSettings.logo_mobile_url ? "Arrastra otra imagen para reemplazar el logo móvil" : "Arrastra el logotipo para versión móvil aquí"}
+                    description="o haz clic para examinar tus archivos (PNG, SVG, JPG, WEBP)"
+                    note="Recomendado: Isotipo cuadrado o logo horizontal compacto"
+                    onFilesChange={async (files) => {
+                      if (files && files.length > 0) {
+                        try {
+                          const uploadedUrl = await api.uploadMedia(files[0]);
+                          if (uploadedUrl) {
+                            setAuthSettings((prev) => ({ ...prev, logo_mobile_url: uploadedUrl }));
+                            showToast("success", "Logo móvil subido", "El logotipo para versión móvil fue actualizado.");
+                          }
+                        } catch {
+                          showToast("danger", "Error", "No se pudo subir la imagen.");
+                        }
+                      }
+                    }}
+                  />
+
+                  <div style={{ maxWidth: 220, marginTop: 4 }}>
+                    <label className={styles.fieldLabel}>Ancho Máximo en Móvil (px):</label>
+                    <Input
+                      type="number"
+                      min={40}
+                      max={300}
+                      value={String(authSettings.logo_mobile_width || 140)}
+                      onChange={(e) => setAuthSettings((prev) => ({ ...prev, logo_mobile_width: Number(e.target.value) || 140 }))}
+                    />
+                    <span className={styles.fieldHint}>Recomendado: 120px a 160px para smartphones.</span>
                   </div>
                 </div>
               </div>

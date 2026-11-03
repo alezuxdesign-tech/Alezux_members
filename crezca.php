@@ -400,6 +400,8 @@ function crezca_get_auth_settings() {
 		'admin_default_redirect' => 'academy', // 'academy' | 'wp'
 		'form_theme'             => 'light', // 'light' | 'dark'
 		'root_login_enabled'     => false,
+		'logo_mobile_url'        => '',
+		'logo_mobile_width'      => 140,
 	];
 
 	$saved = get_option( 'crezca_auth_settings', [] );

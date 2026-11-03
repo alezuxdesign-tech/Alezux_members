@@ -673,35 +673,51 @@ div.alezux-auth-body .alezux-form-panel {
 
 /* En teléfonos móviles: Solo mostrar el formulario con el logo arriba a petición del usuario */
 @media (max-width: 768px) {
-  body.alezux-auth-body {
-    height: auto;
-    min-height: 100vh;
-    background: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .alezux-auth-wrapper {
+  body.alezux-auth-body,
+  body.theme-dark,
+  div.alezux-auth-body,
+  div.alezux-auth-body.theme-dark {
+    background: #090a0f !important;
     height: auto;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px 16px;
-  }
-
-  .alezux-auth-card {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-width: 440px;
-    min-height: auto;
-    height: auto;
-    margin: auto;
-    box-shadow: none;
-    border-radius: 0;
     padding: 0;
+  }
+
+  .alezux-auth-wrapper,
+  div.alezux-auth-body .alezux-auth-wrapper {
+    height: auto !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 32px 20px !important;
+    background: #090a0f !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Quitar completamente el cuadro/borde del login en móvil */
+  .alezux-auth-card,
+  .alezux-auth-card.theme-dark,
+  .alezux-auth-card.theme-light,
+  div.alezux-auth-body .alezux-auth-card {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 420px !important;
+    min-height: auto !important;
+    height: auto !important;
+    margin: auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
   }
 
   /* Ocultar completamente el panel Hero en móviles */
@@ -712,17 +728,30 @@ div.alezux-auth-body .alezux-form-panel {
   /* Mostrar el logo encima del formulario */
   .mobile-brand-header {
     display: flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    width: 100%;
   }
 
-  .alezux-form-panel {
-    padding: 12px 4px 32px 4px !important;
-    width: 100%;
-    max-width: 100%;
+  .alezux-form-panel,
+  .alezux-form-panel.theme-dark,
+  .alezux-form-panel.theme-light,
+  div.alezux-auth-body .alezux-form-panel {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 8px 0 28px 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .auth-view {
-    max-width: 100%;
-    margin: 0 auto;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
   }
 }
 
@@ -730,17 +759,18 @@ div.alezux-auth-body .alezux-form-panel {
    TEMA DARK (SUPERFICIE OSCURA NEUTRA - 100% FIEL A LA PLATAFORMA)
    ========================================================================== */
 body.theme-dark,
-div.alezux-auth-body.theme-dark {
+div.alezux-auth-body.theme-dark,
+.alezux-auth-wrapper.theme-dark {
   background: #090a0f !important;
 }
 
 .alezux-auth-card.theme-dark {
-  background: #0e0f13 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #090a0f !important;
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .alezux-form-panel.theme-dark {
-  background: #121316 !important;
+  background: #090a0f !important;
   color: #f4f4f5 !important;
 }
 
@@ -822,13 +852,13 @@ div.alezux-auth-body.theme-dark {
 
 @media (max-width: 900px) {
   body.alezux-auth-body.theme-dark,
-  div.alezux-auth-body.theme-dark,
+  div.alezux-auth-body.theme-dark {
+    background: #090a0f !important;
+  }
   .alezux-auth-card.theme-dark,
   .alezux-form-panel.theme-dark {
-    background: #121316 !important;
-  }
-}
-  .alezux-form-panel.theme-dark {
-    background: #0f121a !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 }

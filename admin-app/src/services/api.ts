@@ -587,6 +587,8 @@ export interface AuthSettings {
   admin_default_redirect: "academy" | "wp";
   form_theme?: "light" | "dark";
   root_login_enabled?: boolean;
+  logo_mobile_url?: string;
+  logo_mobile_width?: number;
 }
 
 export interface EmailLogItem {

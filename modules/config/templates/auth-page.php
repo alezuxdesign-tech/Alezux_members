@@ -16,6 +16,8 @@ $site_desc       = get_bloginfo( 'description' );
 $custom_logo_id  = get_theme_mod( 'custom_logo' );
 $logo_img        = ! empty( $auth_settings['logo_url'] ) ? $auth_settings['logo_url'] : ( $custom_logo_id ? wp_get_attachment_image_url( $custom_logo_id, 'medium' ) : get_option( 'alezux_academy_logo', '' ) );
 $logo_width      = ! empty( $auth_settings['logo_width'] ) ? intval( $auth_settings['logo_width'] ) : 160;
+$logo_mobile_url = ! empty( $auth_settings['logo_mobile_url'] ) ? $auth_settings['logo_mobile_url'] : $logo_img;
+$logo_mobile_width = ! empty( $auth_settings['logo_mobile_width'] ) ? intval( $auth_settings['logo_mobile_width'] ) : ( ! empty( $auth_settings['logo_width'] ) ? min( intval( $auth_settings['logo_width'] ), 160 ) : 140 );
 $site_icon       = get_site_icon_url( 64 );
 
 $raw_redirect    = ! empty( $_REQUEST['redirect_to'] ) ? esc_url_raw( $_REQUEST['redirect_to'] ) : '';
@@ -322,13 +324,13 @@ if ( $standalone ) : ?>
     <!-- ======================================================== -->
     <div class="alezux-form-panel <?php echo $form_theme === 'dark' ? 'theme-dark' : 'theme-light'; ?>">
 
-      <!-- Cabecera Móvil: Logo arriba solo en teléfonos a petición del usuario -->
+      <!-- Cabecera Móvil: Logo optimizado para teléfonos -->
       <div class="mobile-brand-header">
         <a href="<?php echo esc_url( home_url() ); ?>" class="mobile-brand-link">
-          <?php if ( $logo_img ) : ?>
-            <img src="<?php echo esc_url( $logo_img ); ?>" alt="<?php echo esc_attr( $site_name ); ?>" style="max-height: 48px; max-width: <?php echo esc_attr( $logo_width ); ?>px; width: auto; object-fit: contain;">
+          <?php if ( $logo_mobile_url ) : ?>
+            <img src="<?php echo esc_url( $logo_mobile_url ); ?>" alt="<?php echo esc_attr( $site_name ); ?>" class="mobile-brand-logo-img" style="max-height: 54px; max-width: <?php echo esc_attr( $logo_mobile_width ); ?>px; width: auto; object-fit: contain;">
           <?php elseif ( $site_icon ) : ?>
-            <img src="<?php echo esc_url( $site_icon ); ?>" alt="<?php echo esc_attr( $site_name ); ?>" style="width: 34px; height: 34px; border-radius: 8px;">
+            <img src="<?php echo esc_url( $site_icon ); ?>" alt="<?php echo esc_attr( $site_name ); ?>" style="width: 38px; height: 38px; border-radius: 8px;">
             <span><?php echo esc_html( $site_name ); ?></span>
           <?php else : ?>
             <span><?php echo esc_html( $site_name ); ?></span>
