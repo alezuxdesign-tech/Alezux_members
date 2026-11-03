@@ -2009,6 +2009,10 @@
   justify-content: center;
 }
 
+.ytCinemaActionItem {
+  display: inline-flex;
+}
+
 /* Botón Circular Estilo YouTube */
 .ytCircleBtn {
   width: 38px !important;
@@ -5393,6 +5397,10 @@
     display: inline-flex !important;
   }
 
+  .ytCinemaActionItem {
+    display: none !important;
+  }
+
   .classroomSidebar {
     display: none !important;
   }
@@ -5600,6 +5608,10 @@
 
   .ytActionItem {
     display: inline-flex !important;
+  }
+
+  .ytCinemaActionItem {
+    display: none !important;
   }
 
   .ytPillBtn {

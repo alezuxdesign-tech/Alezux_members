@@ -781,15 +781,17 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 56px;
+  min-height: 64px;
+  height: auto;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   z-index: 80;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  padding-top: env(safe-area-inset-top, 0px);
-  box-sizing: content-box;
+  padding: 14px 16px;
+  padding-top: max(14px, env(safe-area-inset-top, 14px));
+  padding-bottom: 14px;
+  box-sizing: border-box;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -1093,6 +1095,12 @@
 
   .mobileHeader {
     display: flex !important;
+    padding: 14px 16px !important;
+    padding-top: max(14px, env(safe-area-inset-top, 14px)) !important;
+    padding-bottom: 14px !important;
+    min-height: 64px !important;
+    height: auto !important;
+    box-sizing: border-box !important;
   }
 
   .mobileBottomBar {

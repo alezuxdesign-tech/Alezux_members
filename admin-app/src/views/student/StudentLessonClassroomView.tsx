@@ -87,8 +87,11 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
   const authorName = course.instructors?.[0]?.name || "Docente Titular";
   const [isOtherModulesOpen, setIsOtherModulesOpen] = useState(false);
 
-  // Estado Modo Cine (pantalla ancha / experiencia cinematográfica)
+  // Estado Modo Cine (pantalla ancha / experiencia cinematográfica - desactivado en móvil)
   const [isCinemaMode, setIsCinemaMode] = useState<boolean>(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 900) {
+      return false;
+    }
     try {
       return localStorage.getItem("crezca_student_cinema_mode") === "true";
     } catch {
@@ -376,7 +379,20 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
   const isCurrentCompleted = currentItem ? completedTopicIds.includes(currentItem.id) : false;
 
   // Tabs de contenido: temario, descripción, archivos, preguntas/quiz o docentes
-  const [contentTab, setContentTab] = useState<"syllabus" | "description" | "files" | "quiz" | "instructors">("description");
+  // En versión móvil, el foco inicial debe ser siempre Temario para que el alumno vea todas las clases disponibles
+  const [contentTab, setContentTab] = useState<"syllabus" | "description" | "files" | "quiz" | "instructors">(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 900) {
+      return "syllabus";
+    }
+    return "description";
+  });
+
+  // En móvil, al abrir o cambiar de módulo/lección, enfocar siempre en Temario
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 900) {
+      setContentTab("syllabus");
+    }
+  }, [currentLesson.id, currentSection.id]);
 
   // Estado del Quiz interactivo
   const currentQuestions = currentItem?.questions || [];
@@ -946,8 +962,8 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
                 </div>
               )}
 
-              {/* 5. Botón Modo Cine (Icono circular YouTube) */}
-              <div className={styles.ytActionItem}>
+              {/* 5. Botón Modo Cine (Icono circular YouTube - oculto en móvil) */}
+              <div className={[styles.ytActionItem, styles.ytCinemaActionItem].join(" ")}>
                 <button
                   type="button"
                   className={[
