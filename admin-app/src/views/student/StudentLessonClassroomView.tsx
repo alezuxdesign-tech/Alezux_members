@@ -1069,38 +1069,6 @@ export const StudentLessonClassroomView: React.FC<StudentLessonClassroomViewProp
               {/* TAB 0: TEMARIO (Visible en móvil y tablet) */}
               {contentTab === "syllabus" && (
                 <div className={styles.mobileSyllabusTabContent}>
-                  {/* Selector rápido de otros módulos si hay más de 1 */}
-                  {course.sections && course.sections.length > 1 && (
-                    <div className={styles.mobileModuleSelectorWrap}>
-                      <span className={styles.mobileModuleSelectorLabel}>Módulo:</span>
-                      <select
-                        className={styles.mobileModuleSelect}
-                        value={currentLesson.id}
-                        onChange={(e) => {
-                          const targetLesId = e.target.value;
-                          for (const sec of course.sections || []) {
-                            const foundLes = sec.lessons?.find((l) => l.id === targetLesId);
-                            if (foundLes) {
-                              const first = foundLes.topics && foundLes.topics.length > 0 ? foundLes.topics[0] : (foundLes as unknown as CourseTopic);
-                              onSwitchModule(sec, foundLes, first);
-                              break;
-                            }
-                          }
-                        }}
-                      >
-                        {course.sections.map((sec) => (
-                          <optgroup key={sec.id} label={sec.title}>
-                            {sec.lessons?.map((les) => (
-                              <option key={les.id} value={les.id}>
-                                {les.title}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
                   <div className={styles.topicsScrollList}>
                     {topics.map((top) => {
                       const hasSubtopics = top.subtopics && top.subtopics.length > 0;
